@@ -1,25 +1,89 @@
 [
 	{
-		"file": "D:\\Unreal Projects\\ClankBuster\\Source\\ClankBuster\\ClankBuster.Build.cs",
+		"file": "D:\\Unreal Projects\\HordeShooter\\Source\\HordeShooter\\HordeShooter.Build.cs",
 		"arguments": [
 			"C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.38.33130\\bin\\Hostx64\\x64\\cl.exe",
-			"@D:\\Unreal Projects\\ClankBuster\\.vscode\\compileCommands_Default\\ClankBuster.1.rsp"
+			"@D:\\Unreal Projects\\HordeShooter\\.vscode\\compileCommands_Default\\HordeShooter.1.rsp"
 		],
 		"directory": "D:\\UE_5.6\\Engine\\Source"
 	},
 	{
-		"file": "D:\\Unreal Projects\\ClankBuster\\Source\\ClankBuster\\ClankBuster.cpp",
+		"file": "D:\\Unreal Projects\\HordeShooter\\Source\\HordeShooter\\HordeShooter.cpp",
 		"arguments": [
 			"C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.38.33130\\bin\\Hostx64\\x64\\cl.exe",
-			"@D:\\Unreal Projects\\ClankBuster\\.vscode\\compileCommands_Default\\ClankBuster.1.rsp"
+			"@D:\\Unreal Projects\\HordeShooter\\.vscode\\compileCommands_Default\\HordeShooter.1.rsp"
 		],
 		"directory": "D:\\UE_5.6\\Engine\\Source"
 	},
 	{
-		"file": "D:\\Unreal Projects\\ClankBuster\\Source\\ClankBuster\\ClankBuster.h",
+		"file": "D:\\Unreal Projects\\HordeShooter\\Source\\HordeShooter\\HordeShooter.h",
 		"arguments": [
 			"C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.38.33130\\bin\\Hostx64\\x64\\cl.exe",
-			"@D:\\Unreal Projects\\ClankBuster\\.vscode\\compileCommands_Default\\ClankBuster.1.rsp"
+			"@D:\\Unreal Projects\\HordeShooter\\.vscode\\compileCommands_Default\\HordeShooter.1.rsp"
+		],
+		"directory": "D:\\UE_5.6\\Engine\\Source"
+	},
+	{
+		"file": "D:\\Unreal Projects\\HordeShooter\\Source\\HordeShooter\\HordeShooterCharacter.cpp",
+		"arguments": [
+			"C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.38.33130\\bin\\Hostx64\\x64\\cl.exe",
+			"@D:\\Unreal Projects\\HordeShooter\\.vscode\\compileCommands_Default\\HordeShooter.1.rsp"
+		],
+		"directory": "D:\\UE_5.6\\Engine\\Source"
+	},
+	{
+		"file": "D:\\Unreal Projects\\HordeShooter\\Source\\HordeShooter\\HordeShooterCharacter.h",
+		"arguments": [
+			"C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.38.33130\\bin\\Hostx64\\x64\\cl.exe",
+			"@D:\\Unreal Projects\\HordeShooter\\.vscode\\compileCommands_Default\\HordeShooter.1.rsp"
+		],
+		"directory": "D:\\UE_5.6\\Engine\\Source"
+	},
+	{
+		"file": "D:\\Unreal Projects\\HordeShooter\\Source\\HordeShooter\\HordeShooterEnemy.cpp",
+		"arguments": [
+			"C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.38.33130\\bin\\Hostx64\\x64\\cl.exe",
+			"@D:\\Unreal Projects\\HordeShooter\\.vscode\\compileCommands_Default\\HordeShooter.1.rsp"
+		],
+		"directory": "D:\\UE_5.6\\Engine\\Source"
+	},
+	{
+		"file": "D:\\Unreal Projects\\HordeShooter\\Source\\HordeShooter\\HordeShooterEnemy.h",
+		"arguments": [
+			"C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.38.33130\\bin\\Hostx64\\x64\\cl.exe",
+			"@D:\\Unreal Projects\\HordeShooter\\.vscode\\compileCommands_Default\\HordeShooter.1.rsp"
+		],
+		"directory": "D:\\UE_5.6\\Engine\\Source"
+	},
+	{
+		"file": "D:\\Unreal Projects\\HordeShooter\\Source\\HordeShooter\\HordeShooterGameModeBase.cpp",
+		"arguments": [
+			"C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.38.33130\\bin\\Hostx64\\x64\\cl.exe",
+			"@D:\\Unreal Projects\\HordeShooter\\.vscode\\compileCommands_Default\\HordeShooter.1.rsp"
+		],
+		"directory": "D:\\UE_5.6\\Engine\\Source"
+	},
+	{
+		"file": "D:\\Unreal Projects\\HordeShooter\\Source\\HordeShooter\\HordeShooterGameModeBase.h",
+		"arguments": [
+			"C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.38.33130\\bin\\Hostx64\\x64\\cl.exe",
+			"@D:\\Unreal Projects\\HordeShooter\\.vscode\\compileCommands_Default\\HordeShooter.1.rsp"
+		],
+		"directory": "D:\\UE_5.6\\Engine\\Source"
+	},
+	{
+		"file": "D:\\Unreal Projects\\HordeShooter\\Source\\HordeShooter\\HordeShooterPlayerController.cpp",
+		"arguments": [
+			"C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.38.33130\\bin\\Hostx64\\x64\\cl.exe",
+			"@D:\\Unreal Projects\\HordeShooter\\.vscode\\compileCommands_Default\\HordeShooter.1.rsp"
+		],
+		"directory": "D:\\UE_5.6\\Engine\\Source"
+	},
+	{
+		"file": "D:\\Unreal Projects\\HordeShooter\\Source\\HordeShooter\\HordeShooterPlayerController.h",
+		"arguments": [
+			"C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.38.33130\\bin\\Hostx64\\x64\\cl.exe",
+			"@D:\\Unreal Projects\\HordeShooter\\.vscode\\compileCommands_Default\\HordeShooter.1.rsp"
 		],
 		"directory": "D:\\UE_5.6\\Engine\\Source"
 	}
