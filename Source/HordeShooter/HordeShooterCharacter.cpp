@@ -16,6 +16,8 @@
 #include "EnhancedInputSubsystems.h"
 #include "Components/SceneComponent.h"
 
+#include "HordeShooterWeapon.h"
+
 // Sets default values
 AHordeShooterCharacter::AHordeShooterCharacter()
 {
@@ -60,6 +62,7 @@ void AHordeShooterCharacter::BeginPlay()
 		BaseCameraLocation = FirstPersonCamera->GetRelativeLocation();
 	}
 
+	//initialize capsule half height values for sliding
 	DefaultHalfHeight = GetCapsuleComponent()->GetUnscaledCapsuleHalfHeight();
 	CrouchedHalfHeight = GetCharacterMovement()->GetCrouchedHalfHeight();
 	TargetHalfHeight = DefaultHalfHeight;
@@ -80,6 +83,23 @@ void AHordeShooterCharacter::BeginPlay()
 		}
 	}
 
+	//spawn weapons and add to inventory:
+	for(const TSubclassOf<AHordeShooterWeapon>& WeaponClass : DefaultWeaponClasses)
+	{
+		if(!WeaponClass) continue;
+
+		FActorSpawnParameters SpawnParams;
+		SpawnParams.Owner = this;
+
+		AHordeShooterWeapon* SpawnedWeapon = GetWorld()->SpawnActor<AHordeShooterWeapon>(WeaponClass, SpawnParams);
+
+		int32 Index = Inventory.Add(SpawnedWeapon);
+		if(Index == CurrentWeaponIndex)
+		{
+			//equip weapon.
+			EquipWeapon(SpawnedWeapon);
+		}
+	}
 }
 
 // Called every frame
@@ -254,6 +274,7 @@ void AHordeShooterCharacter::SetupPlayerInputComponent(UInputComponent* PlayerIn
 	}
 }
 
+
 void AHordeShooterCharacter::Move(const FInputActionValue& Value)
 {
 	FVector2D MovementVector = Value.Get<FVector2D>();
@@ -422,6 +443,33 @@ void AHordeShooterCharacter::StopSlide()
 	GetCharacterMovement()->BrakingDecelerationWalking = 2048.0f;
 }
 
+void AHordeShooterCharacter::EquipWeapon(AHordeShooterWeapon* NewWeapon)
+{
+	if(!NewWeapon || NewWeapon == CurrentEquippedWeapon) return;
+
+	AHordeShooterWeapon* PreviousWeapon = nullptr;
+
+	//unequip/holster current weapon if we have one
+	if(CurrentEquippedWeapon)
+	{
+		CurrentEquippedWeapon->Mesh->SetVisibility(false);
+		CurrentEquippedWeapon->SetActorEnableCollision(false);
+		CurrentEquippedWeapon->bIsEquipped = false;
+		PreviousWeapon = CurrentEquippedWeapon;
+	}
+
+	CurrentEquippedWeapon = NewWeapon;
+	CurrentEquippedWeapon->AttachToComponent(
+		CharacterArms,
+		FAttachmentTransformRules::KeepRelativeTransform,
+		FName("ik_hand_gun")
+	);
+
+	CurrentEquippedWeapon->Mesh->SetVisibility(true);
+	CurrentEquippedWeapon->SetActorEnableCollision(true);
+	CurrentEquippedWeapon->bIsEquipped = true;
+}
+
 void AHordeShooterCharacter::FireWeapon()
 {
 	
@@ -429,17 +477,27 @@ void AHordeShooterCharacter::FireWeapon()
 
 void AHordeShooterCharacter::SwitchWeapon(const FInputActionValue& Value)
 {
+	if(Inventory.Num() <= 1) return;
 	
+	const float ScrollValue = Value.Get<float>();
+	if(FMath::IsNearlyZero(ScrollValue)) return;
+
+	const int32 Direction = (ScrollValue > 0.f) ? 1 : -1;
+	CurrentWeaponIndex = (CurrentWeaponIndex + Direction + Inventory.Num()) % Inventory.Num();
+
+	EquipWeapon(Inventory[CurrentWeaponIndex]);
 }
 
 void AHordeShooterCharacter::StartAiming()
 {
-	
+	if(!CurrentEquippedWeapon) return;
+	bIsAiming = true;
 }
 
 void AHordeShooterCharacter::StopAiming()
 {
-	
+	if(!CurrentEquippedWeapon) return;
+	bIsAiming = false;
 }
 
 void AHordeShooterCharacter::TogglePause()

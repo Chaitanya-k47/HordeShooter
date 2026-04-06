@@ -12,6 +12,7 @@ class UInputMappingContext;
 class UCameraComponent;
 class USkeletalMeshComponent;
 class USceneComponent;
+class HordeShooterWeapon;
 
 UCLASS()
 class HORDESHOOTER_API AHordeShooterCharacter : public ACharacter
@@ -136,6 +137,25 @@ protected:
 	float MaxSlideSpeed = 2500.f; //hHard cap
 
 
+	//Weapon config:
+	UPROPERTY(EditDefaultsOnly, Category = "Weapon")
+	TArray<TSubclassOf<AHordeShooterWeapon>> DefaultWeaponClasses; //default weapon classes to spawn with and add to inventory
+
+	UPROPERTY(VisibleInstanceOnly, BlueprintReadWrite, Category = "Weapon")
+	TArray<AHordeShooterWeapon*> Inventory;
+
+	UPROPERTY(VisibleInstanceOnly, BlueprintReadWrite, Category = "Weapon")
+	AHordeShooterWeapon* CurrentEquippedWeapon;
+
+	UPROPERTY(VisibleInstanceOnly, BlueprintReadWrite, Category = "Weapon")
+	int32 CurrentWeaponIndex = 0; //start with primary weapon equipped
+
+	UPROPERTY(BlueprintReadOnly)
+	bool bIsAiming = false;
+
+	UFUNCTION(BlueprintCallable, Category = "Weapon")
+	virtual void EquipWeapon(AHordeShooterWeapon* NewWeapon);
+	
 protected:
 	//Input callbacks:
 	void Move(const FInputActionValue& Value);
