@@ -136,6 +136,9 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement|Slide")
 	float MaxSlideSpeed = 2500.f; //hHard cap
 
+	UPROPERTY(BlueprintReadOnly)
+	bool bIsSliding = false;
+
 
 	//Weapon config:
 	UPROPERTY(EditDefaultsOnly, Category = "Weapon")
@@ -155,7 +158,16 @@ protected:
 
 	UFUNCTION(BlueprintCallable, Category = "Weapon")
 	virtual void EquipWeapon(AHordeShooterWeapon* NewWeapon);
-	
+
+
+	//Weapon collision/clipping config:
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Weapon")
+	float WallCheckDistance = 100.f;
+
+public:
+	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Weapon")
+	bool IsCloseToWall() const;
+
 protected:
 	//Input callbacks:
 	void Move(const FInputActionValue& Value);
@@ -204,5 +216,4 @@ private:
 	float CrouchedHalfHeight;
 	float TargetHalfHeight;
 
-	bool bIsSliding = false;
 };

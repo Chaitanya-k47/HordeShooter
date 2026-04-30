@@ -9,6 +9,7 @@
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Kismet/GameplayStatics.h"
 #include "GameFramework/PlayerController.h"
+#include "DrawDebugHelpers.h"
 
 #include "InputAction.h"
 #include "InputMappingContext.h"
@@ -297,11 +298,12 @@ void AHordeShooterCharacter::Look(const FInputActionValue& Value)
 
 void AHordeShooterCharacter::Dash()
 {
-	if(AvailableDashes <= 0 || bIsDashing || bIsSliding)
+	if(AvailableDashes <= 0 || bIsDashing || bIsSliding || bIsAiming)
 	{
 		//DEBUG
 		if (AvailableDashes <= 0) GEngine->AddOnScreenDebugMessage(-1, 3.0f, FColor::Red, TEXT("FAILED: Out of Dashes!"));
 		else if (bIsSliding) GEngine->AddOnScreenDebugMessage(-1, 1.0f, FColor::Orange, TEXT("FAILED: Cannot dash while sliding!"));
+		else if(bIsAiming)  GEngine->AddOnScreenDebugMessage(-1, 1.0f, FColor::Orange, TEXT("FAILED: Cannot dash while aiming!"));
 
 		return;
 	}
@@ -405,11 +407,12 @@ void AHordeShooterCharacter::Landed(const FHitResult& Hit)
 
 void AHordeShooterCharacter::StartSlide()
 {
-	if(bIsSliding || bIsDashing)
+	if(bIsSliding || bIsDashing || bIsAiming)
 	{
 		//DEBUG
 		if (bIsDashing) GEngine->AddOnScreenDebugMessage(-1, 1.0f, FColor::Orange, TEXT("FAILED: Cannot slide while dashing!"));
 		else if (bIsSliding) GEngine->AddOnScreenDebugMessage(-1, 1.0f, FColor::Orange, TEXT("FAILED: Already sliding!"));
+		else if (bIsAiming) GEngine->AddOnScreenDebugMessage(-1, 1.0f, FColor::Orange, TEXT("FAILED: Cannot slide while aiming!"));
 
 		return;
 	}
@@ -490,15 +493,41 @@ void AHordeShooterCharacter::SwitchWeapon(const FInputActionValue& Value)
 
 void AHordeShooterCharacter::StartAiming()
 {
-	if(!CurrentEquippedWeapon) return;
+	if(!CurrentEquippedWeapon || bIsSliding || bIsDashing) return;
 	bIsAiming = true;
 }
 
 void AHordeShooterCharacter::StopAiming()
 {
-	if(!CurrentEquippedWeapon) return;
+	if(!CurrentEquippedWeapon || bIsSliding || bIsDashing) return;
 	bIsAiming = false;
 }
+
+bool AHordeShooterCharacter::IsCloseToWall() const
+{
+	if(!FirstPersonCamera) return false;
+
+	FVector Start = FirstPersonCamera->GetComponentLocation();
+	FVector Direction = FirstPersonCamera->GetForwardVector();
+	FVector End = Start + (Direction * WallCheckDistance);
+
+	FHitResult HitResult;
+	FCollisionQueryParams QueryParams;
+	QueryParams.AddIgnoredActor(this);
+
+	bool bHit = GetWorld()->LineTraceSingleByChannel(
+		HitResult,
+		Start,
+		End,
+		ECC_Visibility,
+		QueryParams
+	);
+
+	//DrawDebugLine(GetWorld(), Start, End, bHit ? FColor::Red : FColor::Green, false, -1.0f, 0, 2.0f);
+
+	return bHit;
+}
+
 
 void AHordeShooterCharacter::TogglePause()
 {
