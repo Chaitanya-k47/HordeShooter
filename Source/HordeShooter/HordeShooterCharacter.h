@@ -131,7 +131,7 @@ protected:
 	float SlideDropInterpSpeed = 12.f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement|Slide")
-	float SlideGravityMultiplier = 4000.f; //how fast you accelerate down a slope
+	float SlideGravityMultiplier = 4000.f; //how fast character accelerate down a slope
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement|Slide")
 	float MaxSlideSpeed = 2500.f; //hHard cap
