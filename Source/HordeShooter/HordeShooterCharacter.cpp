@@ -61,6 +61,7 @@ void AHordeShooterCharacter::BeginPlay()
 	if(FirstPersonCamera)
 	{
 		BaseCameraLocation = FirstPersonCamera->GetRelativeLocation();
+		BaseCameraRotation = FirstPersonCamera->GetRelativeRotation();
 	}
 
 	//initialize capsule half height values for sliding
@@ -191,26 +192,28 @@ void AHordeShooterCharacter::Tick(float DeltaTime)
 		float CurrentInterpSpeed = RunFOVInterpSpeed;
 		float CurrentSpeed = GetVelocity().Size2D();
 
-		FVector TargetCameraLocation = BaseCameraLocation; 
+		FVector TargetCameraLocation = BaseCameraLocation;
+		float RollOffset = 0.f;
 
 		// STATE 1: DASHING
 		if (bIsDashing)
 		{
 			TargetFOV = FMath::Lerp(IdleFOV, DashFOV, ForwardFactor);
 			CurrentInterpSpeed = DashFOVInterpSpeed;
-
-			//FVector LagOffset = FVector(0.f, -RightAlignment * MaxDashCameraLag, 0.f);
-			//FVector LagOffset = FVector(-RightAlignment * MaxDashCameraLag, 0.f, 0.f);
 			
 			//this one works the best:
 			FVector LagOffset = FVector(0.f, 0.f, -RightAlignment * MaxDashCameraLag);
 			TargetCameraLocation = BaseCameraLocation + LagOffset;
+
+			RollOffset = RightAlignment * MaxDashCameraTilt;
 		}
 		// STATE 2: RUNNING
 		else if (CurrentSpeed > 10.f)
 		{
 			TargetFOV = RunFOV; // Standard run FOV
 			CurrentInterpSpeed = RunFOVInterpSpeed;
+
+			RollOffset = RightAlignment * MaxRunCameraTilt;
 		}
 		// STATE 3: IDLE
 		else
@@ -224,11 +227,18 @@ void AHordeShooterCharacter::Tick(float DeltaTime)
 		float NewFOV = FMath::FInterpTo(CurrentFOV, TargetFOV, DeltaTime, CurrentInterpSpeed);
 		FirstPersonCamera->SetFieldOfView(NewFOV);
 
-		// --- APPLY CAMERA TRANSLATION LAG ---
+		// --- APPLY CAMERA TRANSLATION LAG WHEN DASHING ---
 		FVector CurrentCameraLocation = FirstPersonCamera->GetRelativeLocation();
 		FVector NewCameraLocation = FMath::VInterpTo(CurrentCameraLocation, TargetCameraLocation, DeltaTime, CameraLagInterpSpeed);
 		FirstPersonCamera->SetRelativeLocation(NewCameraLocation);
 
+		// --- APPLY CAMERA TILT FOR SIDEWAYS MOVEMENT ---
+		FRotator CurrentCameraRotation = FirstPersonCamera->GetRelativeRotation();
+		float AbsoluteTargetRoll = BaseCameraRotation.Roll + RollOffset;
+		float NewRoll = FMath::FInterpTo(CurrentCameraRotation.Roll, AbsoluteTargetRoll, DeltaTime, CameraTiltInterpSpeed);
+		FirstPersonCamera->SetRelativeRotation(FRotator(BaseCameraRotation.Pitch, BaseCameraRotation.Yaw, NewRoll));
+
+		// --- HANDLE CAPSULE HALF HEIGHT INTERP FOR SLIDING ---
 		if(GetCapsuleComponent())
 		{
 			float CurrentHalfHeight = GetCapsuleComponent()->GetUnscaledCapsuleHalfHeight();

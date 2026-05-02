@@ -106,6 +106,17 @@ protected:
 	float CameraLagInterpSpeed = 6.f;
 
 
+	//CAMERA TILT CONFIG
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Camera|Tilt")
+	float MaxRunCameraTilt = 1.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Camera|Tilt")
+	float MaxDashCameraTilt = 2.5f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Camera|Tilt")
+	float CameraTiltInterpSpeed = 8.0f;
+
+
 	//Dash config:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement|Dash")
 	float DashSpeed = 8300.f;
@@ -211,6 +222,7 @@ private:
 	int32 AirDashesUsed;
 
 	FVector BaseCameraLocation;
+	FRotator BaseCameraRotation;
 
 	float DefaultHalfHeight;
 	float CrouchedHalfHeight;
