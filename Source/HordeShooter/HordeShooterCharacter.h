@@ -105,6 +105,12 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Camera|Lag")
 	float CameraLagInterpSpeed = 6.f;
 
+	UPROPERTY(BlueprintReadOnly)
+	FInputActionValue MouseInputValue;
+
+	UPROPERTY(BlueprintReadOnly)
+	FInputActionValue MovementInputValue;
+
 
 	//CAMERA TILT CONFIG
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Camera|Tilt")

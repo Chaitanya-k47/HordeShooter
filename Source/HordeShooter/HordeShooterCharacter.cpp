@@ -258,7 +258,12 @@ void AHordeShooterCharacter::SetupPlayerInputComponent(UInputComponent* PlayerIn
 	{
 		//bind Move and Look using callbacks
 		EnhancedInputComponent->BindAction(MoveAction, ETriggerEvent::Triggered, this, &AHordeShooterCharacter::Move);
+		EnhancedInputComponent->BindAction(MoveAction, ETriggerEvent::Completed, this, &AHordeShooterCharacter::Move);
+		EnhancedInputComponent->BindAction(MoveAction, ETriggerEvent::Canceled, this, &AHordeShooterCharacter::Move);
+
 		EnhancedInputComponent->BindAction(LookAction, ETriggerEvent::Triggered, this, &AHordeShooterCharacter::Look);
+		EnhancedInputComponent->BindAction(LookAction, ETriggerEvent::Completed, this, &AHordeShooterCharacter::Look);
+		EnhancedInputComponent->BindAction(LookAction, ETriggerEvent::Canceled, this, &AHordeShooterCharacter::Look);
 
 		//bind jump using built-in Jump functions
 		EnhancedInputComponent->BindAction(JumpAction, ETriggerEvent::Started, this, &AHordeShooterCharacter::Jump);
@@ -288,6 +293,8 @@ void AHordeShooterCharacter::SetupPlayerInputComponent(UInputComponent* PlayerIn
 
 void AHordeShooterCharacter::Move(const FInputActionValue& Value)
 {
+	MovementInputValue = Value;
+
 	FVector2D MovementVector = Value.Get<FVector2D>();
 	if(Controller != nullptr)
 	{
@@ -298,6 +305,8 @@ void AHordeShooterCharacter::Move(const FInputActionValue& Value)
 
 void AHordeShooterCharacter::Look(const FInputActionValue& Value)
 {
+	MouseInputValue = Value;
+
 	FVector2D LookAxisVector = Value.Get<FVector2D>();
 	if(Controller !=nullptr)
 	{
