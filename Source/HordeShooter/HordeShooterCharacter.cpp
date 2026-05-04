@@ -18,6 +18,8 @@
 #include "Components/SceneComponent.h"
 
 #include "HordeShooterWeapon.h"
+#include "HordeShooterPlayerController.h"
+#include "HordeShooterHUDWidget.h"
 
 // Sets default values
 AHordeShooterCharacter::AHordeShooterCharacter()
@@ -96,6 +98,8 @@ void AHordeShooterCharacter::BeginPlay()
 		AHordeShooterWeapon* SpawnedWeapon = GetWorld()->SpawnActor<AHordeShooterWeapon>(WeaponClass, SpawnParams);
 
 		int32 Index = Inventory.Add(SpawnedWeapon);
+		SpawnedWeapon->CurrentOwner = this;
+
 		if(Index == CurrentWeaponIndex)
 		{
 			//equip weapon.
@@ -278,6 +282,7 @@ void AHordeShooterCharacter::SetupPlayerInputComponent(UInputComponent* PlayerIn
 
 		//bind fire using callback
 		EnhancedInputComponent->BindAction(FireAction, ETriggerEvent::Started, this, &AHordeShooterCharacter::FireWeapon);
+		EnhancedInputComponent->BindAction(FireAction, ETriggerEvent::Completed, this, &AHordeShooterCharacter::StopFiringWeapon);
 
 		//bind switch weapon using callback
 		EnhancedInputComponent->BindAction(SwitchWeaponAction, ETriggerEvent::Started, this, &AHordeShooterCharacter::SwitchWeapon);
@@ -286,6 +291,9 @@ void AHordeShooterCharacter::SetupPlayerInputComponent(UInputComponent* PlayerIn
 		EnhancedInputComponent->BindAction(AimAction, ETriggerEvent::Started, this, &AHordeShooterCharacter::StartAiming);
 		EnhancedInputComponent->BindAction(AimAction, ETriggerEvent::Completed, this, &AHordeShooterCharacter::StopAiming);
 		
+		//bind reload using callback
+		EnhancedInputComponent->BindAction(ReloadAction, ETriggerEvent::Started, this, &AHordeShooterCharacter::ReloadWeapon);
+
 		EnhancedInputComponent->BindAction(PauseAction, ETriggerEvent::Started, this, &AHordeShooterCharacter::TogglePause);
 	}
 }
@@ -490,11 +498,34 @@ void AHordeShooterCharacter::EquipWeapon(AHordeShooterWeapon* NewWeapon)
 	CurrentEquippedWeapon->Mesh->SetVisibility(true);
 	CurrentEquippedWeapon->SetActorEnableCollision(true);
 	CurrentEquippedWeapon->bIsEquipped = true;
+
+	if(AHordeShooterPlayerController* PC = Cast<AHordeShooterPlayerController>(GetController()))
+	{
+		if(PC->PlayerHUDWidget)
+		{
+			PC->PlayerHUDWidget->UpdateAmmo(CurrentEquippedWeapon->CurrentAmmo, CurrentEquippedWeapon->MagSize);
+			CurrentEquippedWeapon->OnAmmoChanged.RemoveAll(PC->PlayerHUDWidget);
+
+			//bind delegate to update HUD when ammo changes:
+			CurrentEquippedWeapon->OnAmmoChanged.AddDynamic(PC->PlayerHUDWidget, &UHordeShooterHUDWidget::UpdateAmmo);
+		}
+	}
 }
 
 void AHordeShooterCharacter::FireWeapon()
 {
-	
+	if(CurrentEquippedWeapon)
+	{
+		CurrentEquippedWeapon->StartFire();
+	}
+}
+
+void AHordeShooterCharacter::StopFiringWeapon()
+{
+	if(CurrentEquippedWeapon)
+	{
+		CurrentEquippedWeapon->StopFire();
+	}
 }
 
 void AHordeShooterCharacter::SwitchWeapon(const FInputActionValue& Value)
@@ -514,12 +545,32 @@ void AHordeShooterCharacter::StartAiming()
 {
 	if(!CurrentEquippedWeapon || bIsSliding || bIsDashing) return;
 	bIsAiming = true;
+
+	// Hide Crosshair
+	if (AHordeShooterPlayerController* PC = Cast<AHordeShooterPlayerController>(GetController()))
+	{
+		if (PC->PlayerHUDWidget) PC->PlayerHUDWidget->ToggleCrosshair(false);
+	}
 }
 
 void AHordeShooterCharacter::StopAiming()
 {
 	if(!CurrentEquippedWeapon || bIsSliding || bIsDashing) return;
 	bIsAiming = false;
+
+	// Show Crosshair
+	if (AHordeShooterPlayerController* PC = Cast<AHordeShooterPlayerController>(GetController()))
+	{
+		if (PC->PlayerHUDWidget) PC->PlayerHUDWidget->ToggleCrosshair(true);
+	}
+}
+
+void AHordeShooterCharacter::ReloadWeapon()
+{
+	if(CurrentEquippedWeapon)
+	{
+		CurrentEquippedWeapon->Reload();
+	}
 }
 
 bool AHordeShooterCharacter::IsCloseToWall() const
@@ -572,4 +623,3 @@ void AHordeShooterCharacter::TogglePause()
         PC->bShowMouseCursor = true;
     }
 }
-

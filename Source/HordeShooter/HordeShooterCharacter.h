@@ -65,6 +65,9 @@ protected:
 	UInputAction* AimAction;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Input")
+	UInputAction* ReloadAction;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Input")
 	UInputAction* PauseAction;
 
 
@@ -170,9 +173,11 @@ protected:
 	UPROPERTY(VisibleInstanceOnly, BlueprintReadWrite, Category = "Weapon")
 	int32 CurrentWeaponIndex = 0; //start with primary weapon equipped
 
+public:
 	UPROPERTY(BlueprintReadOnly)
 	bool bIsAiming = false;
 
+protected:
 	UFUNCTION(BlueprintCallable, Category = "Weapon")
 	virtual void EquipWeapon(AHordeShooterWeapon* NewWeapon);
 
@@ -202,6 +207,7 @@ protected:
 
 	//Fire weapon callback:
 	void FireWeapon();
+	void StopFiringWeapon();
 
 	//switch weapon callback:
 	void SwitchWeapon(const FInputActionValue& Value);
@@ -209,6 +215,9 @@ protected:
 	//Aim callback:
 	void StartAiming();
 	void StopAiming();
+
+	//Reload callback:
+	void ReloadWeapon();
 
 	//Pause callback:(later shift this to player controller)
 	void TogglePause();

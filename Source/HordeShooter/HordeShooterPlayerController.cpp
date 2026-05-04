@@ -2,4 +2,20 @@
 
 
 #include "HordeShooterPlayerController.h"
+#include "HordeShooterHUDWidget.h"
 
+
+void AHordeShooterPlayerController::BeginPlay()
+{
+    Super::BeginPlay();
+    
+    if(PlayerHUDClass)
+    {
+        PlayerHUDWidget = CreateWidget<UHordeShooterHUDWidget>(this, PlayerHUDClass);
+        
+        if(PlayerHUDWidget)
+        {
+            PlayerHUDWidget->AddToViewport();
+        }
+    }
+}
