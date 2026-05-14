@@ -8,6 +8,9 @@
 #include "HordeShooterCharacter.h"
 #include "Camera/CameraComponent.h"
 #include "Animation/AnimMontage.h"
+#include "NiagaraFunctionLibrary.h"
+#include "NiagaraComponent.h"
+#include "Kismet/GameplayStatics.h"
 
 
 // Sets default values
@@ -49,7 +52,9 @@ void AHordeShooterWeapon::Tick(float DeltaTime)
 
 void AHordeShooterWeapon::StartFire()
 {
-	if(!bIsEquipped || CurrentAmmo<=0 || !bCanFire || bIsReloading) return;
+	if(!bIsEquipped || !bCanFire || bIsReloading) return;
+
+	if(CurrentAmmo<=0) Reload();
 
 	//shoot the first bullet immediately
 	PerformFire();
@@ -72,6 +77,12 @@ void AHordeShooterWeapon::PerformFire()
 	{
 		StopFire();
 		Reload();
+		return;
+	}
+
+	if(!bCanFire)
+	{
+		StopFire();
 		return;
 	}
 
@@ -101,6 +112,24 @@ void AHordeShooterWeapon::PerformFire()
 		}
 	}
 
+	//Muzzle Flash:
+	if (MuzzleFlashSystem)
+	{
+		UNiagaraFunctionLibrary::SpawnSystemAttached(
+			MuzzleFlashSystem,
+			Mesh, // The weapon mesh
+			FName("SOC_MuzzleFlash"), // The exact name of your socket!
+			FVector::ZeroVector,
+			FRotator::ZeroRotator,
+			EAttachLocation::SnapToTarget,
+			true // Auto-destroy when the particle finishes playing
+		);
+	}
+
+	//Shoot Sound
+	{
+		UGameplayStatics::PlaySoundAtLocation(GetWorld(), ShootSound, GetActorLocation());
+	}
 
 	//linetrace logic:
 	FVector Start = CurrentOwner->FirstPersonCamera->GetComponentLocation();
@@ -120,18 +149,34 @@ void AHordeShooterWeapon::PerformFire()
 		QueryParams
 	);
 
-	// Debug Line (Red for hit, Green for miss)
-	FVector DebugVisualStart = Start + (ForwardVector * 50.0f);
-	DrawDebugLine(
-		GetWorld(), 
-		DebugVisualStart, 
-		(bHit ? HitResult.Location : End), 
-		bHit ? FColor::Red : FColor::Green, 
-		false, 
-		2.0f, 
-		0, 
-		1.0f
-	);
+	//Bullet Tracer:
+	FVector TracerEndPoint = bHit ? HitResult.Location : End;
+	if (TracerSystem)
+	{
+		// 1. Get the exact location of the gun barrel right now
+		FTransform MuzzleTransform = Mesh->GetSocketTransform(FName("SOC_MuzzleFlash"));
+		//FVector MuzzleLocation = Mesh->GetSocketLocation(FName("SOC_MuzzleFlash"));
+
+		// 2. Spawn the beam starting at the muzzle
+		UNiagaraComponent* TracerComp = UNiagaraFunctionLibrary::SpawnSystemAtLocation(
+			GetWorld(),
+			TracerSystem,
+			MuzzleTransform.GetLocation(),
+			MuzzleTransform.Rotator(),
+			FVector(1.f),
+			true, // Auto destroy
+			true, // Auto activate
+			ENCPoolMethod::None,
+			true // Pre-cull
+		);
+
+		// 3. Tell the Niagara System where the wall is!
+		if (TracerComp)
+		{
+			TracerComp->SetVectorParameter(FName("TraceStart"), MuzzleTransform.GetLocation());
+			TracerComp->SetVectorParameter(FName("TraceEnd"), TracerEndPoint);
+		}
+	}
 
 	//apply damage:
 	if(bHit && HitResult.GetActor())

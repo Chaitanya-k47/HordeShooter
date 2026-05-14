@@ -13,6 +13,7 @@ class USceneComponent;
 class USkeletalMeshComponent;
 class AHordeShooterCharacter;
 class UAnimMontage;
+class UNiagaraSystem;
 
 UCLASS()
 class HORDESHOOTER_API AHordeShooterWeapon : public AActor
@@ -89,6 +90,18 @@ public:
 	UAnimMontage* WeaponReloadMontage;
 
 
+	//FX:
+	UPROPERTY(EditDefaultsOnly, Category = "Effects")
+	UNiagaraSystem* MuzzleFlashSystem;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Effects")
+	UNiagaraSystem* TracerSystem;
+
+	//SFX
+	UPROPERTY(EditDefaultsOnly, Category = "Sound")
+	USoundBase* ShootSound;
+	
+
 	//CORE FUNCTIONS:
 	//these are called by character class
 	virtual void StartFire();
@@ -106,6 +119,8 @@ public:
 	UPROPERTY(BlueprintReadOnly, Category = "Weapon Stats|State")
 	bool bIsReloading = false;
 
+	bool bCanFire = true;
+
 
 protected:
 	//this fn performs raycast.
@@ -116,7 +131,7 @@ private:
 
 	//fire:
 	FTimerHandle FireTimerHandle;
-	bool bCanFire = true;
+	
 	void ResetFireCooldown();
 
 	//reload:

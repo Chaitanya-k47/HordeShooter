@@ -594,6 +594,14 @@ bool AHordeShooterCharacter::IsCloseToWall() const
 	);
 
 	//DrawDebugLine(GetWorld(), Start, End, bHit ? FColor::Red : FColor::Green, false, -1.0f, 0, 2.0f);
+	if(bHit)
+	{
+		if(CurrentEquippedWeapon) CurrentEquippedWeapon->bCanFire = false;
+	}
+	else
+	{
+		if(CurrentEquippedWeapon) CurrentEquippedWeapon->bCanFire = true;
+	}
 
 	return bHit;
 }
