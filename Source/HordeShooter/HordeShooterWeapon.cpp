@@ -11,6 +11,9 @@
 #include "NiagaraFunctionLibrary.h"
 #include "NiagaraComponent.h"
 #include "Kismet/GameplayStatics.h"
+#include "Materials/MaterialInterface.h"
+#include "Materials/MaterialInstanceDynamic.h"
+#include "Components/DecalComponent.h"
 
 
 // Sets default values
@@ -24,6 +27,10 @@ AHordeShooterWeapon::AHordeShooterWeapon()
 
 	Mesh = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("Mesh"));
 	Mesh->SetupAttachment(Root);
+
+	BarrelSmokeComp = CreateDefaultSubobject<UNiagaraComponent>(TEXT("BarrelSmokeComponent"));
+	BarrelSmokeComp->SetupAttachment(Mesh, FName("SOC_MuzzleFlash"));
+	BarrelSmokeComp->bAutoActivate = false; //keep it off by default
 }
 
 
@@ -56,6 +63,9 @@ void AHordeShooterWeapon::StartFire()
 
 	if(CurrentAmmo<=0) Reload();
 
+	BarrelSmokeComp->Deactivate();
+	GetWorldTimerManager().ClearTimer(SmokeTimerHandle);
+
 	//shoot the first bullet immediately
 	PerformFire();
 
@@ -68,6 +78,15 @@ void AHordeShooterWeapon::StartFire()
 void AHordeShooterWeapon::StopFire()
 {
 	GetWorldTimerManager().ClearTimer(FireTimerHandle);
+
+	BarrelSmokeComp->Activate(true); 	
+	GetWorldTimerManager().SetTimer(SmokeTimerHandle, this, &AHordeShooterWeapon::StopBarrelSmoke, BarrelSmokeDuration, false);
+}
+
+
+void AHordeShooterWeapon::StopBarrelSmoke()
+{
+	BarrelSmokeComp->Deactivate();
 }
 
 
@@ -126,6 +145,19 @@ void AHordeShooterWeapon::PerformFire()
 		);
 	}
 
+	// if(SmokeTrailSystem)
+	// {
+	// 	UNiagaraFunctionLibrary::SpawnSystemAttached(
+	// 		SmokeTrailSystem,
+	// 		Mesh, // The weapon mesh
+	// 		FName("SOC_MuzzleFlash"), // The exact name of your socket!
+	// 		FVector::ZeroVector,
+	// 		FRotator::ZeroRotator,
+	// 		EAttachLocation::SnapToTarget,
+	// 		true // Auto-destroy when the particle finishes playing
+	// 	);
+	// }
+
 	//Shoot Sound
 	{
 		UGameplayStatics::PlaySoundAtLocation(GetWorld(), ShootSound, GetActorLocation());
@@ -161,7 +193,7 @@ void AHordeShooterWeapon::PerformFire()
 		UNiagaraComponent* TracerComp = UNiagaraFunctionLibrary::SpawnSystemAtLocation(
 			GetWorld(),
 			TracerSystem,
-			MuzzleTransform.GetLocation(),
+			MuzzleTransform.GetLocation(), //+ FVector(10000.f, 0.f, 0.f),
 			MuzzleTransform.Rotator(),
 			FVector(1.f),
 			true, // Auto destroy
@@ -175,14 +207,75 @@ void AHordeShooterWeapon::PerformFire()
 		{
 			TracerComp->SetVectorParameter(FName("TraceStart"), MuzzleTransform.GetLocation());
 			TracerComp->SetVectorParameter(FName("TraceEnd"), TracerEndPoint);
+
+			//CS2 style tracer:
+			// TracerComp->SetVectorParameter(FName("TraceEnd"), TracerEndPoint);
+
+			// FVector TracerDirection = (TracerEndPoint - MuzzleTransform.GetLocation()).GetSafeNormal();
+			// FVector TracerVelocity = TracerDirection * 20000.f;
+			// TracerComp->SetVectorParameter(FName("TracerVelocity"), TracerVelocity);
 		}
+
 	}
 
-	//apply damage:
-	if(bHit && HitResult.GetActor())
+	//Impact:
+	if(bHit)
 	{
-		//TODO: DamagableInterface Logic here.
+		FRotator HitRotation = HitResult.ImpactNormal.Rotation();
+
+		//impact fx:
+		if(ImpactSystem)
+		{
+			UNiagaraFunctionLibrary::SpawnSystemAtLocation(
+				GetWorld(),
+				ImpactSystem,
+				HitResult.ImpactPoint,
+				HitRotation
+			);
+		}
+
+		//bullet hole decal:
+		if(BulletHoleDecal)
+		{
+			UDecalComponent* DecalComp = UGameplayStatics::SpawnDecalAtLocation(
+				GetWorld(),
+				BulletHoleDecal,
+				FVector(5.f, 5.f, 5.f), // decal size
+				HitResult.ImpactPoint,
+				HitRotation,
+				10.f // decal lifespan
+			);
+
+			if(DecalComp)
+			{
+				UMaterialInstanceDynamic* DynamicDecalMat = DecalComp->CreateDynamicMaterialInstance();
+
+				if(DynamicDecalMat)
+				{
+					float UniqueIndex = static_cast<float>(GetUniqueDecalIndex());
+					DynamicDecalMat->SetScalarParameterValue(FName("AtlasIndex"), UniqueIndex);
+				}
+			}
+		}
+
+		//impact sound:
+		if(ImpactSound)
+		{
+			UGameplayStatics::PlaySoundAtLocation(
+				GetWorld(),
+				ImpactSound,
+				HitResult.ImpactPoint
+			);
+		}
+
+		//apply damage:
+		if(HitResult.GetActor())
+		{
+			//TODO: DamagableInterface Logic here.
+		}
+
 	}
+
 
 	if(!bIsAutomatic)
 	{
@@ -192,6 +285,22 @@ void AHordeShooterWeapon::PerformFire()
 	}
 }
 
+int32 AHordeShooterWeapon::GetUniqueDecalIndex()
+{
+	if(AvailableDecalIndices.Num() == 0)
+	{
+		for(int32 i=0; i<TotalDecalVariations; ++i)
+		{
+			AvailableDecalIndices.Add(i);
+		}
+	}
+
+	int32 RandomArrayPosition = FMath::RandRange(0, AvailableDecalIndices.Num() - 1);
+	int32 ChosenAtlasIndex = AvailableDecalIndices[RandomArrayPosition];
+	AvailableDecalIndices.RemoveAtSwap(RandomArrayPosition);
+		
+	return ChosenAtlasIndex;
+}
 
 void AHordeShooterWeapon::ResetFireCooldown()
 {
@@ -241,6 +350,7 @@ void AHordeShooterWeapon::FinishReload()
 	//broadcast
 	OnAmmoChanged.Broadcast(CurrentAmmo, MagSize);
 }
+
 
 
 

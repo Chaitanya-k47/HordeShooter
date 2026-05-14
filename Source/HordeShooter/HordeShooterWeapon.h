@@ -14,6 +14,8 @@ class USkeletalMeshComponent;
 class AHordeShooterCharacter;
 class UAnimMontage;
 class UNiagaraSystem;
+class UNiagaraComponent;
+class UMaterialInterface;
 
 UCLASS()
 class HORDESHOOTER_API AHordeShooterWeapon : public AActor
@@ -47,6 +49,9 @@ public:
 	UPROPERTY(VisibleInstanceOnly, BlueprintReadWrite, Category = "State")
 	bool bIsEquipped = false;
 
+	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Components")
+	UNiagaraComponent* BarrelSmokeComp;
+
 
 	//WEAPON STATS:
 	UPROPERTY(EditDefaultsOnly, Category = "Weapon Stats")
@@ -63,6 +68,9 @@ public:
 
 	UPROPERTY(EditDefaultsOnly, Category = "Weapon Stats")
 	float ShotImpulse = 5000.f; //force applied to enemies on kill or hit.
+
+	UPROPERTY(EditDefaultsOnly, Category = "Effects")
+	float BarrelSmokeDuration = 3.0f; // How long the smoke lingers after shooting
 
 
 	//AMMO SYSTEM:
@@ -94,12 +102,28 @@ public:
 	UPROPERTY(EditDefaultsOnly, Category = "Effects")
 	UNiagaraSystem* MuzzleFlashSystem;
 
+	// UPROPERTY(EditDefaultsOnly, Category = "Effects")
+	// UNiagaraSystem* SmokeTrailSystem;
+
 	UPROPERTY(EditDefaultsOnly, Category = "Effects")
 	UNiagaraSystem* TracerSystem;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Effects")
+	UNiagaraSystem* ImpactSystem;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Effects")
+	UMaterialInterface* BulletHoleDecal;
+	
+	UPROPERTY(EditDefaultsOnly, Category = "Effects")
+	int32 TotalDecalVariations = 64;
+
 
 	//SFX
 	UPROPERTY(EditDefaultsOnly, Category = "Sound")
 	USoundBase* ShootSound;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Sound")
+	USoundBase* ImpactSound;
 	
 
 	//CORE FUNCTIONS:
@@ -137,5 +161,15 @@ private:
 	//reload:
 	FTimerHandle ReloadTimerHandle;
 	void FinishReload();
+
+	//decals:
+	TArray<int32> AvailableDecalIndices;
+
+	//helper to get a random unique decal index for each shot.
+	int32 GetUniqueDecalIndex();
+
+	//barrel smoke:
+	FTimerHandle SmokeTimerHandle;
+	void StopBarrelSmoke();
 
 };
