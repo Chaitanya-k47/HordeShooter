@@ -14,6 +14,8 @@
 #include "Materials/MaterialInterface.h"
 #include "Materials/MaterialInstanceDynamic.h"
 #include "Components/DecalComponent.h"
+#include "HordeShooterCasing.h"
+#include "GameFramework/CharacterMovementComponent.h"
 
 
 // Sets default values
@@ -27,6 +29,10 @@ AHordeShooterWeapon::AHordeShooterWeapon()
 
 	Mesh = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("Mesh"));
 	Mesh->SetupAttachment(Root);
+
+	Magazine = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("Magazine"));
+	Magazine->SetupAttachment(Mesh, FName("Magazine"));
+	Magazine->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 
 	BarrelSmokeComp = CreateDefaultSubobject<UNiagaraComponent>(TEXT("BarrelSmokeComponent"));
 	BarrelSmokeComp->SetupAttachment(Mesh, FName("SOC_MuzzleFlash"));
@@ -79,7 +85,7 @@ void AHordeShooterWeapon::StopFire()
 {
 	GetWorldTimerManager().ClearTimer(FireTimerHandle);
 
-	BarrelSmokeComp->Activate(true); 	
+	BarrelSmokeComp->Activate(true);	
 	GetWorldTimerManager().SetTimer(SmokeTimerHandle, this, &AHordeShooterWeapon::StopBarrelSmoke, BarrelSmokeDuration, false);
 }
 
@@ -145,18 +151,41 @@ void AHordeShooterWeapon::PerformFire()
 		);
 	}
 
-	// if(SmokeTrailSystem)
-	// {
-	// 	UNiagaraFunctionLibrary::SpawnSystemAttached(
-	// 		SmokeTrailSystem,
-	// 		Mesh, // The weapon mesh
-	// 		FName("SOC_MuzzleFlash"), // The exact name of your socket!
-	// 		FVector::ZeroVector,
-	// 		FRotator::ZeroRotator,
-	// 		EAttachLocation::SnapToTarget,
-	// 		true // Auto-destroy when the particle finishes playing
-	// 	);
-	// }
+	//Casing Ejection:
+	if(CasingClass)
+	{
+		FTransform SocketTransform = Mesh->GetSocketTransform(FName("SOC_CasingEjection"));
+
+		FActorSpawnParameters SpawnParams;
+		SpawnParams.Owner = this;
+		SpawnParams.Instigator = CurrentOwner;
+
+		//spawn the casings(its beginplay() handles the physics impulse.)
+		AHordeShooterCasing* SpawnedCasing = GetWorld()->SpawnActor<AHordeShooterCasing>(
+			CasingClass,
+			SocketTransform.GetLocation(),
+			SocketTransform.GetRotation().Rotator(),
+			SpawnParams
+		);
+
+		//Feed the player's ANTICIPATED velocity to the casing.
+		if(SpawnedCasing && CurrentOwner)
+		{
+			// FVector InheritedVelocity = CurrentOwner->GetVelocity();
+			// FVector InputDir = CurrentOwner->GetLastMovementInputVector();
+
+			// if(CurrentOwner->GetCharacterMovement()->IsMovingOnGround() && !InputDir.IsNearlyZero())
+			// {
+			// 	float MaxSpeed = FMath::Max(CurrentOwner->GetCharacterMovement()->MaxWalkSpeed, InheritedVelocity.Size());
+			// 	InheritedVelocity = FVector(InputDir.X * MaxSpeed, InputDir.Y * MaxSpeed, InheritedVelocity.Z);
+			// }
+
+			// SpawnedCasing->EjectCasing(InheritedVelocity);
+
+			SpawnedCasing->EjectCasing(CurrentOwner->GetVelocity());
+		}
+
+	}
 
 	//Shoot Sound
 	{

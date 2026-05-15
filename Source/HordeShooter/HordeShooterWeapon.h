@@ -16,6 +16,7 @@ class UAnimMontage;
 class UNiagaraSystem;
 class UNiagaraComponent;
 class UMaterialInterface;
+class AHordeShooterCasing;
 
 UCLASS()
 class HORDESHOOTER_API AHordeShooterWeapon : public AActor
@@ -42,6 +43,9 @@ public:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Components")
 	USkeletalMeshComponent* Mesh;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Components")
+	UStaticMeshComponent* Magazine;
 
 	UPROPERTY(VisibleInstanceOnly, BlueprintReadWrite, Category = "State")
 	AHordeShooterCharacter* CurrentOwner;
@@ -75,7 +79,7 @@ public:
 
 	//AMMO SYSTEM:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Weapon Stats|Ammo")
-	int32 MagSize = 30;
+	int32 MagSize = 45;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Weapon Stats|Ammo")
 	int32 CurrentAmmo;
@@ -102,9 +106,6 @@ public:
 	UPROPERTY(EditDefaultsOnly, Category = "Effects")
 	UNiagaraSystem* MuzzleFlashSystem;
 
-	// UPROPERTY(EditDefaultsOnly, Category = "Effects")
-	// UNiagaraSystem* SmokeTrailSystem;
-
 	UPROPERTY(EditDefaultsOnly, Category = "Effects")
 	UNiagaraSystem* TracerSystem;
 
@@ -116,6 +117,9 @@ public:
 	
 	UPROPERTY(EditDefaultsOnly, Category = "Effects")
 	int32 TotalDecalVariations = 64;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Effects")
+	TSubclassOf<AHordeShooterCasing> CasingClass;
 
 
 	//SFX
