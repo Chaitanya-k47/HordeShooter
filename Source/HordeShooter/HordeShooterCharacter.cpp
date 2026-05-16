@@ -20,6 +20,7 @@
 #include "HordeShooterWeapon.h"
 #include "HordeShooterPlayerController.h"
 #include "HordeShooterHUDWidget.h"
+#include "Components/AudioComponent.h"
 
 // Sets default values
 AHordeShooterCharacter::AHordeShooterCharacter()
@@ -39,12 +40,15 @@ AHordeShooterCharacter::AHordeShooterCharacter()
 	FirstPersonCamera->SetupAttachment(CharacterArms, FName("head")); //attach camera to Head bone.
 	FirstPersonCamera->bUsePawnControlRotation = false;
 
+	SlideAudioComponent = CreateDefaultSubobject<UAudioComponent>(TEXT("SlideAudioComponent"));
+	SlideAudioComponent->SetupAttachment(GetRootComponent());
+	SlideAudioComponent->bAutoActivate = false;
 
 	//Movement config:
 	GetCharacterMovement()->MaxWalkSpeed = 1000.f; // Base run speed (up from 600)
 	GetCharacterMovement()->MaxAcceleration = 4000.f; // Snappy start
 	GetCharacterMovement()->BrakingDecelerationWalking = 4000.f; // Snappy stop (no ice skating)
-	GetCharacterMovement()->GroundFriction = 8.0f; 
+	GetCharacterMovement()->GroundFriction = 8.0f;
 	
 	GetCharacterMovement()->GravityScale = 2.f;
 	GetCharacterMovement()->JumpZVelocity = 1000.f;
@@ -199,6 +203,28 @@ void AHordeShooterCharacter::Tick(float DeltaTime)
 		FVector TargetCameraLocation = BaseCameraLocation;
 		float RollOffset = 0.f;
 
+		//PEDOMETER:
+		if (GetCharacterMovement()->IsMovingOnGround() && CurrentSpeed > 10.f && !bIsSliding && !bIsDashing)
+		{
+			//distance covered this exact frame
+			AccumulatedStepDistance += (CurrentSpeed * DeltaTime);
+
+			if (AccumulatedStepDistance >= DistancePerFootstep)
+			{
+				PlayFootstepSound();
+				
+				//reset the tracker(but keep any overflow distance for perfect accuracy)
+				//AccumulatedStepDistance -= DistancePerFootstep;
+				AccumulatedStepDistance = 0.f;
+			}
+		}
+		else if (CurrentSpeed <= 10.f || GetCharacterMovement()->IsFalling())
+		{
+			//reset pedometer
+			AccumulatedStepDistance = 0.f;
+		
+		}
+
 		// STATE 1: DASHING
 		if (bIsDashing)
 		{
@@ -211,6 +237,7 @@ void AHordeShooterCharacter::Tick(float DeltaTime)
 
 			RollOffset = RightAlignment * MaxDashCameraTilt;
 		}
+
 		// STATE 2: RUNNING
 		else if (CurrentSpeed > 10.f)
 		{
@@ -219,6 +246,7 @@ void AHordeShooterCharacter::Tick(float DeltaTime)
 
 			RollOffset = RightAlignment * MaxRunCameraTilt;
 		}
+
 		// STATE 3: IDLE
 		else
 		{
@@ -376,6 +404,11 @@ void AHordeShooterCharacter::Dash()
 	bIsDashing = true;
 	DashTimer = DashDuration;
 
+	if (DashSound)
+	{
+		UGameplayStatics::PlaySoundAtLocation(GetWorld(), DashSound, GetActorLocation());
+	}
+
 	//clear the timer in case player dashed again while it was recharging:
 	GetWorldTimerManager().ClearTimer(DashTimerHandle);
 
@@ -447,6 +480,11 @@ void AHordeShooterCharacter::StartSlide()
 	bIsSliding = true;
 	TargetHalfHeight = CrouchedHalfHeight;
 
+	if (SlideAudioComponent && SlideAudioComponent->Sound)
+	{
+		SlideAudioComponent->Play();
+	}
+
 	if(GetCharacterMovement()->IsMovingOnGround())
 	{
 		FVector SlideDirection = GetVelocity().GetSafeNormal();
@@ -465,12 +503,34 @@ void AHordeShooterCharacter::StopSlide()
 	bIsSliding = false;
 	TargetHalfHeight = DefaultHalfHeight;
 
+	if (SlideAudioComponent)
+	{
+		SlideAudioComponent->FadeOut(0.2f, 0.0f);
+	}
 	
 	GetCharacterMovement()->MaxWalkSpeed = 1000.f;
 
 	//reset friction and deceleration to default UE values.
 	GetCharacterMovement()->GroundFriction = 8.0f;
 	GetCharacterMovement()->BrakingDecelerationWalking = 2048.0f;
+}
+
+void AHordeShooterCharacter::OnJumped_Implementation()
+{
+	Super::OnJumped_Implementation();
+
+	if (JumpSound)
+	{
+		UGameplayStatics::PlaySoundAtLocation(GetWorld(), JumpSound, GetActorLocation());
+	}	
+}
+
+void AHordeShooterCharacter::PlayFootstepSound()
+{
+	if(FootstepSound)
+	{
+		UGameplayStatics::PlaySoundAtLocation(GetWorld(), FootstepSound, GetActorLocation());
+	}
 }
 
 void AHordeShooterCharacter::EquipWeapon(AHordeShooterWeapon* NewWeapon)
@@ -631,3 +691,4 @@ void AHordeShooterCharacter::TogglePause()
         PC->bShowMouseCursor = true;
     }
 }
+

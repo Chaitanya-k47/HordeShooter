@@ -67,7 +67,11 @@ void AHordeShooterWeapon::StartFire()
 {
 	if(!bIsEquipped || !bCanFire || bIsReloading) return;
 
-	if(CurrentAmmo<=0) Reload();
+	if(CurrentAmmo<=0)
+	{
+		Reload();
+		return;
+	}
 
 	BarrelSmokeComp->Deactivate();
 	GetWorldTimerManager().ClearTimer(SmokeTimerHandle);
@@ -85,8 +89,6 @@ void AHordeShooterWeapon::StopFire()
 {
 	GetWorldTimerManager().ClearTimer(FireTimerHandle);
 
-	BarrelSmokeComp->Activate(true);	
-	GetWorldTimerManager().SetTimer(SmokeTimerHandle, this, &AHordeShooterWeapon::StopBarrelSmoke, BarrelSmokeDuration, false);
 }
 
 
@@ -95,6 +97,20 @@ void AHordeShooterWeapon::StopBarrelSmoke()
 	BarrelSmokeComp->Deactivate();
 }
 
+void AHordeShooterWeapon::EvaluateAndPlaySmoke()
+{
+	float SmokeDuration = BulletsFiredConsecutively * SmokeMultiplier;
+
+	if (SmokeDuration >= 2.0f)
+	{
+		//maximum Cap Check (FMath::Clamp restricts the value between 0 and 6)
+		SmokeDuration = FMath::Clamp(SmokeDuration, 0.0f, 6.0f);
+		BarrelSmokeComp->Activate(true);
+		GetWorldTimerManager().SetTimer(SmokeTimerHandle, this, &AHordeShooterWeapon::StopBarrelSmoke, SmokeDuration, false);
+	}
+
+	BulletsFiredConsecutively = 0; //reset the counter
+}
 
 void AHordeShooterWeapon::PerformFire()
 {
@@ -118,6 +134,15 @@ void AHordeShooterWeapon::PerformFire()
 
 	//broadcast
 	OnAmmoChanged.Broadcast(CurrentAmmo, MagSize);
+
+	//dynamic smoke heat tracking:
+	BarrelSmokeComp->Deactivate();
+	GetWorldTimerManager().ClearTimer(SmokeTimerHandle);
+	
+	BulletsFiredConsecutively++;
+	
+	//restart the 0.5s countdown. If we don't shoot again in 0.5s, it triggers EvaluateAndPlaySmoke().
+	GetWorldTimerManager().SetTimer(SmokeEvalTimerHandle, this, &AHordeShooterWeapon::EvaluateAndPlaySmoke, SmokeEvalWindow, false);
 
 	if (CurrentOwner && CurrentOwner->CharacterArms)
 	{
@@ -330,6 +355,7 @@ int32 AHordeShooterWeapon::GetUniqueDecalIndex()
 		
 	return ChosenAtlasIndex;
 }
+
 
 void AHordeShooterWeapon::ResetFireCooldown()
 {

@@ -73,9 +73,6 @@ public:
 	UPROPERTY(EditDefaultsOnly, Category = "Weapon Stats")
 	float ShotImpulse = 5000.f; //force applied to enemies on kill or hit.
 
-	UPROPERTY(EditDefaultsOnly, Category = "Effects")
-	float BarrelSmokeDuration = 3.0f; // How long the smoke lingers after shooting
-
 
 	//AMMO SYSTEM:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Weapon Stats|Ammo")
@@ -154,6 +151,13 @@ protected:
 	//this fn performs raycast.
 	virtual void PerformFire();
 
+	//DYNAMIC SMOKE CONFIG:
+	UPROPERTY(EditDefaultsOnly, Category = "Effects|Smoke")
+	float SmokeEvalWindow = 0.5f; //after how long after shooting the gun barrel is considerd cool
+
+	UPROPERTY(EditDefaultsOnly, Category = "Effects|Smoke")
+	float SmokeMultiplier = 0.2f; //how mush smoke duration per bullet.
+
 
 private:
 
@@ -173,7 +177,10 @@ private:
 	int32 GetUniqueDecalIndex();
 
 	//barrel smoke:
+	int32 BulletsFiredConsecutively = 0;
+	FTimerHandle SmokeEvalTimerHandle;
 	FTimerHandle SmokeTimerHandle;
+	void EvaluateAndPlaySmoke();
 	void StopBarrelSmoke();
 
 };

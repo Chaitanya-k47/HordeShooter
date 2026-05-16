@@ -13,6 +13,8 @@ class UCameraComponent;
 class USkeletalMeshComponent;
 class USceneComponent;
 class HordeShooterWeapon;
+class USoundBase;
+class UAudioComponent;
 
 UCLASS()
 class HORDESHOOTER_API AHordeShooterCharacter : public ACharacter
@@ -83,6 +85,22 @@ public:
 protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Camera")
 	USceneComponent* Pivot;
+
+	//MOVEMENT SOUNDS
+	UPROPERTY(EditDefaultsOnly, Category = "Sound|Movement")
+	USoundBase* JumpSound;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Sound|Movement")
+	USoundBase* DashSound;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Sound|Movement")
+	USoundBase* FootstepSound;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Sound|Movement")
+	float DistancePerFootstep = 250.f; //for pedometer implementation
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Sound|Movement")
+	UAudioComponent* SlideAudioComponent;
 
 
 protected:
@@ -173,6 +191,7 @@ protected:
 	UPROPERTY(VisibleInstanceOnly, BlueprintReadWrite, Category = "Weapon")
 	int32 CurrentWeaponIndex = 0; //start with primary weapon equipped
 
+
 public:
 	UPROPERTY(BlueprintReadOnly)
 	bool bIsAiming = false;
@@ -222,6 +241,9 @@ protected:
 	//Pause callback:(later shift this to player controller)
 	void TogglePause();
 
+	//jump fn override.
+	virtual void OnJumped_Implementation() override;
+
 private:
 	//State variables:
 	bool bIsDashing = false;
@@ -242,5 +264,8 @@ private:
 	float DefaultHalfHeight;
 	float CrouchedHalfHeight;
 	float TargetHalfHeight;
+
+	float AccumulatedStepDistance = 0.f; //for footstep sfx
+	void PlayFootstepSound();
 
 };

@@ -18,7 +18,8 @@ AHordeShooterCasing::AHordeShooterCasing()
 	CasingMesh->SetCollisionResponseToChannel(ECC_Camera, ECR_Ignore); //ignore camera collisions
 	CasingMesh->SetCollisionResponseToChannel(ECC_Pawn, ECR_Ignore); //ignore player collisions
 	CasingMesh->SetCollisionResponseToChannel(ECC_WorldDynamic, ECR_Ignore); 
-	CasingMesh->SetCollisionResponseToChannel(ECC_PhysicsBody, ECR_Ignore); 
+	CasingMesh->SetCollisionResponseToChannel(ECC_PhysicsBody, ECR_Ignore);
+	CasingMesh->SetCollisionResponseToChannel(ECC_Visibility, ECR_Ignore);
 	CasingMesh->SetCollisionResponseToChannel(ECC_WorldStatic, ECR_Block);
 
 	CasingMesh->SetSimulatePhysics(true);
