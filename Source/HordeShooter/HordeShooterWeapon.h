@@ -147,6 +147,15 @@ public:
 	bool bCanFire = true;
 
 
+	//ALT FIRE HELPER:
+	//decides if the weapon uses rightclick for aim or alt fire.
+	UPROPERTY(EditDefaultsOnly, Category = "Weapon Stats")
+	bool bCanAim = true;
+
+	//implementation empty in this class, child classes can override.
+	virtual void StartAltFire();
+	virtual void StopAltFire();
+
 protected:
 	//this fn performs raycast.
 	virtual void PerformFire();

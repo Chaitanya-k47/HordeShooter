@@ -49,8 +49,8 @@ void AHordeShooterWeapon::BeginPlay()
 	
 	if(!CurrentOwner && !bIsEquipped)
 	{
-		Mesh->SetVisibility(false);
-		Mesh->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+		SetActorHiddenInGame(true);
+		SetActorEnableCollision(false);
 	}
 }
 
@@ -397,6 +397,7 @@ void AHordeShooterWeapon::Reload()
 }
 
 
+
 void AHordeShooterWeapon::FinishReload()
 {
 	CurrentAmmo = MagSize;
@@ -407,7 +408,16 @@ void AHordeShooterWeapon::FinishReload()
 }
 
 
+void AHordeShooterWeapon::StartAltFire()
+{
+	//base implementation empty, child classes can override this for alt fire
+}
 
+
+void AHordeShooterWeapon::StopAltFire()
+{
+	//base implementation empty, child classes can override this for alt fire
+}
 
 
 

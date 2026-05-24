@@ -542,7 +542,7 @@ void AHordeShooterCharacter::EquipWeapon(AHordeShooterWeapon* NewWeapon)
 	//unequip/holster current weapon if we have one
 	if(CurrentEquippedWeapon)
 	{
-		CurrentEquippedWeapon->Mesh->SetVisibility(false);
+		CurrentEquippedWeapon->SetActorHiddenInGame(true);
 		CurrentEquippedWeapon->SetActorEnableCollision(false);
 		CurrentEquippedWeapon->bIsEquipped = false;
 		PreviousWeapon = CurrentEquippedWeapon;
@@ -555,7 +555,7 @@ void AHordeShooterCharacter::EquipWeapon(AHordeShooterWeapon* NewWeapon)
 		FName("ik_hand_gun")
 	);
 
-	CurrentEquippedWeapon->Mesh->SetVisibility(true);
+	CurrentEquippedWeapon->SetActorHiddenInGame(false);
 	CurrentEquippedWeapon->SetActorEnableCollision(true);
 	CurrentEquippedWeapon->bIsEquipped = true;
 
@@ -604,25 +604,44 @@ void AHordeShooterCharacter::SwitchWeapon(const FInputActionValue& Value)
 void AHordeShooterCharacter::StartAiming()
 {
 	if(!CurrentEquippedWeapon || bIsSliding || bIsDashing) return;
-	bIsAiming = true;
-
-	// Hide Crosshair
-	if (AHordeShooterPlayerController* PC = Cast<AHordeShooterPlayerController>(GetController()))
+	
+	if(CurrentEquippedWeapon->bCanAim)
 	{
-		if (PC->PlayerHUDWidget) PC->PlayerHUDWidget->ToggleCrosshair(false);
+		bIsAiming = true;
+
+		// Hide Crosshair
+		if (AHordeShooterPlayerController* PC = Cast<AHordeShooterPlayerController>(GetController()))
+		{
+			if (PC->PlayerHUDWidget) PC->PlayerHUDWidget->ToggleCrosshair(false);
+		}
+	}
+	else
+	{
+		//cant aim, hence try alt fire if available.
+		CurrentEquippedWeapon->StartAltFire();
 	}
 }
 
 void AHordeShooterCharacter::StopAiming()
 {
 	if(!CurrentEquippedWeapon || bIsSliding || bIsDashing) return;
-	bIsAiming = false;
-
-	// Show Crosshair
-	if (AHordeShooterPlayerController* PC = Cast<AHordeShooterPlayerController>(GetController()))
+	
+	if(CurrentEquippedWeapon->bCanAim)
 	{
-		if (PC->PlayerHUDWidget) PC->PlayerHUDWidget->ToggleCrosshair(true);
+		bIsAiming = false;
+
+		// Show Crosshair
+		if (AHordeShooterPlayerController* PC = Cast<AHordeShooterPlayerController>(GetController()))
+		{
+			if (PC->PlayerHUDWidget) PC->PlayerHUDWidget->ToggleCrosshair(true);
+		}
 	}
+	else
+	{
+		//stop alt fire if it was active.
+		CurrentEquippedWeapon->StopAltFire();
+	}
+	
 }
 
 void AHordeShooterCharacter::ReloadWeapon()
