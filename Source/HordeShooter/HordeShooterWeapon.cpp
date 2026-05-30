@@ -396,6 +396,14 @@ void AHordeShooterWeapon::Reload()
 	GetWorldTimerManager().SetTimer(ReloadTimerHandle, this, &AHordeShooterWeapon::FinishReload, DynamicReloadTime, false);
 }
 
+void AHordeShooterWeapon::OnHolstered()
+{
+	StopFire();
+
+	bIsReloading = false;
+	GetWorldTimerManager().ClearTimer(ReloadTimerHandle);
+}
+
 
 
 void AHordeShooterWeapon::FinishReload()

@@ -10,6 +10,7 @@
 #include "NiagaraComponent.h"
 #include "NiagaraFunctionLibrary.h"
 #include "Components/AudioComponent.h"
+#include "Components/DecalComponent.h"
 
 /*
     Decoupled logic for RayGun's primary fire(Beam):
@@ -53,6 +54,16 @@ ARayGun::ARayGun()
 	ChargeAudioComp->bAutoActivate = false;
 }
 
+void ARayGun::BeginPlay()
+{
+    Super::BeginPlay();
+    
+    if(Mesh)
+    {
+        DynamicWeaponMat = Mesh->CreateAndSetMaterialInstanceDynamic(0);
+    }
+}
+
 void ARayGun::Tick(float DeltaTime)
 {
     Super::Tick(DeltaTime);
@@ -83,39 +94,92 @@ void ARayGun::Tick(float DeltaTime)
             BeamImpactAudioComp->SetVolumeMultiplier(1.0f); //play
 
 			CurrentBeamTarget = Hit.GetActor(); //cache the target for the damage timer
+
+            //Scorchmark pedometer:
+            if(ScorchDecalMaterial)
+            {
+                float DistanceMoved = FVector::Dist(LastScorchLocation, Hit.Location);
+
+				//if we moved far enough (or if it's the very first frame we hit the wall)
+				if (DistanceMoved > ScorchSpawnDistance || LastScorchLocation.IsZero())
+				{
+                    // 2. RANDOMIZE ROTATION: Spin the decal like a roulette wheel
+					FRotator DecalRotation = Hit.ImpactNormal.Rotation();
+					DecalRotation.Roll = FMath::RandRange(0.0f, 360.0f); // Random spin!
+
+					// 3. RANDOMIZE SIZE: Slightly vary the size so the trail isn't a perfect uniform width
+					float RandomSize = FMath::RandRange(ScorchDecalSize * 0.7f, ScorchDecalSize * 1.3f);
+					FVector DecalScale = FVector(RandomSize, RandomSize, RandomSize);
+
+					UDecalComponent* DecalComp = UGameplayStatics::SpawnDecalAtLocation(
+						GetWorld(),
+						ScorchDecalMaterial,
+						FVector(ScorchDecalSize, ScorchDecalSize, ScorchDecalSize),
+						Hit.Location,
+						Hit.ImpactNormal.Rotation(),
+						ScorchLifespan
+					);
+
+                    if (DecalComp)
+					{
+						//parameters: StartDelay (0s), FadeDuration (ScorchLifespan), bDestroyOwnerAfterFade (false)
+						//this makes Decal Lifetime opcity go from 1.0 to 0.0 over the total lifespan
+						DecalComp->SetFadeOut(0.0f, ScorchLifespan, false);
+					}
+
+					//remember this spot for the next distance check
+					LastScorchLocation = Hit.Location;
+				}
+            }
 		}
 		else
 		{
 			BeamImpactComponent->SetWorldLocation(FVector(0,0,-10000)); //hide in the floor
-
             BeamImpactAudioComp->SetVolumeMultiplier(0.0f); //mute
-
 			CurrentBeamTarget = nullptr;
+
+            LastScorchLocation = FVector::ZeroVector; //reset scorch pedometer when not hitting anything
 		}
 	}
 
     //ALT FIRE charge tracker:
-    if(bIsCharging)
+    if(bIsCharging && bCanFire)
     {
         CurrentChargeTime += DeltaTime;
 
-        float ChargePercent = FMath::Clamp(CurrentChargeTime / ChargeTimeRequired, 0.0f, 1.0f); 
-
-        ChargeOrbComp->SetFloatParameter(FName("ChargeProgress"), ChargePercent);
-
-        if(UMaterialInstanceDynamic* DynamicMat = Cast<UMaterialInstanceDynamic>(Mesh->GetMaterial(0)))
+        float ChargeRatio = FMath::Clamp(CurrentChargeTime / ChargeTimeRequired, 0.0f, 1.0f);
+        if(ChargeOrbComp) 
         {
-			float GlowValue = FMath::Lerp(1.0f, 50.0f, ChargePercent); 
-			DynamicMat->SetScalarParameterValue(FName("GlowIntensity"), GlowValue);
+            ChargeOrbComp->SetFloatParameter(FName("OrbSize"), ChargeRatio*15.0f);
+            ChargeOrbComp->SetFloatParameter(FName("EmberSphereRadius"), ChargeRatio*10.5f); 
         }
     }
+    else if(bIsCharging && !bCanFire)
+    {
+        StopAltFire(); //stop charging if we lose the ability to fire
+    }
+    
+    //dynamic weapon glow:
+    // if(DynamicWeaponMat)
+    // {
+    //     float TargetGlow = 0.0f;
 
+	// 	if (bIsCharging && bCanFire)
+	// 	{
+	// 		float ChargePercent = FMath::Clamp(CurrentChargeTime / ChargeTimeRequired, 0.0f, 1.0f);
+	// 		TargetGlow = FMath::Lerp(0.0f, 50.0f, ChargePercent); // Target brightens as you charge
+	// 	}
+
+	// 	// Smoothly fade up when charging, and fade down to 0 when released!
+	// 	CurrentGlow = FMath::FInterpTo(CurrentGlow, TargetGlow, DeltaTime, 10.0f); 
+	// 	DynamicWeaponMat->SetScalarParameterValue(FName("GlowIntensity"), CurrentGlow);
+    // }
 
 }
 
 void ARayGun::StartFire()
 {
-    if (CurrentAmmo < BeamAmmoCostPerBeamTick || bIsReloading || bIsFiringBeam || bIsCharging) return;
+    if (CurrentAmmo < BeamAmmoCostPerBeamTick || bIsReloading || bIsFiringBeam || bIsCharging || !bCanFire) return;
    
     bIsFiringBeam = true;
 
@@ -165,6 +229,12 @@ void ARayGun::StopFire()
 
 void ARayGun::PerformBeamTick()
 {
+    if(bIsFiringBeam && !bCanFire)
+    {
+        StopFire();
+        return;
+    }
+
     if (CurrentAmmo < BeamAmmoCostPerBeamTick)
 	{
 		StopFire();
@@ -183,7 +253,7 @@ void ARayGun::PerformBeamTick()
 
 void ARayGun::StartAltFire()
 {
-    if(CurrentAmmo < AltFireAmmoCost || bIsReloading || bIsCharging || bIsFiringBeam) return;
+    if(CurrentAmmo < AltFireAmmoCost || bIsReloading || bIsCharging || bIsFiringBeam || !bCanFire) return;
 
     bIsCharging = true;
     CurrentChargeTime = 0.0f;
@@ -221,17 +291,29 @@ void ARayGun::StopAltFire()
         }   
     }
 
-    //Reset gun glow immediately
-	if (UMaterialInstanceDynamic* DynamicMat = Cast<UMaterialInstanceDynamic>(Mesh->GetMaterial(0)))
-	{
-		DynamicMat->SetScalarParameterValue(FName("GlowIntensity"), 1.0f);
-	}
-
-    if(CurrentChargeTime >= ChargeTimeRequired)
+    if(CurrentChargeTime >= ChargeTimeRequired && bCanFire)
     {
         PerformAltFire();
     }
     CurrentChargeTime = 0.0f; //reset charge time
+}
+
+void ARayGun::OnHolstered()
+{
+    Super::OnHolstered();
+
+	bIsCharging = false;
+	CurrentChargeTime = 0.0f; //reset to 0 so StopAltFire doesnt trigger the blast
+	
+	ChargeOrbComp->Deactivate();
+	ChargeAudioComp->FadeOut(0.1f, 0.0f);
+
+	//shut down the continuous beam if it was running
+	bIsFiringBeam = false;
+	CurrentBeamTarget = nullptr;
+	BeamComponent->Deactivate();
+	BeamImpactComponent->Deactivate();
+	GetWorldTimerManager().ClearTimer(BeamDamageTimerHandle);
 }
 
 
@@ -297,6 +379,19 @@ void ARayGun::PerformAltFire()
         }
     }
 
+    if (AltFireMuzzleFlash)
+	{
+		UNiagaraFunctionLibrary::SpawnSystemAttached(
+			AltFireMuzzleFlash, Mesh, FName("SOC_MuzzleFlash"), 
+			FVector::ZeroVector, FRotator::ZeroRotator, EAttachLocation::SnapToTarget, true
+		);
+	}
+
+    if(AltFireDischargeSound)
+    {
+        UGameplayStatics::PlaySoundAtLocation(GetWorld(), AltFireDischargeSound, Start);
+    }
+
     if(AoEBlastEffect)
     {
         UNiagaraFunctionLibrary::SpawnSystemAtLocation(
@@ -306,14 +401,6 @@ void ARayGun::PerformAltFire()
             FRotator::ZeroRotator
         );
     }
-
-    if (AltFireMuzzleFlash)
-	{
-		UNiagaraFunctionLibrary::SpawnSystemAttached(
-			AltFireMuzzleFlash, Mesh, FName("SOC_MuzzleFlash"), 
-			FVector::ZeroVector, FRotator::ZeroRotator, EAttachLocation::SnapToTarget, true
-		);
-	}
 
     if (AltFireBeamSystem)
 	{

@@ -570,10 +570,30 @@ void AHordeShooterCharacter::EquipWeapon(AHordeShooterWeapon* NewWeapon)
 			CurrentEquippedWeapon->OnAmmoChanged.AddDynamic(PC->PlayerHUDWidget, &UHordeShooterHUDWidget::UpdateAmmo);
 		}
 	}
+
+	float EquipTime = 0.15f; //fallback time
+	if (CurrentEquippedWeapon->ArmsEquipMontage && CharacterArms)
+	{
+		if (UAnimInstance* AnimInst = CharacterArms->GetAnimInstance())
+		{
+			AnimInst->Montage_Play(CurrentEquippedWeapon->ArmsEquipMontage);
+			EquipTime = CurrentEquippedWeapon->ArmsEquipMontage->GetPlayLength();
+		}
+	}
+
+	//wait for the Equip animation to finish before unlocking the weapon
+	GetWorldTimerManager().SetTimer(WeaponSwitchTimerHandle, this, &AHordeShooterCharacter::FinishEquipping, EquipTime, false);
+}
+
+void AHordeShooterCharacter::FinishEquipping()
+{
+	bIsSwitchingWeapons = false;
 }
 
 void AHordeShooterCharacter::FireWeapon()
 {
+	if(bIsSwitchingWeapons) return;
+
 	if(CurrentEquippedWeapon)
 	{
 		CurrentEquippedWeapon->StartFire();
@@ -582,7 +602,7 @@ void AHordeShooterCharacter::FireWeapon()
 
 void AHordeShooterCharacter::StopFiringWeapon()
 {
-	if(CurrentEquippedWeapon)
+	if(CurrentEquippedWeapon && !bIsSwitchingWeapons)
 	{
 		CurrentEquippedWeapon->StopFire();
 	}
@@ -590,20 +610,50 @@ void AHordeShooterCharacter::StopFiringWeapon()
 
 void AHordeShooterCharacter::SwitchWeapon(const FInputActionValue& Value)
 {
-	if(Inventory.Num() <= 1) return;
+	if(Inventory.Num() <= 1 || bIsSwitchingWeapons) return;
 	
 	const float ScrollValue = Value.Get<float>();
 	if(FMath::IsNearlyZero(ScrollValue)) return;
 
-	const int32 Direction = (ScrollValue > 0.f) ? 1 : -1;
-	CurrentWeaponIndex = (CurrentWeaponIndex + Direction + Inventory.Num()) % Inventory.Num();
+	//force player out of aiming or firing:
+	StopFiringWeapon();
+	if(bIsAiming) StopAiming();
 
-	EquipWeapon(Inventory[CurrentWeaponIndex]);
+	const int32 Direction = (ScrollValue > 0.f) ? 1 : -1;
+	int32 NextIndex = (CurrentWeaponIndex + Direction + Inventory.Num()) % Inventory.Num();
+	PendingWeapon = Inventory[NextIndex];
+
+	bIsSwitchingWeapons = true;
+	if (CurrentEquippedWeapon)
+	{
+		CurrentEquippedWeapon->OnHolstered();
+	}
+
+	//play holster anim
+	float HolsterTime = 0.15f; //fallback time just in case
+	if (CurrentEquippedWeapon && CurrentEquippedWeapon->ArmsHolsterMontage && CharacterArms)
+	{
+		if (UAnimInstance* AnimInst = CharacterArms->GetAnimInstance())
+		{
+			AnimInst->Montage_Play(CurrentEquippedWeapon->ArmsHolsterMontage);
+			HolsterTime = CurrentEquippedWeapon->ArmsHolsterMontage->GetPlayLength();
+		}
+	}
+
+	//start timer, wait for anim to finish
+	GetWorldTimerManager().SetTimer(WeaponSwitchTimerHandle, this, &AHordeShooterCharacter::PerformWeaponSwitch, HolsterTime, false);
 }
+
+void AHordeShooterCharacter::PerformWeaponSwitch()
+{
+	CurrentWeaponIndex = Inventory.Find(PendingWeapon);
+	EquipWeapon(PendingWeapon);
+}
+
 
 void AHordeShooterCharacter::StartAiming()
 {
-	if(!CurrentEquippedWeapon || bIsSliding || bIsDashing) return;
+	if(!CurrentEquippedWeapon || bIsSliding || bIsDashing || bIsSwitchingWeapons) return;
 	
 	if(CurrentEquippedWeapon->bCanAim)
 	{
@@ -646,6 +696,8 @@ void AHordeShooterCharacter::StopAiming()
 
 void AHordeShooterCharacter::ReloadWeapon()
 {
+	if (bIsSwitchingWeapons) return;
+
 	if(CurrentEquippedWeapon)
 	{
 		CurrentEquippedWeapon->Reload();

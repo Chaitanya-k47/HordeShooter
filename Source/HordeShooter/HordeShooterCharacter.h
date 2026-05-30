@@ -268,4 +268,15 @@ private:
 	float AccumulatedStepDistance = 0.f; //for footstep sfx
 	void PlayFootstepSound();
 
+	//weapon switch state machine variables:
+	bool bIsSwitchingWeapons = false;
+	FTimerHandle WeaponSwitchTimerHandle;
+
+	UPROPERTY()
+	AHordeShooterWeapon* PendingWeapon = nullptr; //used to store the weapon we want to equip while playing equip/holster animations
+
+	void PerformWeaponSwitch(); //happens after holster anim finishes.(updates backend and UI)
+	void FinishEquipping(); //happens after equip anim finishes.
+
+
 };

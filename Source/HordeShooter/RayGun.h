@@ -8,6 +8,7 @@
 
 class UNiagaraComponent;
 class UAudioComponent;
+class UMaterialInstanceDynamic;
 
 /**
  * 
@@ -28,9 +29,13 @@ public:
 	virtual void StopFire() override;
 	virtual void StartAltFire() override;
 	virtual void StopAltFire() override;
+	virtual void OnHolstered() override;
 
 
 protected:
+
+	virtual void BeginPlay() override;
+
 	//RAYGUN FX:
 	//primary fire(continuous beam):
 	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Components")
@@ -48,6 +53,17 @@ protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Components")
 	UAudioComponent* BeamImpactAudioComp;
 	
+	UPROPERTY(EditDefaultsOnly, Category = "Effects|Beam")
+	UMaterialInterface* ScorchDecalMaterial;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Effects|Beam")
+	float ScorchDecalSize = 12.0f;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Effects|Beam")
+	float ScorchSpawnDistance = 12.0f; //how far the laser must drag to spawn a new mark
+
+	UPROPERTY(EditDefaultsOnly, Category = "Effects|Beam")
+	float ScorchLifespan = 5.0f;
 
 	//alt fire (charged AOE blast):
 	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Components")
@@ -64,6 +80,9 @@ protected:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Components")
 	UAudioComponent* ChargeAudioComp;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Effects|Alt Fire")
+	USoundBase* AltFireDischargeSound;
 
 	UPROPERTY(EditDefaultsOnly, Category = "Effects|Alt Fire")
 	USoundBase* AltFireBlastSound;
@@ -119,4 +138,11 @@ private:
 	
 	float CurrentChargeTime = 0.f;
 	void PerformAltFire();
+
+	FVector LastScorchLocation = FVector::ZeroVector;
+
+	UPROPERTY()
+	UMaterialInstanceDynamic* DynamicWeaponMat;
+
+	float CurrentGlow = 0.0f;
 };

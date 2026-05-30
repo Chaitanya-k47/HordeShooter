@@ -93,6 +93,12 @@ public:
 	UAnimMontage* ArmsReloadMontage;
 
 	UPROPERTY(EditDefaultsOnly, Category = "Animations")
+	UAnimMontage* ArmsEquipMontage;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Animations")
+	UAnimMontage* ArmsHolsterMontage;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Animations")
 	UAnimMontage* WeaponFireMontage;
 
 	UPROPERTY(EditDefaultsOnly, Category = "Animations")
@@ -132,6 +138,7 @@ public:
 	virtual void StartFire();
 	virtual void StopFire();
 	virtual void Reload();
+	virtual void OnHolstered();
 
 
 	//RELOAD AND FIRE HELPERS:
