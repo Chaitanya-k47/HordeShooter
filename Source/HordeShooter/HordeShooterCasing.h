@@ -18,13 +18,12 @@ public:
 	// Sets default values for this actor's properties
 	AHordeShooterCasing();
 
-protected:
-	// Called when the game starts or when spawned
-	virtual void BeginPlay() override;
-
-public:	
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;
+
+	void ActivateAndEject(const FTransform& StartTransform, FVector ShooterVelocity);
+
+	void DeactivateCasing();
 
 
 protected:
@@ -37,6 +36,9 @@ protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Effects")
 	float ShellEjectionImpulse = 155.f;
 
+	// Called when the game starts or when spawned
+	virtual void BeginPlay() override;
+
 	UFUNCTION()
 	virtual void OnHit(
 		UPrimitiveComponent* HitComp, //self component that was hit
@@ -46,11 +48,9 @@ protected:
 		const FHitResult& Hit
 	);
 
-public:
-	void EjectCasing(FVector ShooterVelocity);
-
 	
 private:
 	bool bHasBounced = false;
+	FTimerHandle DeactivateTimerHandle; //timer to return to the pool
 	
 };

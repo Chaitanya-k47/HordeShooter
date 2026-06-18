@@ -145,4 +145,9 @@ private:
 	UMaterialInstanceDynamic* DynamicWeaponMat;
 
 	float CurrentGlow = 0.0f;
+
+	//alt fire cooldown
+	bool bCanAltFire = true;
+	FTimerHandle AltFireCooldownTimerHandle;
+	void ResetAltFireCooldown();
 };

@@ -174,6 +174,9 @@ protected:
 	UPROPERTY(EditDefaultsOnly, Category = "Effects|Smoke")
 	float SmokeMultiplier = 0.2f; //how mush smoke duration per bullet.
 
+	//CASING POOL config:
+	UPROPERTY(EditDefaultsOnly, Category = "Effects|Casings")
+	int32 CasingPoolSize = 45;
 
 private:
 
@@ -198,5 +201,10 @@ private:
 	FTimerHandle SmokeTimerHandle;
 	void EvaluateAndPlaySmoke();
 	void StopBarrelSmoke();
+
+	//casings pool array:
+	UPROPERTY()
+	TArray<AHordeShooterCasing*> CasingPool;
+	int32 CurrentCasingIndex = 0;
 
 };

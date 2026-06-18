@@ -253,7 +253,7 @@ void ARayGun::PerformBeamTick()
 
 void ARayGun::StartAltFire()
 {
-    if(CurrentAmmo < AltFireAmmoCost || bIsReloading || bIsCharging || bIsFiringBeam || !bCanFire) return;
+    if(CurrentAmmo < AltFireAmmoCost || bIsReloading || bIsCharging || bIsFiringBeam || !bCanFire || !bCanAltFire) return;
 
     bIsCharging = true;
     CurrentChargeTime = 0.0f;
@@ -326,14 +326,20 @@ void ARayGun::PerformAltFire()
     //broadcast
     OnAmmoChanged.Broadcast(CurrentAmmo, MagSize);
 
+    //alt fire cooldown:
+    float CooldownDuration = 0.0f;
     if(CurrentOwner && CurrentOwner->CharacterArms && ArmsDischargeMontage)
     {
         UAnimInstance* ArmsAnimInstance = CurrentOwner->CharacterArms->GetAnimInstance();
         if(ArmsAnimInstance)
         {
             ArmsAnimInstance->Montage_Play(ArmsDischargeMontage);
+            CooldownDuration += ArmsDischargeMontage->GetPlayLength();
         }   
     }
+
+    bCanAltFire = false;
+    GetWorldTimerManager().SetTimer(AltFireCooldownTimerHandle, this, &ARayGun::ResetAltFireCooldown, CooldownDuration, false);
 
     FVector Start = CurrentOwner->FirstPersonCamera->GetComponentLocation();
     FVector ForwardVector = CurrentOwner->FirstPersonCamera->GetForwardVector();
@@ -420,4 +426,9 @@ void ARayGun::PerformAltFire()
 	{
 		UGameplayStatics::PlaySoundAtLocation(GetWorld(), AltFireBlastSound, Start);
 	}
+}
+
+void ARayGun::ResetAltFireCooldown()
+{
+    bCanAltFire = true;
 }

@@ -46,6 +46,24 @@ void AHordeShooterWeapon::BeginPlay()
 	Super::BeginPlay();
 
 	CurrentAmmo = MagSize;
+
+	//Casings pool initialization:
+	if(CasingClass)
+	{
+		CasingPoolSize = MagSize;
+
+		FActorSpawnParameters SpawnParams;
+		SpawnParams.Owner = this;
+
+		for(int32 i=0; i<CasingPoolSize; i++)
+		{
+			AHordeShooterCasing* NewCasing = GetWorld()->SpawnActor<AHordeShooterCasing>(CasingClass, FVector::ZeroVector, FRotator::ZeroRotator, SpawnParams);
+			if(NewCasing)
+			{
+				CasingPool.Add(NewCasing);
+			}
+		}
+	}
 	
 	if(!CurrentOwner && !bIsEquipped)
 	{
@@ -177,39 +195,21 @@ void AHordeShooterWeapon::PerformFire()
 	}
 
 	//Casing Ejection:
-	if(CasingClass)
+	if(CasingPool.Num() > 0)
 	{
 		FTransform SocketTransform = Mesh->GetSocketTransform(FName("SOC_CasingEjection"));
 
-		FActorSpawnParameters SpawnParams;
-		SpawnParams.Owner = this;
-		SpawnParams.Instigator = CurrentOwner;
+		//get current casing from the pool.
+		AHordeShooterCasing* PooledCasing = CasingPool[CurrentCasingIndex];
 
-		//spawn the casings(its beginplay() handles the physics impulse.)
-		AHordeShooterCasing* SpawnedCasing = GetWorld()->SpawnActor<AHordeShooterCasing>(
-			CasingClass,
-			SocketTransform.GetLocation(),
-			SocketTransform.GetRotation().Rotator(),
-			SpawnParams
-		);
-
-		//Feed the player's ANTICIPATED velocity to the casing.
-		if(SpawnedCasing && CurrentOwner)
+		//activate and eject the casing:
+		if(PooledCasing && CurrentOwner)
 		{
-			// FVector InheritedVelocity = CurrentOwner->GetVelocity();
-			// FVector InputDir = CurrentOwner->GetLastMovementInputVector();
-
-			// if(CurrentOwner->GetCharacterMovement()->IsMovingOnGround() && !InputDir.IsNearlyZero())
-			// {
-			// 	float MaxSpeed = FMath::Max(CurrentOwner->GetCharacterMovement()->MaxWalkSpeed, InheritedVelocity.Size());
-			// 	InheritedVelocity = FVector(InputDir.X * MaxSpeed, InputDir.Y * MaxSpeed, InheritedVelocity.Z);
-			// }
-
-			// SpawnedCasing->EjectCasing(InheritedVelocity);
-
-			SpawnedCasing->EjectCasing(CurrentOwner->GetVelocity());
+			PooledCasing->ActivateAndEject(SocketTransform, CurrentOwner->GetVelocity());
 		}
 
+		//increment the casing index, and loop back to 0 if we reach the end of the pool(roundrobin)
+		CurrentCasingIndex = (CurrentCasingIndex + 1) % CasingPoolSize;
 	}
 
 	//Shoot Sound
