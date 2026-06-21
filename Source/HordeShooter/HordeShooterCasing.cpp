@@ -53,6 +53,7 @@ void AHordeShooterCasing::ActivateAndEject(const FTransform& StartTransform, FVe
 	CasingMesh->SetHiddenInGame(false);
 	CasingMesh->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
 	CasingMesh->SetSimulatePhysics(true);
+	CasingMesh->SetNotifyRigidBodyCollision(true);
 
 	//clear any old physics state:
 	CasingMesh->SetPhysicsLinearVelocity(FVector::ZeroVector);

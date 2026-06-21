@@ -400,12 +400,19 @@ void ARayGun::PerformAltFire()
 
     if(AoEBlastEffect)
     {
-        UNiagaraFunctionLibrary::SpawnSystemAtLocation(
+        float ScaleFactor = (AltFireRadius / 100.0f) * 1.2; //assuming the Niagara system is designed with a base radius of 100 units
+
+        UNiagaraComponent* BlastComp = UNiagaraFunctionLibrary::SpawnSystemAtLocation(
             GetWorld(),
             AoEBlastEffect,
             ImpactPoint,
             FRotator::ZeroRotator
         );
+
+        if(BlastComp)
+        {
+            BlastComp->SetFloatParameter(FName("BlastScale"), ScaleFactor);
+        }
     }
 
     if (AltFireBeamSystem)
