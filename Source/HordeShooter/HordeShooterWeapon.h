@@ -55,6 +55,9 @@ public:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Components")
 	UNiagaraComponent* BarrelSmokeComp;
+	
+	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Components")
+	UNiagaraComponent* MuzzleFlashComp;
 
 
 	//WEAPON STATS:
@@ -65,7 +68,7 @@ public:
 	float WeaponRange = 10000.f;
 	
 	UPROPERTY(EditDefaultsOnly, Category = "Weapon Stats")
-	float FireRate = 0.1f; //time in seconds between shots, 0.1: 10 shots per second
+	float FireRate = 0.097f; //time in seconds between shots, 0.1: 10 shots per second
 
 	UPROPERTY(EditDefaultsOnly, Category = "Weapon Stats")
 	bool bIsAutomatic = true;
@@ -106,9 +109,6 @@ public:
 
 
 	//FX:
-	UPROPERTY(EditDefaultsOnly, Category = "Effects")
-	UNiagaraSystem* MuzzleFlashSystem;
-
 	UPROPERTY(EditDefaultsOnly, Category = "Effects")
 	UNiagaraSystem* TracerSystem;
 

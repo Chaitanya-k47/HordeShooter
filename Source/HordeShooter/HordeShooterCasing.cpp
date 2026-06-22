@@ -86,9 +86,19 @@ void AHordeShooterCasing::OnHit(
 		const FHitResult& Hit
 	)
 {
-	if(!bHasBounced && ShellBounceSound)
+	if(!bHasBounced)
 	{
-		UGameplayStatics::PlaySoundAtLocation(GetWorld(), ShellBounceSound, GetActorLocation());
-		bHasBounced = true; //only play sound on first bounce
+		if(ShellBounceSound)
+		{
+			UGameplayStatics::PlaySoundAtLocation(GetWorld(), ShellBounceSound, GetActorLocation());
+		}
+		bHasBounced = true;//only play sound on first bounce
+
+		//we wait for 0.5 sec after collision before putting the casing to sleep.
+		FTimerHandle PhysicsSleepTimerHandle;
+		GetWorldTimerManager().SetTimer(PhysicsSleepTimerHandle, [this]()
+		{
+			if(CasingMesh) CasingMesh->SetSimulatePhysics(false);
+		}, 0.5f, false);
 	}
 }

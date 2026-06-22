@@ -37,6 +37,10 @@ AHordeShooterWeapon::AHordeShooterWeapon()
 	BarrelSmokeComp = CreateDefaultSubobject<UNiagaraComponent>(TEXT("BarrelSmokeComponent"));
 	BarrelSmokeComp->SetupAttachment(Mesh, FName("SOC_MuzzleFlash"));
 	BarrelSmokeComp->bAutoActivate = false; //keep it off by default
+	
+	MuzzleFlashComp = CreateDefaultSubobject<UNiagaraComponent>(TEXT("MuzzleFlashComponent"));
+	MuzzleFlashComp->SetupAttachment(Mesh, FName("SOC_MuzzleFlash"));
+	MuzzleFlashComp->bAutoActivate = false;
 }
 
 
@@ -181,17 +185,9 @@ void AHordeShooterWeapon::PerformFire()
 	}
 
 	//Muzzle Flash:
-	if (MuzzleFlashSystem)
+	if (MuzzleFlashComp->GetAsset())
 	{
-		UNiagaraFunctionLibrary::SpawnSystemAttached(
-			MuzzleFlashSystem,
-			Mesh, // The weapon mesh
-			FName("SOC_MuzzleFlash"), // The exact name of your socket!
-			FVector::ZeroVector,
-			FRotator::ZeroRotator,
-			EAttachLocation::SnapToTarget,
-			true // Auto-destroy when the particle finishes playing
-		);
+		MuzzleFlashComp->Activate(true);
 	}
 
 	//Casing Ejection:
