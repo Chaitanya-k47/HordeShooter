@@ -89,7 +89,7 @@ A highly versatile energy weapon utilizing complex state machines for continuous
 ---
 
 ## 🛠️ Tech Stack & Systems Summary
-* **Engine:** Unreal Engine 5.3+
+* **Engine:** Unreal Engine 5.6.1
 * **Language:** C++ / Blueprints (Hybrid Architecture)
 * **VFX/Shaders:** Niagara GPU/CPU Compute, Substrate Material Workflows.
 * **UI:** Event-Driven UMG. The HUD never ticks. Weapons broadcast Dynamic Multicast Delegates upon firing or reloading, pushing updates to the UI only when memory states explicitly change.
