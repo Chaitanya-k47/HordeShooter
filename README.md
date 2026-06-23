@@ -1,7 +1,7 @@
 # Horde Shooter (WIP)
 **A Fast-Paced, Highly Optimized FPS built in Unreal Engine 5 & C++**
 
-*Watch the full high-fidelity gameplay and audio showcase on YouTube: [https://youtu.be/DxT6JSBPCa8]*
+*Watch the full high-fidelity gameplay and audio showcase on YouTube: [Insert YouTube Link Here]*
 
 ## 📖 Overview
 **Horde Shooter** is a high-speed, retro-inspired Arena Shooter. The primary technical goal of this project is to build a highly scalable, AAA-standard C++ architecture capable of handling heavy combat logic, advanced movement mechanics, and intense visual effects while maintaining strict CPU/GPU performance budgets. 
@@ -14,9 +14,20 @@ The project strictly adheres to Object-Oriented principles, decoupling weapon lo
 
 Instead of relying solely on Unreal's default Character Movement Component, traversal mechanics are strictly state-driven, utilizing dynamic velocity overrides and procedural camera math.
 
+### Dynamic Pedometer (Walking)
+![Walk](media/Walk_Git_GIFs-Trim-ezgif.com-video-to-gif-converter.gif)
+
+* **The Optimization:** Replaced traditional timer-based or AnimNotify footstep audio with a C++ distance-tracking pedometer. By accumulating `Velocity.Size() * DeltaTime` per frame, the footstep audio frequency automatically scales to any movement speed (walking, running, or being slowed by an effect) with zero reliance on animation states.
+
 ### Multi-State Dashing (Ground & Air)
 ![Dash](media/Dash_Git_GIFs-Trim-ezgif.com-video-to-gif-converter.gif)
+
+<br>
+
 ![Double Dash](media/DoubleDash_Git_GIFs-Trim-ezgif.com-video-to-gif-converter.gif)
+
+<br>
+
 ![Air Dash](media/AirDash_Git_GIFs-Trim-ezgif.com-video-to-gif-converter.gif)
 
 * **The Logic:** Built a *Doom Eternal*-style dual-charge system. Dashing overrides the `Velocity` vector in `Tick` rather than using `LaunchCharacter` impulses. Ground dashes utilize `FVector::VectorPlaneProject` against the floor's normal to seamlessly glide up and down ramps without losing momentum or bouncing.
@@ -27,11 +38,6 @@ Instead of relying solely on Unreal's default Character Movement Component, trav
 
 * **The Logic:** Drops `GroundFriction` to 0.0 and applies a massive directional velocity boost. Slopes dynamically add to momentum by projecting world gravity onto the floor's angle.
 * **The Optimization:** Avoids Unreal's native 56-unit camera snap during `Crouch()` by mathematically interpolating the entire Skeletal Mesh's Z-offset in C++. This keeps the First-Person arms and camera perfectly smooth without relying on heavy Animation Blueprints or IK setups.
-
-### Dynamic Pedometer (Walking)
-![Walk](media/Walk_Git_GIFs-Trim-ezgif.com-video-to-gif-converter.gif)
-
-* **The Optimization:** Replaced traditional timer-based or AnimNotify footstep audio with a C++ distance-tracking pedometer. By accumulating `Velocity.Size() * DeltaTime` per frame, the footstep audio frequency automatically scales to any movement speed (walking, running, or being slowed by an effect) with zero reliance on animation states.
 
 ### Aggressive Jumping
 ![Double Jump](media/DoubleJump_Git_GIFs-Trim-ezgif.com-video-to-gif-converter.gif)
@@ -46,6 +52,9 @@ Weapons are entirely decoupled from the Player Character. The player simply dele
 
 ### Assault Rifle: Gunplay & Procedural Camera Lean
 ![AR Fire](media/AR_Fire_Git_GIFs-Trim-ezgif.com-video-to-gif-converter.gif)
+
+<br>
+
 ![AR ADS](media/AR_Fire_ADS_Git_GIFs-Trim-ezgif.com-video-to-gif-converter.gif)
 
 * **The Logic:** Hitscan architecture utilizing `LineTraceSingleByChannel`. Visual recoil uses Additive Animation Montages layered over movement swaying, allowing the player to reload and fire without breaking their running animations.
