@@ -19,8 +19,8 @@ AHordeShooterEnemy::AHordeShooterEnemy()
 	bUseControllerRotationRoll = false;
 
 	UCharacterMovementComponent* MoveComp = GetCharacterMovement();
-	MoveComp->bOrientRotationToMovement = true;
-	MoveComp->bUseControllerDesiredRotation = false;
+	MoveComp->bOrientRotationToMovement = false;
+	MoveComp->bUseControllerDesiredRotation = true;
 	MoveComp->RotationRate = FRotator(0.f, 600.f, 0.f);
 
 }
@@ -51,10 +51,6 @@ void AHordeShooterEnemy::ResetEnemy()
 	GetMesh()->SetSimulatePhysics(false);
 	GetMesh()->SetCollisionProfileName(TEXT("CharacterMesh"));
 	GetMesh()->AttachToComponent(GetCapsuleComponent(), FAttachmentTransformRules::SnapToTargetIncludingScale);
-	
-	// Adjust these vectors if your specific enemy mesh imports sideways/floating
-	GetMesh()->SetRelativeLocation(FVector(0, 0, -90));
-	GetMesh()->SetRelativeRotation(FRotator(0, -90, 0));
 }
 
 void AHordeShooterEnemy::ReactToHit(float DamageAmount, const FVector& HitDirection)
