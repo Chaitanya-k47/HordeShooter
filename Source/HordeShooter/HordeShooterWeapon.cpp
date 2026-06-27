@@ -16,6 +16,7 @@
 #include "Components/DecalComponent.h"
 #include "HordeShooterCasing.h"
 #include "GameFramework/CharacterMovementComponent.h"
+#include "DamageableInterface.h"
 
 
 // Sets default values
@@ -321,7 +322,15 @@ void AHordeShooterWeapon::PerformFire()
 		//apply damage:
 		if(HitResult.GetActor())
 		{
-			//TODO: DamagableInterface Logic here.
+			//DamagableInterface logic:
+			if(HitResult.GetActor()->GetClass()->ImplementsInterface(UDamageableInterface::StaticClass()))
+			{
+				IDamageableInterface* DamageableActor = Cast<IDamageableInterface>(HitResult.GetActor());
+				if(DamageableActor)
+				{
+					DamageableActor->ReactToHit(BaseDamage, ForwardVector);
+				}
+			}
 		}
 
 	}

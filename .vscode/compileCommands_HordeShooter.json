@@ -1,5 +1,21 @@
 [
 	{
+		"file": "D:\\Unreal Projects\\HordeShooter\\Source\\HordeShooter\\DamageableInterface.cpp",
+		"arguments": [
+			"C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.38.33130\\bin\\Hostx64\\x64\\cl.exe",
+			"@D:\\Unreal Projects\\HordeShooter\\.vscode\\compileCommands_HordeShooter\\HordeShooter.1.rsp"
+		],
+		"directory": "D:\\UE_5.6\\Engine\\Source"
+	},
+	{
+		"file": "D:\\Unreal Projects\\HordeShooter\\Source\\HordeShooter\\DamageableInterface.h",
+		"arguments": [
+			"C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.38.33130\\bin\\Hostx64\\x64\\cl.exe",
+			"@D:\\Unreal Projects\\HordeShooter\\.vscode\\compileCommands_HordeShooter\\HordeShooter.1.rsp"
+		],
+		"directory": "D:\\UE_5.6\\Engine\\Source"
+	},
+	{
 		"file": "D:\\Unreal Projects\\HordeShooter\\Source\\HordeShooter\\HordeShooter.Build.cs",
 		"arguments": [
 			"C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.38.33130\\bin\\Hostx64\\x64\\cl.exe",
@@ -129,6 +145,22 @@
 	},
 	{
 		"file": "D:\\Unreal Projects\\HordeShooter\\Source\\HordeShooter\\HordeShooterWeapon.h",
+		"arguments": [
+			"C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.38.33130\\bin\\Hostx64\\x64\\cl.exe",
+			"@D:\\Unreal Projects\\HordeShooter\\.vscode\\compileCommands_HordeShooter\\HordeShooter.1.rsp"
+		],
+		"directory": "D:\\UE_5.6\\Engine\\Source"
+	},
+	{
+		"file": "D:\\Unreal Projects\\HordeShooter\\Source\\HordeShooter\\RayGun.cpp",
+		"arguments": [
+			"C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.38.33130\\bin\\Hostx64\\x64\\cl.exe",
+			"@D:\\Unreal Projects\\HordeShooter\\.vscode\\compileCommands_HordeShooter\\HordeShooter.1.rsp"
+		],
+		"directory": "D:\\UE_5.6\\Engine\\Source"
+	},
+	{
+		"file": "D:\\Unreal Projects\\HordeShooter\\Source\\HordeShooter\\RayGun.h",
 		"arguments": [
 			"C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.38.33130\\bin\\Hostx64\\x64\\cl.exe",
 			"@D:\\Unreal Projects\\HordeShooter\\.vscode\\compileCommands_HordeShooter\\HordeShooter.1.rsp"

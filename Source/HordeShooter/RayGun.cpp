@@ -11,6 +11,7 @@
 #include "NiagaraFunctionLibrary.h"
 #include "Components/AudioComponent.h"
 #include "Components/DecalComponent.h"
+#include "DamageableInterface.h"
 
 /*
     Decoupled logic for RayGun's primary fire(Beam):
@@ -245,10 +246,18 @@ void ARayGun::PerformBeamTick()
     CurrentAmmo -= BeamAmmoCostPerBeamTick;
 	OnAmmoChanged.Broadcast(CurrentAmmo, MagSize);
 
-    if(CurrentBeamTarget)
-    {
-        //TODO: apply damage to CurrentBeamTarget using BeamDamagePerBeamTick and the damage interface.
-    }
+    if (CurrentBeamTarget && CurrentOwner && CurrentOwner->FirstPersonCamera)
+	{
+		if (CurrentBeamTarget->GetClass()->ImplementsInterface(UDamageableInterface::StaticClass()))
+		{
+			IDamageableInterface* DamageableActor = Cast<IDamageableInterface>(CurrentBeamTarget);
+			if (DamageableActor)
+			{
+				FVector PushDirection = CurrentOwner->FirstPersonCamera->GetForwardVector();
+				DamageableActor->ReactToHit(BeamDamagePerBeamTick, PushDirection);
+			}
+		}
+	}
 }
 
 void ARayGun::StartAltFire()
@@ -377,10 +386,17 @@ void ARayGun::PerformAltFire()
     {
         for(const FOverlapResult& Overlap : OverlapResults)
         {
+            //damageableinterface implementation
             AActor* HitActor = Overlap.GetActor();
-            if(HitActor)
+            if(HitActor && HitActor->GetClass()->ImplementsInterface(UDamageableInterface::StaticClass()))
             {
-                //TODO: call Damage interface
+                IDamageableInterface* DamageableActor = Cast<IDamageableInterface>(HitActor);
+                if(DamageableActor)
+                {   
+                    //push the ememies out from the centre of the blast
+                    FVector PushDirection = (HitActor->GetActorLocation() - ImpactPoint).GetSafeNormal();
+                    DamageableActor->ReactToHit(AltFireDamage, PushDirection);
+                }
             }
         }
     }
