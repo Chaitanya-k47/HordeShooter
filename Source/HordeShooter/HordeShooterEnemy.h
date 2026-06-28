@@ -8,6 +8,10 @@
 
 #include "HordeShooterEnemy.generated.h"
 
+class UAnimMontage;
+
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnAttackFinishedSignature);
+
 UCLASS()
 class HORDESHOOTER_API AHordeShooterEnemy : public ACharacter, public IDamageableInterface
 {
@@ -17,20 +21,66 @@ public:
 	// Sets default values for this character's properties
 	AHordeShooterEnemy();
 
+	// Called every frame
+	// virtual void Tick(float DeltaTime) override;
+
+
+	//STATS:
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat|Stats")
+	float MaxHealth = 100.f;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Combat|Stats")
+	float CurrentHealth;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat|AI")
+	float AttackRange = 150.f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat|AI")
+	float AttackDamage = 10.f;
+  
+
+	//Action Montages (C++):
+	UPROPERTY(EditDefaultsOnly, Category = "Combat|Animation")
+	TArray<UAnimMontage*> AttackMontages;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Combat|Animation")
+	TArray<UAnimMontage*> HitReactionMontages;
+
+
+	//STATE flags (read by AI controller):
+	bool bIsAttacking = false;
+	bool bIsStunned = false;
+	bool bIsDead = false;
+
+
+	//COMBAT ACTIONS:
+	void PerformMeleeAttack();
+	void PlayHitReaction();
+
+
+	//broadcast to AI controller when attack anim finishes.
+	FOnAttackFinishedSignature OnAttackFinished;
+
+
+	//POOLING SYSTEM:
+	// Called to revive the enemy without spawning a new one
+	virtual void ResetEnemy();
+
+
 protected:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
 
-	//STATS:
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats")
-	float MaxHealth = 100.f;
-
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Stats")
-	float CurrentHealth;
 
 	//DAMAGE INTERFACE:
 	virtual void ReactToHit(float DamageAmount, const FVector& HitDirection) override;
 	virtual void Die();
+
+
+	//Callback when c++ action montages finishes
+	UFUNCTION()
+	void OnMontageEnded(UAnimMontage* Montage, bool bInterrupted); 
+
 
 	//HYBRID BP HOOKS for ENEMY VARIENTS:
 	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Combat")
@@ -41,16 +91,8 @@ protected:
 	void OnDeath(); 
 	virtual void OnDeath_Implementation(); //default c++ implementation.
 
-public:	
-	// Called every frame
-	virtual void Tick(float DeltaTime) override;
-
-	//POOLING SYSTEM:
-	// Called to revive the enemy without spawning a new one
-	virtual void ResetEnemy();
-
 
 private:
-	bool bIsDead = false;
 	FVector LastHitDirection;
+
 };

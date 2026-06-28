@@ -5,6 +5,7 @@
 
 #include "Components/CapsuleComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
+#include "Animation/AnimInstance.h"
 
 // Sets default values
 AHordeShooterEnemy::AHordeShooterEnemy()
@@ -30,28 +31,79 @@ void AHordeShooterEnemy::BeginPlay()
 {
 	Super::BeginPlay();
 	ResetEnemy();
+
+	if(GetMesh() && GetMesh()->GetAnimInstance())
+	{
+		GetMesh()->GetAnimInstance()->OnMontageEnded.AddDynamic(this, &AHordeShooterEnemy::OnMontageEnded);
+	}
 	
 }
 
 // Called every frame
-void AHordeShooterEnemy::Tick(float DeltaTime)
-{
-	Super::Tick(DeltaTime);
+// void AHordeShooterEnemy::Tick(float DeltaTime)
+// {
+// 	Super::Tick(DeltaTime);
 
-}
+// }
 
 void AHordeShooterEnemy::ResetEnemy()
 {
 	CurrentHealth = MaxHealth;
 	bIsDead = false;
+	bIsStunned = false;
+	bIsAttacking = false;
 	
 	// Reset Physics & Collision for when we pull them from the Object Pool
 	GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
+	GetCapsuleComponent()->SetCollisionResponseToChannel(ECC_Visibility, ECR_Ignore);
 	
 	GetMesh()->SetSimulatePhysics(false);
-	GetMesh()->SetCollisionProfileName(TEXT("CharacterMesh"));
+	GetMesh()->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
+	GetMesh()->SetCollisionResponseToChannel(ECC_Visibility, ECR_Block);
+
 	GetMesh()->AttachToComponent(GetCapsuleComponent(), FAttachmentTransformRules::SnapToTargetIncludingScale);
 }
+
+//COMBAT ACTIONS:
+void AHordeShooterEnemy::PerformMeleeAttack()
+{
+	if(bIsAttacking || bIsStunned || bIsDead || AttackMontages.Num() == 0) return;
+
+	bIsAttacking = true;
+	int32 RandomIndex = FMath::RandRange(0, AttackMontages.Num() - 1);
+
+	if(GetMesh()->GetAnimInstance())
+	{
+		GetMesh()->GetAnimInstance()->Montage_Play(AttackMontages[RandomIndex]);
+	}
+}
+
+void AHordeShooterEnemy::PlayHitReaction()
+{
+	if(bIsDead || HitReactionMontages.Num() == 0) return;
+
+	bIsStunned = true;
+	int32 RandomIndex = FMath::RandRange(0, HitReactionMontages.Num() - 1);
+	
+	if(GetMesh()->GetAnimInstance())
+	{
+		GetMesh()->GetAnimInstance()->Montage_Play(HitReactionMontages[RandomIndex]);
+	}
+}
+
+void AHordeShooterEnemy::OnMontageEnded(UAnimMontage* Montage, bool bInterrupted)
+{
+	if(AttackMontages.Contains(Montage))
+	{
+		bIsAttacking = false;
+		OnAttackFinished.Broadcast(); //tell AI controller that the attack is finished.
+	}
+	else if(HitReactionMontages.Contains(Montage))
+	{
+		bIsStunned = false;
+	}
+}
+
 
 void AHordeShooterEnemy::ReactToHit(float DamageAmount, const FVector& HitDirection)
 {
@@ -68,6 +120,10 @@ void AHordeShooterEnemy::ReactToHit(float DamageAmount, const FVector& HitDirect
 	if(CurrentHealth <= 0.f)
 	{
 		Die();
+	}
+	else
+	{
+		PlayHitReaction();
 	}
 }
 
