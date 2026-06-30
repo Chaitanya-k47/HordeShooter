@@ -254,7 +254,8 @@ void ARayGun::PerformBeamTick()
 			if (DamageableActor)
 			{
 				FVector PushDirection = CurrentOwner->FirstPersonCamera->GetForwardVector();
-				DamageableActor->ReactToHit(BeamDamagePerBeamTick, PushDirection);
+                FVector FinalImpulse = PushDirection * (ShotImpulse * 0.2f);
+				DamageableActor->ReactToHit(BeamDamagePerBeamTick, FinalImpulse);
 			}
 		}
 	}
@@ -395,7 +396,8 @@ void ARayGun::PerformAltFire()
                 {   
                     //push the ememies out from the centre of the blast
                     FVector PushDirection = (HitActor->GetActorLocation() - ImpactPoint).GetSafeNormal();
-                    DamageableActor->ReactToHit(AltFireDamage, PushDirection);
+                    FVector FinalImpulse = PushDirection * AltFireImpulse;
+                    DamageableActor->ReactToHit(AltFireDamage, FinalImpulse);
                 }
             }
         }

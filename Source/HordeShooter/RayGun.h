@@ -112,6 +112,9 @@ protected:
 	UPROPERTY(EditDefaultsOnly, Category = "Weapon Stats|Alt Fire")
 	int32 AltFireAmmoCost = 5;
 
+	UPROPERTY(EditDefaultsOnly, Category = "Weapon Stats|Alt Fire")
+	float AltFireImpulse = 20000.0f;
+
 
 	//RAYGUN ANIMATIONS:
 	UPROPERTY(EditDefaultsOnly, Category = "Animations|Beam")

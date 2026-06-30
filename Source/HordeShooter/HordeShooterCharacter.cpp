@@ -704,7 +704,7 @@ void AHordeShooterCharacter::ReloadWeapon()
 	}
 }
 
-bool AHordeShooterCharacter::IsCloseToWall() const
+bool AHordeShooterCharacter::IsCloseToWall()
 {
 	if(!FirstPersonCamera) return false;
 
@@ -725,13 +725,11 @@ bool AHordeShooterCharacter::IsCloseToWall() const
 	);
 
 	//DrawDebugLine(GetWorld(), Start, End, bHit ? FColor::Red : FColor::Green, false, -1.0f, 0, 2.0f);
-	if(bHit)
-	{
-		if(CurrentEquippedWeapon) CurrentEquippedWeapon->bCanFire = false;
-	}
+	if(bHit && HitResult.GetActor() && HitResult.GetActor()->IsA(APawn::StaticClass())) return false; //ignore pawns, only check for walls
+	else if(bHit && CurrentEquippedWeapon) CurrentEquippedWeapon->bIsLowered = true;
 	else
 	{
-		if(CurrentEquippedWeapon) CurrentEquippedWeapon->bCanFire = true;
+		if(CurrentEquippedWeapon) CurrentEquippedWeapon->bIsLowered = false;
 	}
 
 	return bHit;

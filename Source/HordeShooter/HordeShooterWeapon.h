@@ -153,6 +153,8 @@ public:
 
 	bool bCanFire = true;
 
+	bool bIsLowered = false;
+
 
 	//ALT FIRE HELPER:
 	//decides if the weapon uses rightclick for aim or alt fire.

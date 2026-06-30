@@ -207,7 +207,7 @@ protected:
 
 public:
 	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Weapon")
-	bool IsCloseToWall() const;
+	bool IsCloseToWall();
 
 protected:
 	//Input callbacks:

@@ -139,7 +139,7 @@ void AHordeShooterEnemy::Die()
 
 	// Temporary: Delete after 3 seconds. 
 	// We will replace this later when we build the Horde Manager Object Pool!
-	SetLifeSpan(3.0f);
+	SetLifeSpan(8.0f);
 }
 
 void AHordeShooterEnemy::OnHit_Implementation(float DamageAmount)
@@ -157,7 +157,6 @@ void AHordeShooterEnemy::OnDeath_Implementation()
 	GetMesh()->SetSimulatePhysics(true);
 
 	// 3. Add directional shot impulse! (Makes them fly backward from shotguns/lasers)
-	float ShotForce = 5000.f; // Adjust this for heavier/lighter flying corpses
-	GetMesh()->AddImpulse(LastHitDirection * ShotForce, NAME_None, true);
+	GetMesh()->AddImpulse(LastHitDirection, NAME_None, true);
 }
 

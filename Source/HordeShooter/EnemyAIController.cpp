@@ -50,35 +50,41 @@ void AEnemyAIController::UpdateAILogic()
 	}
 
     //priority Override: If getting hit/stunned or currently attacking, don't change states
-	if (ControlledEnemy->bIsStunned || ControlledEnemy->bIsAttacking)
+	if (ControlledEnemy->bIsStunned)
 	{
-		StopMovement();
 		return;
 	}
 
-    //STATE: Chasing
+    float DistanceToPlayer = FVector::Dist(ControlledEnemy->GetActorLocation(), PlayerTarget->GetActorLocation());
+    
+    GEngine->AddOnScreenDebugMessage(-1, 0.2f, FColor::Green, FString::Printf(TEXT("Distance to Player: %f"), DistanceToPlayer));
+    GEngine->AddOnScreenDebugMessage(-1, 0.2f, FColor::Green, FString::Printf(TEXT("AI State: %s"), *UEnum::GetValueAsString(CurrentState)));
+    
+   //STATE: Chasing
     if(CurrentState == EAIState::Chasing)
     {
-        MoveToActor(PlayerTarget, ControlledEnemy->AttackRange);
-
-        float DistanceToPlayer = FVector::Dist(ControlledEnemy->GetActorLocation(), PlayerTarget->GetActorLocation());
+        MoveToActor(PlayerTarget, 10.f);
 
         //check LOS if in range:
         if(DistanceToPlayer <= ControlledEnemy->AttackRange && CheckLineOfSight())
         {
+            //transition to attack
+            ControlledEnemy->PerformMeleeAttack();
             CurrentState = EAIState::Attacking;
+            SetFocus(PlayerTarget);
         }
     }
 
     //STATE: Attacking
     else if(CurrentState == EAIState::Attacking)
     {
-        StopMovement();       // Plant feet
+        MoveToActor(PlayerTarget, 10.f);
 		SetFocus(PlayerTarget); // Lock eyes on player
 		
 		//fire the C++ Montage
-		ControlledEnemy->PerformMeleeAttack();
+		// ControlledEnemy->PerformMeleeAttack();
     }
+    
 }
 
 bool AEnemyAIController::CheckLineOfSight()

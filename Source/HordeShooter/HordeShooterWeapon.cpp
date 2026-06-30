@@ -88,7 +88,7 @@ void AHordeShooterWeapon::Tick(float DeltaTime)
 
 void AHordeShooterWeapon::StartFire()
 {
-	if(!bIsEquipped || !bCanFire || bIsReloading) return;
+	if(!bIsEquipped || !bCanFire || bIsReloading || bIsLowered) return;
 
 	if(CurrentAmmo<=0)
 	{
@@ -144,7 +144,7 @@ void AHordeShooterWeapon::PerformFire()
 		return;
 	}
 
-	if(!bCanFire)
+	if(!bCanFire || bIsReloading || bIsLowered)
 	{
 		StopFire();
 		return;
@@ -328,7 +328,8 @@ void AHordeShooterWeapon::PerformFire()
 				IDamageableInterface* DamageableActor = Cast<IDamageableInterface>(HitResult.GetActor());
 				if(DamageableActor)
 				{
-					DamageableActor->ReactToHit(BaseDamage, ForwardVector);
+					FVector FinalImpulse = ForwardVector * ShotImpulse;
+					DamageableActor->ReactToHit(BaseDamage, FinalImpulse);
 				}
 			}
 		}
