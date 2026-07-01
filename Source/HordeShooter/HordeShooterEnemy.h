@@ -33,7 +33,7 @@ public:
 	float CurrentHealth;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat|AI")
-	float AttackRange = 150.f;
+	float AttackRange = 300.f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat|AI")
 	float AttackDamage = 10.f;
@@ -73,7 +73,7 @@ protected:
 
 
 	//DAMAGE INTERFACE:
-	virtual void ReactToHit(float DamageAmount, const FVector& HitDirection) override;
+	virtual void ReactToHit(float DamageAmount, const FVector& HitImpulse, FName HitBoneName) override;
 	virtual void Die();
 
 
@@ -93,6 +93,7 @@ protected:
 
 
 private:
-	FVector LastHitDirection;
+	FVector LastHitImpulse;
+	FName LastHitBoneName; 
 
 };

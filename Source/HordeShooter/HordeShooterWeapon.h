@@ -74,7 +74,7 @@ public:
 	bool bIsAutomatic = true;
 
 	UPROPERTY(EditDefaultsOnly, Category = "Weapon Stats")
-	float ShotImpulse = 5000.f; //force applied to enemies on kill or hit.
+	float ShotImpulse = 8000.f; //force applied to enemies on kill or hit.
 
 
 	//AMMO SYSTEM:

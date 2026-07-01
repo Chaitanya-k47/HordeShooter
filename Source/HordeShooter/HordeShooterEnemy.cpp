@@ -20,8 +20,8 @@ AHordeShooterEnemy::AHordeShooterEnemy()
 	bUseControllerRotationRoll = false;
 
 	UCharacterMovementComponent* MoveComp = GetCharacterMovement();
-	MoveComp->bOrientRotationToMovement = false;
-	MoveComp->bUseControllerDesiredRotation = true;
+	MoveComp->bOrientRotationToMovement = true;
+	MoveComp->bUseControllerDesiredRotation = false;
 	MoveComp->RotationRate = FRotator(0.f, 600.f, 0.f);
 
 }
@@ -52,6 +52,7 @@ void AHordeShooterEnemy::ResetEnemy()
 	bIsDead = false;
 	bIsStunned = false;
 	bIsAttacking = false;
+	GetMesh()->bPauseAnims = false;
 	
 	// Reset Physics & Collision for when we pull them from the Object Pool
 	GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
@@ -105,12 +106,13 @@ void AHordeShooterEnemy::OnMontageEnded(UAnimMontage* Montage, bool bInterrupted
 }
 
 
-void AHordeShooterEnemy::ReactToHit(float DamageAmount, const FVector& HitDirection)
+void AHordeShooterEnemy::ReactToHit(float DamageAmount, const FVector& HitImpulse, FName HitBoneName)
 {
 	if(bIsDead) return;
 	
 	CurrentHealth -= DamageAmount;
-	LastHitDirection = HitDirection;
+	LastHitImpulse = HitImpulse;
+	LastHitBoneName = HitBoneName;
 	
 	// Print to screen for easy debugging
 	if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 2.0f, FColor::Yellow, FString::Printf(TEXT("Enemy Hit! Health: %f"), CurrentHealth));
@@ -156,7 +158,9 @@ void AHordeShooterEnemy::OnDeath_Implementation()
 	GetMesh()->SetCollisionProfileName(TEXT("Ragdoll"));
 	GetMesh()->SetSimulatePhysics(true);
 
-	// 3. Add directional shot impulse! (Makes them fly backward from shotguns/lasers)
-	GetMesh()->AddImpulse(LastHitDirection, NAME_None, true);
+	GetMesh()->bPauseAnims = true;
+
+	//Add directional shot impulse!
+	GetMesh()->AddImpulse(LastHitImpulse, LastHitBoneName, true);
 }
 

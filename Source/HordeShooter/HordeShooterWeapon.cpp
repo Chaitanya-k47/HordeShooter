@@ -329,7 +329,7 @@ void AHordeShooterWeapon::PerformFire()
 				if(DamageableActor)
 				{
 					FVector FinalImpulse = ForwardVector * ShotImpulse;
-					DamageableActor->ReactToHit(BaseDamage, FinalImpulse);
+					DamageableActor->ReactToHit(BaseDamage, FinalImpulse, HitResult.BoneName);
 				}
 			}
 		}

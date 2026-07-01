@@ -6,6 +6,8 @@
 #include "HordeShooterEnemy.h"
 #include "Kismet/GameplayStatics.h"
 #include "Navigation/PathFollowingComponent.h"
+#include "GameFramework/CharacterMovementComponent.h"
+#include "NavigationSystem.h"
 
 AEnemyAIController::AEnemyAIController()
 {
@@ -49,43 +51,43 @@ void AEnemyAIController::UpdateAILogic()
 		return;
 	}
 
-    //priority Override: If getting hit/stunned or currently attacking, don't change states
-	if (ControlledEnemy->bIsStunned)
-	{
-		return;
-	}
-
     float DistanceToPlayer = FVector::Dist(ControlledEnemy->GetActorLocation(), PlayerTarget->GetActorLocation());
     
     GEngine->AddOnScreenDebugMessage(-1, 0.2f, FColor::Green, FString::Printf(TEXT("Distance to Player: %f"), DistanceToPlayer));
     GEngine->AddOnScreenDebugMessage(-1, 0.2f, FColor::Green, FString::Printf(TEXT("AI State: %s"), *UEnum::GetValueAsString(CurrentState)));
     
    //STATE: Chasing
+   //MoveToActor() if on nav mesh, if not then dont call MoveToActor() as it conflicts with MoveToLocation() and the enemy slides slowly. 
     if(CurrentState == EAIState::Chasing)
     {
-        MoveToActor(PlayerTarget, 10.f);
+        ControlledEnemy->GetCharacterMovement()->bOrientRotationToMovement = true;
+        ControlledEnemy->GetCharacterMovement()->bUseControllerDesiredRotation = false;
+        ClearFocus(EAIFocusPriority::Gameplay); //stop looking at the player while chasing.
+
+        MoveToPlayer();
 
         //check LOS if in range:
         if(DistanceToPlayer <= ControlledEnemy->AttackRange && CheckLineOfSight())
         {
             //transition to attack
-            ControlledEnemy->PerformMeleeAttack();
             CurrentState = EAIState::Attacking;
-            SetFocus(PlayerTarget);
         }
     }
 
     //STATE: Attacking
     else if(CurrentState == EAIState::Attacking)
     {
-        MoveToActor(PlayerTarget, 10.f);
-		SetFocus(PlayerTarget); // Lock eyes on player
-		
-		//fire the C++ Montage
-		// ControlledEnemy->PerformMeleeAttack();
+        ControlledEnemy->GetCharacterMovement()->bOrientRotationToMovement = false;
+        ControlledEnemy->GetCharacterMovement()->bUseControllerDesiredRotation = true;
+        SetFocus(PlayerTarget); 
+
+        ControlledEnemy->PerformMeleeAttack();
+
+        MoveToPlayer();
     }
     
 }
+
 
 bool AEnemyAIController::CheckLineOfSight()
 {
@@ -111,6 +113,39 @@ void AEnemyAIController::OnEnemyAttackFinished()
 	//montage ended! Resume chasing.
 	CurrentState = EAIState::Chasing;
 	ClearFocus(EAIFocusPriority::Gameplay); //unlock the neck so NavMesh can steer again
+}
+
+void AEnemyAIController::MoveToPlayer()
+{
+    UNavigationSystemV1* NavSys = UNavigationSystemV1::GetCurrent(GetWorld());
+    if(NavSys)
+    {
+        //Check if the player is on the nav mesh.
+        //logic: if the 50x50x50 box(extent of projection) around the player overlaps with the nave mesh at any point, then bIsPlayerOnNavMesh = true. 
+        FNavLocation NavCheck;
+        bool bIsPlayerOnNavMesh = NavSys->ProjectPointToNavigation(PlayerTarget->GetActorLocation(), NavCheck, FVector(50.f, 50.f, 50.f));
+
+        if (bIsPlayerOnNavMesh)
+        {   
+            //call MoveToActor
+            MoveToActor(PlayerTarget, 100.f);
+            LastEdgeLocation = FVector::ZeroVector; // Reset our edge tracker
+        }
+        else
+        {
+            //player is off the mesh
+            //donot call MoveToActor use MoveToLocation().
+            if (NavSys->ProjectPointToNavigation(PlayerTarget->GetActorLocation(), NavCheck, FVector(2000.f, 2000.f, 2000.f)))
+            {
+                //only update the path if the player moved significantly along the edge
+                if (FVector::Dist(LastEdgeLocation, NavCheck.Location) > 50.0f)
+                {
+                    LastEdgeLocation = NavCheck.Location;
+                    MoveToLocation(LastEdgeLocation, 100.f);
+                }
+            }
+        }
+    }
 }
 
 void AEnemyAIController::BeginPlay()

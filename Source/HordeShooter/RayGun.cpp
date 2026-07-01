@@ -95,6 +95,7 @@ void ARayGun::Tick(float DeltaTime)
             BeamImpactAudioComp->SetVolumeMultiplier(1.0f); //play
 
 			CurrentBeamTarget = Hit.GetActor(); //cache the target for the damage timer
+            CurrentBeamHitBone = Hit.BoneName; //cache the bone that is being hit
 
             //Scorchmark pedometer:
             if(ScorchDecalMaterial)
@@ -255,7 +256,7 @@ void ARayGun::PerformBeamTick()
 			{
 				FVector PushDirection = CurrentOwner->FirstPersonCamera->GetForwardVector();
                 FVector FinalImpulse = PushDirection * (ShotImpulse * 0.2f);
-				DamageableActor->ReactToHit(BeamDamagePerBeamTick, FinalImpulse);
+				DamageableActor->ReactToHit(BeamDamagePerBeamTick, FinalImpulse, CurrentBeamHitBone);
 			}
 		}
 	}
@@ -397,7 +398,7 @@ void ARayGun::PerformAltFire()
                     //push the ememies out from the centre of the blast
                     FVector PushDirection = (HitActor->GetActorLocation() - ImpactPoint).GetSafeNormal();
                     FVector FinalImpulse = PushDirection * AltFireImpulse;
-                    DamageableActor->ReactToHit(AltFireDamage, FinalImpulse);
+                    DamageableActor->ReactToHit(AltFireDamage, FinalImpulse, NAME_None);
                 }
             }
         }

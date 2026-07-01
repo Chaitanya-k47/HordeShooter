@@ -58,5 +58,8 @@ private:
 
 	UFUNCTION()
 	void OnEnemyAttackFinished();
+
+	void MoveToPlayer();
+	FVector LastEdgeLocation = FVector::ZeroVector;
 	
 };

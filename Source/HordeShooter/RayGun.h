@@ -137,6 +137,8 @@ private:
 	UPROPERTY()
 	AActor* CurrentBeamTarget = nullptr; //the actor currently being hit by the beam
 
+	FName CurrentBeamHitBone;
+
 	void PerformBeamTick();
 	
 	float CurrentChargeTime = 0.f;

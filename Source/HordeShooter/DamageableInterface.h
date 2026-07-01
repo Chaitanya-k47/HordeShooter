@@ -26,6 +26,6 @@ public:
 	//"= 0" means this is a pure virtual function.
 	//any class that implements this interface must define this function.
 	//hence this class is abstract
-	virtual void ReactToHit(float DamageAmount, const FVector& HitImpulse) = 0;
+	virtual void ReactToHit(float DamageAmount, const FVector& HitImpulse, FName HitBoneName) = 0;
 
 };
