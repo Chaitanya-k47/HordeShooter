@@ -5,6 +5,8 @@
 #include "CoreMinimal.h"
 #include "GameFramework/Character.h"
 #include "InputActionValue.h"
+#include "DamageableInterface.h"
+
 #include "HordeShooterCharacter.generated.h"
 
 class UInputAction;
@@ -17,7 +19,7 @@ class USoundBase;
 class UAudioComponent;
 
 UCLASS()
-class HORDESHOOTER_API AHordeShooterCharacter : public ACharacter
+class HORDESHOOTER_API AHordeShooterCharacter : public ACharacter, public IDamageableInterface
 {
 	GENERATED_BODY()
 
@@ -74,6 +76,13 @@ protected:
 
 
 public:
+	//player health:
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Player Stats")
+	float MaxHealth = 100.0f;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Player Stats")
+	float CurrentHealth;
+
 	//first person camera component:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Camera")
 	UCameraComponent* FirstPersonCamera;
@@ -243,6 +252,10 @@ protected:
 
 	//jump fn override.
 	virtual void OnJumped_Implementation() override;
+
+	//Damageable interface:
+	virtual void ReactToHit(float DamageAmount, const FVector& HitImpulse, FName HitBoneName) override;
+	void PlayerDie();
 
 private:
 	//State variables:

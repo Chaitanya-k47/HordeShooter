@@ -223,6 +223,7 @@ void AHordeShooterWeapon::PerformFire()
 	FCollisionQueryParams QueryParams;
 	QueryParams.AddIgnoredActor(this);
 	QueryParams.AddIgnoredActor(CurrentOwner);
+	QueryParams.bReturnPhysicalMaterial = true;
 
 	bool bHit = GetWorld()->LineTraceSingleByChannel(
 		HitResult,
@@ -274,23 +275,37 @@ void AHordeShooterWeapon::PerformFire()
 	{
 		FRotator HitRotation = HitResult.ImpactNormal.Rotation();
 
+		// retrieve and store the surface type that was hit
+		EPhysicalSurface SurfaceType = SurfaceType_Default;
+		if(HitResult.PhysMaterial.IsValid())
+		{
+			SurfaceType = HitResult.PhysMaterial->SurfaceType;
+		}
+
+		//look up the effects bundle from dict or use default.
+		FImpactEffects* EffectsToPlay = &DefaultImpact;
+		if(SurfaceImpactEffects.Contains(SurfaceType))
+		{
+			EffectsToPlay = &SurfaceImpactEffects[SurfaceType];
+		}
+
 		//impact fx:
-		if(ImpactSystem)
+		if(EffectsToPlay->ImpactVFX)
 		{
 			UNiagaraFunctionLibrary::SpawnSystemAtLocation(
 				GetWorld(),
-				ImpactSystem,
+				EffectsToPlay->ImpactVFX,
 				HitResult.ImpactPoint,
 				HitRotation
 			);
 		}
 
 		//bullet hole decal:
-		if(BulletHoleDecal)
+		if(EffectsToPlay->ImpactDecal)
 		{
 			UDecalComponent* DecalComp = UGameplayStatics::SpawnDecalAtLocation(
 				GetWorld(),
-				BulletHoleDecal,
+				EffectsToPlay->ImpactDecal,
 				FVector(5.f, 5.f, 5.f), // decal size
 				HitResult.ImpactPoint,
 				HitRotation,
@@ -310,11 +325,11 @@ void AHordeShooterWeapon::PerformFire()
 		}
 
 		//impact sound:
-		if(ImpactSound)
+		if(EffectsToPlay->ImpactSFX)
 		{
 			UGameplayStatics::PlaySoundAtLocation(
 				GetWorld(),
-				ImpactSound,
+				EffectsToPlay->ImpactSFX,
 				HitResult.ImpactPoint
 			);
 		}

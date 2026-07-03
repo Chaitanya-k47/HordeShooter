@@ -60,6 +60,8 @@ AHordeShooterCharacter::AHordeShooterCharacter()
 void AHordeShooterCharacter::BeginPlay()
 {
 	Super::BeginPlay();
+
+	CurrentHealth = MaxHealth;
 	
 	//initialize target FOV to base FOV
 	TargetFOV = IdleFOV;
@@ -735,6 +737,22 @@ bool AHordeShooterCharacter::IsCloseToWall()
 	return bHit;
 }
 
+void AHordeShooterCharacter::ReactToHit(float DamageAmount, const FVector& HitImpulse, FName HitBoneName)
+{
+	CurrentHealth -= DamageAmount;
+
+	if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 2.0f, FColor::Red, FString::Printf(TEXT("PLAYER HIT! Health: %f"), CurrentHealth));
+	if (CurrentHealth <= 0)
+	{
+		PlayerDie();
+	}
+}
+
+void AHordeShooterCharacter::PlayerDie()
+{
+	if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 5.0f, FColor::Red, TEXT("PLAYER IS DEAD. GAME OVER."));
+	// We will add respawn/menu logic here later
+}
 
 void AHordeShooterCharacter::TogglePause()
 {

@@ -37,6 +37,10 @@ public:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat|AI")
 	float AttackDamage = 10.f;
+
+	//Maps specific bone name to damage multipliers.
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Combat|Stats")
+	TMap<FName, float> BoneDamageMultipliers;
   
 
 	//Action Montages (C++):
@@ -57,6 +61,9 @@ public:
 	void PerformMeleeAttack();
 	void PlayHitReaction();
 
+	UFUNCTION(BlueprintCallable)
+	void ExecuteAttack(); //called by anim notify to apply damage to player
+
 
 	//broadcast to AI controller when attack anim finishes.
 	FOnAttackFinishedSignature OnAttackFinished;
@@ -65,6 +72,9 @@ public:
 	//POOLING SYSTEM:
 	// Called to revive the enemy without spawning a new one
 	virtual void ResetEnemy();
+
+	UPROPERTY(EditDefaultsOnly, Category = "Combat|Sounds")
+	USoundBase* HeadshotSound;
 
 
 protected:

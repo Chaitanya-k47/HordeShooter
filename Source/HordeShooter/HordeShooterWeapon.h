@@ -18,6 +18,22 @@ class UNiagaraComponent;
 class UMaterialInterface;
 class AHordeShooterCasing;
 
+//a bundle of effects for a single surface type.
+USTRUCT(BlueprintType)
+struct FImpactEffects
+{
+	GENERATED_BODY()
+
+	UPROPERTY(EditDefaultsOnly)
+	UNiagaraSystem* ImpactVFX;
+
+	UPROPERTY(EditDefaultsOnly)
+	USoundBase* ImpactSFX;
+
+	UPROPERTY(EditDefaultsOnly)
+	UMaterialInterface* ImpactDecal;
+};
+
 UCLASS()
 class HORDESHOOTER_API AHordeShooterWeapon : public AActor
 {
@@ -111,12 +127,6 @@ public:
 	//FX:
 	UPROPERTY(EditDefaultsOnly, Category = "Effects")
 	UNiagaraSystem* TracerSystem;
-
-	UPROPERTY(EditDefaultsOnly, Category = "Effects")
-	UNiagaraSystem* ImpactSystem;
-
-	UPROPERTY(EditDefaultsOnly, Category = "Effects")
-	UMaterialInterface* BulletHoleDecal;
 	
 	UPROPERTY(EditDefaultsOnly, Category = "Effects")
 	int32 TotalDecalVariations = 64;
@@ -128,10 +138,16 @@ public:
 	//SFX
 	UPROPERTY(EditDefaultsOnly, Category = "Sound")
 	USoundBase* ShootSound;
-
-	UPROPERTY(EditDefaultsOnly, Category = "Sound")
-	USoundBase* ImpactSound;
 	
+
+	//Impact effects:
+	//Dictionary mapping surface types to specific impacts
+	UPROPERTY(EditDefaultsOnly, Category = "Effects|Impact")
+	TMap<TEnumAsByte<EPhysicalSurface>, FImpactEffects> SurfaceImpactEffects;
+
+	//default effects for surfaces that don't have a specific entry in the map
+	UPROPERTY(EditDefaultsOnly, Category = "Effects|Impact")
+	FImpactEffects DefaultImpact;
 
 	//CORE FUNCTIONS:
 	//these are called by character class

@@ -6,6 +6,9 @@
 #include "Components/CapsuleComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Animation/AnimInstance.h"
+#include "HordeShooterCharacter.h"
+#include "DrawDebugHelpers.h"
+#include "Kismet/GameplayStatics.h"
 
 // Sets default values
 AHordeShooterEnemy::AHordeShooterEnemy()
@@ -79,6 +82,56 @@ void AHordeShooterEnemy::PerformMeleeAttack()
 	}
 }
 
+void AHordeShooterEnemy::ExecuteAttack()
+{
+	if(bIsDead) return;
+	
+	//we put the center of the sphere halfway to the max range, and make its radius the other half.
+	float StrikeRadius = AttackRange / 2.0f; 
+	FVector StrikeLocation = GetActorLocation() + (GetActorForwardVector() * StrikeRadius);
+
+	TArray<FOverlapResult> OverlapResults;
+	FCollisionShape SphereCol = FCollisionShape::MakeSphere(StrikeRadius);
+	FCollisionQueryParams QueryParams;
+	QueryParams.AddIgnoredActor(this);
+
+	bool bHit = GetWorld()->OverlapMultiByChannel(
+		OverlapResults,
+		StrikeLocation,
+		FQuat::Identity,
+		ECC_Pawn, 
+		SphereCol,
+		QueryParams
+	);
+
+	DrawDebugSphere(GetWorld(), StrikeLocation, StrikeRadius, 12, bHit ? FColor::Red : FColor::Green, false, 1.0f);
+
+	if(bHit)
+	{
+		for(const FOverlapResult& Overlap : OverlapResults)
+		{
+			AActor* HitActor = Overlap.GetActor();
+
+			if (HitActor && HitActor->IsA(AHordeShooterCharacter::StaticClass())) //check if the hit actor is player
+			{
+				if (HitActor->GetClass()->ImplementsInterface(UDamageableInterface::StaticClass()))
+				{
+					IDamageableInterface* DamageableActor = Cast<IDamageableInterface>(HitActor);
+					if (DamageableActor)
+					{
+						//Push the player slightly backward
+						FVector PushDirection = GetActorForwardVector() * 1000.0f; 
+						DamageableActor->ReactToHit(AttackDamage, PushDirection, NAME_None);
+						
+						break; //we hit the player, no need to keep looping
+					}
+				}
+			}
+		}
+	}
+}
+
+
 void AHordeShooterEnemy::PlayHitReaction()
 {
 	if(bIsDead || HitReactionMontages.Num() == 0) return;
@@ -91,6 +144,7 @@ void AHordeShooterEnemy::PlayHitReaction()
 		GetMesh()->GetAnimInstance()->Montage_Play(HitReactionMontages[RandomIndex]);
 	}
 }
+
 
 void AHordeShooterEnemy::OnMontageEnded(UAnimMontage* Montage, bool bInterrupted)
 {
@@ -109,15 +163,31 @@ void AHordeShooterEnemy::OnMontageEnded(UAnimMontage* Montage, bool bInterrupted
 void AHordeShooterEnemy::ReactToHit(float DamageAmount, const FVector& HitImpulse, FName HitBoneName)
 {
 	if(bIsDead) return;
+
+	float FinalDamage = DamageAmount;
+
+	if(BoneDamageMultipliers.Contains(HitBoneName))
+	{
+		float Multiplier = BoneDamageMultipliers[HitBoneName];
+		FinalDamage *= Multiplier;
+
+		if (Multiplier > 1.0f && GEngine)
+		{
+			if (HeadshotSound)
+			{
+				UGameplayStatics::PlaySoundAtLocation(GetWorld(), HeadshotSound, GetActorLocation());
+			}
+			GEngine->AddOnScreenDebugMessage(-1, 2.0f, FColor::Red, TEXT("CRITICAL HIT!"));
+		}
+	}
 	
-	CurrentHealth -= DamageAmount;
+	CurrentHealth -= FinalDamage;
 	LastHitImpulse = HitImpulse;
 	LastHitBoneName = HitBoneName;
 	
-	// Print to screen for easy debugging
-	if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 2.0f, FColor::Yellow, FString::Printf(TEXT("Enemy Hit! Health: %f"), CurrentHealth));
-	
-	OnHit(DamageAmount); // Triggers Blueprint logic, then C++ default
+	OnHit(FinalDamage); // Triggers Blueprint logic, then C++ default
+
+	if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 2.0f, FColor::Yellow, FString::Printf(TEXT("Enemy Hit for %f! Health: %f"), FinalDamage, CurrentHealth));
 
 	if(CurrentHealth <= 0.f)
 	{

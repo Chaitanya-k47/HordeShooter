@@ -145,7 +145,7 @@ void ARayGun::Tick(float DeltaTime)
 	}
 
     //ALT FIRE charge tracker:
-    if(bIsCharging && bCanFire)
+    if(bIsCharging && bCanFire && !bIsLowered)
     {
         CurrentChargeTime += DeltaTime;
 
@@ -156,7 +156,7 @@ void ARayGun::Tick(float DeltaTime)
             ChargeOrbComp->SetFloatParameter(FName("EmberSphereRadius"), ChargeRatio*10.5f); 
         }
     }
-    else if(bIsCharging && !bCanFire)
+    else if(bIsCharging && (!bCanFire || bIsLowered))
     {
         StopAltFire(); //stop charging if we lose the ability to fire
     }
@@ -181,7 +181,7 @@ void ARayGun::Tick(float DeltaTime)
 
 void ARayGun::StartFire()
 {
-    if (CurrentAmmo < BeamAmmoCostPerBeamTick || bIsReloading || bIsFiringBeam || bIsCharging || !bCanFire) return;
+    if (CurrentAmmo < BeamAmmoCostPerBeamTick || bIsReloading || bIsFiringBeam || bIsCharging || !bCanFire || bIsLowered) return;
    
     bIsFiringBeam = true;
 
@@ -231,7 +231,7 @@ void ARayGun::StopFire()
 
 void ARayGun::PerformBeamTick()
 {
-    if(bIsFiringBeam && !bCanFire)
+    if(bIsFiringBeam && (!bCanFire || bIsLowered))
     {
         StopFire();
         return;
@@ -302,7 +302,7 @@ void ARayGun::StopAltFire()
         }   
     }
 
-    if(CurrentChargeTime >= ChargeTimeRequired && bCanFire)
+    if(CurrentChargeTime >= ChargeTimeRequired && (bCanFire || !bIsLowered))
     {
         PerformAltFire();
     }
