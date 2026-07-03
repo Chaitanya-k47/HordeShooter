@@ -162,7 +162,15 @@ void AHordeShooterEnemy::OnMontageEnded(UAnimMontage* Montage, bool bInterrupted
 
 void AHordeShooterEnemy::ReactToHit(float DamageAmount, const FVector& HitImpulse, FName HitBoneName)
 {
-	if(bIsDead) return;
+	if(bIsDead)
+	{
+		if (GetMesh()->IsSimulatingPhysics())
+		{
+			GetMesh()->AddImpulse(HitImpulse, HitBoneName, true);
+		}
+		
+		return;
+	}
 
 	float FinalDamage = DamageAmount;
 
@@ -229,6 +237,9 @@ void AHordeShooterEnemy::OnDeath_Implementation()
 	GetMesh()->SetSimulatePhysics(true);
 
 	GetMesh()->bPauseAnims = true;
+
+	//so that ragdoll doesnt ignore bullets.
+	GetMesh()->SetCollisionResponseToChannel(ECC_Visibility, ECR_Block);
 
 	//Add directional shot impulse!
 	GetMesh()->AddImpulse(LastHitImpulse, LastHitBoneName, true);
