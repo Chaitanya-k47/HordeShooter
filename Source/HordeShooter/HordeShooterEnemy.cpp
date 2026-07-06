@@ -160,32 +160,35 @@ void AHordeShooterEnemy::OnMontageEnded(UAnimMontage* Montage, bool bInterrupted
 }
 
 
-void AHordeShooterEnemy::ReactToHit(float DamageAmount, const FVector& HitImpulse, FName HitBoneName)
+bool AHordeShooterEnemy::ReactToHit(float DamageAmount, const FVector& HitImpulse, FName HitBoneName)
 {
 	if(bIsDead)
 	{
 		if (GetMesh()->IsSimulatingPhysics())
 		{
-			GetMesh()->AddImpulse(HitImpulse, HitBoneName, true);
+			GetMesh()->AddImpulse(HitImpulse*0.2f, HitBoneName, true);
 		}
 		
-		return;
+		return false; //already dead, no crit hit/headshot.
 	}
 
 	float FinalDamage = DamageAmount;
+	bool bIsHeadshot = false;
 
 	if(BoneDamageMultipliers.Contains(HitBoneName))
 	{
 		float Multiplier = BoneDamageMultipliers[HitBoneName];
 		FinalDamage *= Multiplier;
 
-		if (Multiplier > 1.0f && GEngine)
+		if(Multiplier > 1.0f && GEngine)
 		{
-			if (HeadshotSound)
-			{
-				UGameplayStatics::PlaySoundAtLocation(GetWorld(), HeadshotSound, GetActorLocation());
-			}
 			GEngine->AddOnScreenDebugMessage(-1, 2.0f, FColor::Red, TEXT("CRITICAL HIT!"));
+
+			if((HitBoneName == FName("Head")))
+			{
+				bIsHeadshot = true;
+			}
+			
 		}
 	}
 	
@@ -205,6 +208,8 @@ void AHordeShooterEnemy::ReactToHit(float DamageAmount, const FVector& HitImpuls
 	{
 		PlayHitReaction();
 	}
+
+	return bIsHeadshot;
 }
 
 void AHordeShooterEnemy::Die()

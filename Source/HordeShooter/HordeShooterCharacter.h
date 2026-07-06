@@ -254,7 +254,7 @@ protected:
 	virtual void OnJumped_Implementation() override;
 
 	//Damageable interface:
-	virtual void ReactToHit(float DamageAmount, const FVector& HitImpulse, FName HitBoneName) override;
+	virtual bool ReactToHit(float DamageAmount, const FVector& HitImpulse, FName HitBoneName) override;
 	void PlayerDie();
 
 private:

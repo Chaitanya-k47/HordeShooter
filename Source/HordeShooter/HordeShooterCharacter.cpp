@@ -737,7 +737,7 @@ bool AHordeShooterCharacter::IsCloseToWall()
 	return bHit;
 }
 
-void AHordeShooterCharacter::ReactToHit(float DamageAmount, const FVector& HitImpulse, FName HitBoneName)
+bool AHordeShooterCharacter::ReactToHit(float DamageAmount, const FVector& HitImpulse, FName HitBoneName)
 {
 	CurrentHealth -= DamageAmount;
 
@@ -746,6 +746,8 @@ void AHordeShooterCharacter::ReactToHit(float DamageAmount, const FVector& HitIm
 	{
 		PlayerDie();
 	}
+
+	return false; //player takes normal damage.
 }
 
 void AHordeShooterCharacter::PlayerDie()

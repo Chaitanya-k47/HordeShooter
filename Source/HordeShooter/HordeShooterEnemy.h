@@ -73,9 +73,6 @@ public:
 	// Called to revive the enemy without spawning a new one
 	virtual void ResetEnemy();
 
-	UPROPERTY(EditDefaultsOnly, Category = "Combat|Sounds")
-	USoundBase* HeadshotSound;
-
 
 protected:
 	// Called when the game starts or when spawned
@@ -83,7 +80,7 @@ protected:
 
 
 	//DAMAGE INTERFACE:
-	virtual void ReactToHit(float DamageAmount, const FVector& HitImpulse, FName HitBoneName) override;
+	virtual bool ReactToHit(float DamageAmount, const FVector& HitImpulse, FName HitBoneName) override;
 	virtual void Die();
 
 

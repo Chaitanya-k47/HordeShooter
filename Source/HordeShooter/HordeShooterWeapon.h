@@ -30,6 +30,9 @@ struct FImpactEffects
 	UPROPERTY(EditDefaultsOnly)
 	USoundBase* ImpactSFX;
 
+	UPROPERTY(EditDefaultsOnly, Category = "Sound")
+	USoundBase* HeadshotSound;
+
 	UPROPERTY(EditDefaultsOnly)
 	UMaterialInterface* ImpactDecal;
 };
