@@ -9,6 +9,7 @@
 #include "HordeShooterCharacter.h"
 #include "DrawDebugHelpers.h"
 #include "Kismet/GameplayStatics.h"
+#include "EnemyAIController.h"
 
 // Sets default values
 AHordeShooterEnemy::AHordeShooterEnemy()
@@ -33,39 +34,70 @@ AHordeShooterEnemy::AHordeShooterEnemy()
 void AHordeShooterEnemy::BeginPlay()
 {
 	Super::BeginPlay();
-	ResetEnemy();
 
 	if(GetMesh() && GetMesh()->GetAnimInstance())
 	{
 		GetMesh()->GetAnimInstance()->OnMontageEnded.AddDynamic(this, &AHordeShooterEnemy::OnMontageEnded);
 	}
 	
+	DeactivateEnemy(); //start inactive.
 }
 
-// Called every frame
-// void AHordeShooterEnemy::Tick(float DeltaTime)
-// {
-// 	Super::Tick(DeltaTime);
-
-// }
-
-void AHordeShooterEnemy::ResetEnemy()
+void AHordeShooterEnemy::ActivateEnemy(const FTransform& SpawnTransform)
 {
-	CurrentHealth = MaxHealth;
+	bIsActive = true;
 	bIsDead = false;
-	bIsStunned = false;
 	bIsAttacking = false;
-	GetMesh()->bPauseAnims = false;
-	
-	// Reset Physics & Collision for when we pull them from the Object Pool
+	bIsStunned = false;
+	CurrentHealth = MaxHealth;
+
+	//reset physics and collision first. (order matters)
+	GetMesh()->SetSimulatePhysics(false);
 	GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
 	GetCapsuleComponent()->SetCollisionResponseToChannel(ECC_Visibility, ECR_Ignore);
-	
-	GetMesh()->SetSimulatePhysics(false);
+
+	//force the mesh back to standing collision profile
+	GetMesh()->SetCollisionProfileName(TEXT("CharacterMesh"));
 	GetMesh()->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
 	GetMesh()->SetCollisionResponseToChannel(ECC_Visibility, ECR_Block);
 
+	//reattach mesh to capsule
 	GetMesh()->AttachToComponent(GetCapsuleComponent(), FAttachmentTransformRules::SnapToTargetIncludingScale);
+	GetMesh()->SetRelativeLocation(FVector(0.0f, 0.0f, -96.0f));
+	GetMesh()->SetRelativeRotation(FRotator(0.0f, -90.0f, 0.0f));
+
+	//reset the capusle rotation i.e. we take only the yaw, the direction in which spawnpoint arrow points. 
+	FRotator SafeRotation = FRotator(0.0f, SpawnTransform.Rotator().Yaw, 0.0f);
+	SetActorRotation(SafeRotation, ETeleportType::TeleportPhysics);
+
+	//teleport to spawnpoint.
+	FVector SafeLocation = SpawnTransform.GetLocation() + FVector(0.0f, 0.0f, 50.0f);
+	SetActorLocation(SafeLocation, false, nullptr, ETeleportType::TeleportPhysics);
+
+	//wakeup visuals and anims.
+	SetActorHiddenInGame(false);
+	GetMesh()->bPauseAnims = false;
+
+	//wakeup the enemy AI.
+	if(AEnemyAIController* AICon = Cast<AEnemyAIController>(GetController())) AICon->WakeAI();
+}
+
+void AHordeShooterEnemy::DeactivateEnemy()
+{
+	bIsActive = false;
+
+	//physics off
+	GetMesh()->SetSimulatePhysics(false);
+	GetMesh()->bPauseAnims = true;
+
+	//collision off
+	GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	GetMesh()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	GetMesh()->SetCollisionProfileName(TEXT("NoCollision")); // Extra safety net
+
+	//hide
+	SetActorHiddenInGame(true);
+	SetActorLocation(FVector(0.0f, 0.0f, -10000.0f), false, nullptr, ETeleportType::TeleportPhysics);
 }
 
 //COMBAT ACTIONS:
@@ -216,15 +248,14 @@ void AHordeShooterEnemy::Die()
 {
 	if(bIsDead) return;
 	bIsDead = true;
+
+	OnEnemyKilled.Broadcast(); //tell wave manager this enemy is dead
 	
 	OnDeath(); // Triggers BP logic, then C++ default
 
-	// Detach AI Controller
-	DetachFromControllerPendingDestroy();
-
-	// Temporary: Delete after 3 seconds. 
-	// We will replace this later when we build the Horde Manager Object Pool!
-	SetLifeSpan(8.0f);
+	//Put Enemy AI to sleep and set timer for it to Deactivate/Despawn.
+	if(AEnemyAIController* AICon = Cast<AEnemyAIController>(GetController())) AICon->SleepAI();
+	GetWorldTimerManager().SetTimer(DespawnTimerHandle, this, &AHordeShooterEnemy::DeactivateEnemy, 5.0f, false);
 }
 
 void AHordeShooterEnemy::OnHit_Implementation(float DamageAmount)

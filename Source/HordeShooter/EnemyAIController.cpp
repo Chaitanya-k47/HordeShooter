@@ -148,6 +148,22 @@ void AEnemyAIController::MoveToPlayer()
     }
 }
 
+void AEnemyAIController::WakeAI()
+{
+    //wake the AI up, start ticking and chasing the player
+    CurrentState = EAIState::Chasing;
+    GetWorldTimerManager().SetTimer(AITickTimer, this, &AEnemyAIController::UpdateAILogic, 0.1f, true);
+}
+
+void AEnemyAIController::SleepAI()
+{
+    //stut down the AI
+    GetWorldTimerManager().ClearTimer(AITickTimer);
+    GetWorldTimerManager().ClearTimer(FindPlayerTimer);
+    StopMovement();
+    ClearFocus(EAIFocusPriority::Gameplay);
+}
+
 void AEnemyAIController::BeginPlay()
 {
     Super::BeginPlay();

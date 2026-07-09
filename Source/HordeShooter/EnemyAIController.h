@@ -29,7 +29,8 @@ class HORDESHOOTER_API AEnemyAIController : public AAIController
 public:
 	AEnemyAIController();
 
-	//virtual void Tick(float DeltaTime) override;
+	void WakeAI();
+	void SleepAI();
 
 protected:
 	// Called when the game starts or when spawned

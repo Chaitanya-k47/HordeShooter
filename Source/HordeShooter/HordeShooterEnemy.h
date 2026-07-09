@@ -11,6 +11,7 @@
 class UAnimMontage;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnAttackFinishedSignature);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnEnemyKilledSignature);
 
 UCLASS()
 class HORDESHOOTER_API AHordeShooterEnemy : public ACharacter, public IDamageableInterface
@@ -20,9 +21,6 @@ class HORDESHOOTER_API AHordeShooterEnemy : public ACharacter, public IDamageabl
 public:
 	// Sets default values for this character's properties
 	AHordeShooterEnemy();
-
-	// Called every frame
-	// virtual void Tick(float DeltaTime) override;
 
 
 	//STATS:
@@ -68,10 +66,15 @@ public:
 	//broadcast to AI controller when attack anim finishes.
 	FOnAttackFinishedSignature OnAttackFinished;
 
+	//broadcast to wave manager when enemy dies.
+	UPROPERTY(BlueprintAssignable, Category = "Events")
+	FOnEnemyKilledSignature OnEnemyKilled;
 
 	//POOLING SYSTEM:
-	// Called to revive the enemy without spawning a new one
-	virtual void ResetEnemy();
+	bool bIsActive = false; //used by the horde wave manager to track if the enemy is currently active
+
+	void ActivateEnemy(const FTransform& SpawnTransform);
+	void DeactivateEnemy();
 
 
 protected:
@@ -102,5 +105,6 @@ protected:
 private:
 	FVector LastHitImpulse;
 	FName LastHitBoneName; 
+	FTimerHandle DespawnTimerHandle;
 
 };
