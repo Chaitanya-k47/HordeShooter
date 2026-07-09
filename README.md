@@ -1,7 +1,7 @@
 # Horde Shooter (WIP)
 **A Fast-Paced, Highly Optimized FPS built in Unreal Engine 5 & C++**
 
-🎥 Watch the full high-fidelity gameplay and audio showcase on YouTube: [Gameplay Showcase](https://youtu.be/DxT6JSBPCa8)
+🎥 Watch the full high-fidelity gameplay and audio showcase on YouTube: [Gameplay Showcase](https://youtu.be/RB3LBlga3Fo)
 
 ## 📖 Overview
 **Horde Shooter** is a high-speed, retro-inspired Arena Shooter. The primary technical goal of this project is to build a highly scalable, AAA-standard C++ architecture capable of handling heavy combat logic, advanced movement mechanics, and intense visual effects while maintaining strict CPU/GPU performance budgets. 
