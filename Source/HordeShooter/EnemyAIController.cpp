@@ -39,7 +39,11 @@ void AEnemyAIController::FindPlayer()
         CurrentState = EAIState::Chasing;
 
         //start the AI tick timer to update AI logic every 0.1 seconds
-        GetWorldTimerManager().SetTimer(AITickTimer, this, &AEnemyAIController::UpdateAILogic, 0.1f, true);
+        //OPTIMIZATION: Staggered AI updates, this forces multiple enemies to not update their logic at the same time but distribute evenly among frames,
+        //hence not causing cpu spikes.
+        float RandomStartDelay = FMath::RandRange(0.0f, 0.1f);
+
+        GetWorldTimerManager().SetTimer(AITickTimer, this, &AEnemyAIController::UpdateAILogic, 0.1f, true, RandomStartDelay);
 	}
 }
 
@@ -51,8 +55,10 @@ void AEnemyAIController::UpdateAILogic()
 		return;
 	}
 
-    float DistanceToPlayer = FVector::Dist(ControlledEnemy->GetActorLocation(), PlayerTarget->GetActorLocation());
-    
+    //OPTIMIZATION: Using Distance Squared intead of Dist.
+    float DistSquared = FVector::DistSquared(ControlledEnemy->GetActorLocation(), PlayerTarget->GetActorLocation());
+    float AttackRangeSquared = FMath::Square(ControlledEnemy->AttackRange); //sq the attack range for comparison.
+
     // GEngine->AddOnScreenDebugMessage(-1, 0.2f, FColor::Green, FString::Printf(TEXT("Distance to Player: %f"), DistanceToPlayer));
     // GEngine->AddOnScreenDebugMessage(-1, 0.2f, FColor::Green, FString::Printf(TEXT("AI State: %s"), *UEnum::GetValueAsString(CurrentState)));
     
@@ -67,7 +73,7 @@ void AEnemyAIController::UpdateAILogic()
         MoveToPlayer();
 
         //check LOS if in range:
-        if(DistanceToPlayer <= ControlledEnemy->AttackRange && CheckLineOfSight())
+        if(DistSquared <= AttackRangeSquared && CheckLineOfSight())
         {
             //transition to attack
             CurrentState = EAIState::Attacking;

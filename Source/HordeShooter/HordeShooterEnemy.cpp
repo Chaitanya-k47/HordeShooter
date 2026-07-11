@@ -28,6 +28,13 @@ AHordeShooterEnemy::AHordeShooterEnemy()
 	MoveComp->bUseControllerDesiredRotation = false;
 	MoveComp->RotationRate = FRotator(0.f, 600.f, 0.f);
 
+	//anim culling:
+	/*
+		AlwaysTickPoseAndRefreshBones (default), (expensive)
+		OnlyTickPoseWhenRendered (enemy looses its ability to cause damage to the player (when not rendered on screen) if attacks are bound to anim notifs.)
+		AlwaysTickPose (evaluates the animation logic(anim notifs) but skips drawing and stretching the 3D mesh bones)
+	*/
+	GetMesh()->VisibilityBasedAnimTickOption = EVisibilityBasedAnimTickOption::AlwaysTickPose;
 }
 
 // Called when the game starts or when spawned
