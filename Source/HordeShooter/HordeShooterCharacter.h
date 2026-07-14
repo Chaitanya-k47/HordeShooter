@@ -74,6 +74,9 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Input")
 	UInputAction* PauseAction;
 
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Input")
+	UInputAction* GenerateArenaAction;
+
 
 public:
 	//player health:
@@ -256,6 +259,9 @@ protected:
 	//Damageable interface:
 	virtual bool ReactToHit(float DamageAmount, const FVector& HitImpulse, FName HitBoneName) override;
 	void PlayerDie();
+
+	//Generate new arena layout callback:
+	void GenerateArena();
 
 private:
 	//State variables:

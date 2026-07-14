@@ -21,6 +21,7 @@
 #include "HordeShooterPlayerController.h"
 #include "HordeShooterHUDWidget.h"
 #include "Components/AudioComponent.h"
+#include "ArenaManager.h"
 
 // Sets default values
 AHordeShooterCharacter::AHordeShooterCharacter()
@@ -325,6 +326,8 @@ void AHordeShooterCharacter::SetupPlayerInputComponent(UInputComponent* PlayerIn
 		EnhancedInputComponent->BindAction(ReloadAction, ETriggerEvent::Started, this, &AHordeShooterCharacter::ReloadWeapon);
 
 		EnhancedInputComponent->BindAction(PauseAction, ETriggerEvent::Started, this, &AHordeShooterCharacter::TogglePause);
+	
+		EnhancedInputComponent->BindAction(GenerateArenaAction, ETriggerEvent::Started, this, &AHordeShooterCharacter::GenerateArena);
 	}
 }
 
@@ -781,3 +784,15 @@ void AHordeShooterCharacter::TogglePause()
     }
 }
 
+void AHordeShooterCharacter::GenerateArena()
+{
+	// Find the one and only Arena Manager in the world
+	AActor* ArenaActor = UGameplayStatics::GetActorOfClass(GetWorld(), AArenaManager::StaticClass());
+	
+	if (AArenaManager* ArenaManager = Cast<AArenaManager>(ArenaActor))
+	{
+		ArenaManager->GenerateNewLayout();
+		
+		if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 2.0f, FColor::Cyan, TEXT("SYSTEM: Reconfiguring Arena Layout..."));
+	}
+}

@@ -1,0 +1,74 @@
+// Fill out your copyright notice in the Description page of Project Settings.
+
+#pragma once
+
+#include "CoreMinimal.h"
+#include "GameFramework/Actor.h"
+#include "ArenaManager.generated.h"
+
+class UInstancedStaticMeshComponent;
+
+UCLASS()
+class HORDESHOOTER_API AArenaManager : public AActor
+{
+	GENERATED_BODY()
+	
+public:	
+	// Sets default values for this actor's properties
+	AArenaManager();
+
+	// Called every frame
+	virtual void Tick(float DeltaTime) override;
+
+	//procedural generation:
+	UFUNCTION(BlueprintCallable, Category = "Arena")
+	void GenerateNewLayout();
+
+
+protected:
+	// Called when the game starts or when spawned
+	virtual void BeginPlay() override;
+
+	//ARENA CONFIG:
+	UPROPERTY(VisibleAnywhere, Category = "Arena")
+	UInstancedStaticMeshComponent* GridMesh;
+
+	UPROPERTY(EditAnywhere, Category = "Arena Config")
+	int32 GridSizeX = 20; //20 bloacks wide.
+
+	UPROPERTY(EditAnywhere, Category = "Arena Config")
+	int32 GridSizeY = 20; //20 bloacks long.
+
+	UPROPERTY(EditAnywhere, Category = "Arena Config")
+	float BlockSize = 400.f; // a block of 4x4x4 meter cube.
+
+	UPROPERTY(EditAnywhere, Category = "Arena Config")
+	float TransitionSpeed = 2.f; //speed of movement of blocks
+
+	UPROPERTY(EditAnywhere, Category = "Arena Config")
+	float BlockLocZ = -2000.f; //how deepdown the blocks will be spawned below origin when initializing the grid
+
+	//how many stair Steps high can the arena go
+	UPROPERTY(EditAnywhere, Category = "Arena Config")
+	int32 MaxStairSteps = 3; 
+
+	//how high above the grid should the player spawn
+	UPROPERTY(EditAnywhere, Category = "Arena Config")
+	float PlayerSpawnHeight = 1000.0f;
+
+	//how high the NavMesh should extend above the tallest wall to allow jumping/spawning
+	UPROPERTY(EditAnywhere, Category = "Arena Config")
+	float NavMeshCeilingPadding = 1000.0f;
+	
+
+private:
+	//tracks current and target height of every single block:
+	TArray<float> CurrentHeights;
+	TArray<float> TargetHeights;
+
+	//batch update the transforms of instances instead of updating them 1by1.
+	TArray<FTransform> InstanceTransforms;
+
+	bool bIsTransitioning = false;
+
+};
