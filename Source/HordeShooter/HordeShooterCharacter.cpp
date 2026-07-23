@@ -50,7 +50,8 @@ AHordeShooterCharacter::AHordeShooterCharacter()
 	GetCharacterMovement()->MaxAcceleration = 4000.f; // Snappy start
 	GetCharacterMovement()->BrakingDecelerationWalking = 4000.f; // Snappy stop (no ice skating)
 	GetCharacterMovement()->GroundFriction = 8.0f;
-	
+	GetCharacterMovement()->SetWalkableFloorAngle(55.f);
+
 	GetCharacterMovement()->GravityScale = 2.f;
 	GetCharacterMovement()->JumpZVelocity = 1000.f;
 	GetCharacterMovement()->AirControl = 0.8f;

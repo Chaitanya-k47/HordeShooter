@@ -33,6 +33,10 @@ protected:
 	UPROPERTY(VisibleAnywhere, Category = "Arena")
 	UInstancedStaticMeshComponent* GridMesh;
 
+	UPROPERTY(VisibleAnywhere, Category = "Arena")
+	UInstancedStaticMeshComponent* RampMesh;
+
+
 	UPROPERTY(EditAnywhere, Category = "Arena Config")
 	int32 GridSizeX = 20; //20 bloacks wide.
 
@@ -66,9 +70,35 @@ private:
 	TArray<float> CurrentHeights;
 	TArray<float> TargetHeights;
 
-	//batch update the transforms of instances instead of updating them 1by1.
+	//tracks current and target height of every ramp:
+	TArray<FTransform> CurrentRampTransforms;
+	TArray<FTransform> TargetRampTransforms;
+
+	//batch update the transforms of block instances instead of updating them 1by1.
 	TArray<FTransform> InstanceTransforms;
 
+	//helper for ramp spawning
+	void SpawnRampTarget(int32 X, int32 Y, float BaseZ, float YawRotation);
+
 	bool bIsTransitioning = false;
+
+	// --- RAMP/CUBE MATH CACHE ---
+	FVector CachedRampScale;
+	FVector CachedRampLocalCenter; 
+	float CachedRampMinZ;
+
+	FVector CachedCubeLocalCenter;
+	float CachedCubeMaxZ;
+
+	//block mesh dimensions default:
+	float MeshSizeX = 100.f;
+	float MeshSizeY = 100.f;
+	float MeshSizeZ = 100.f;
+
+	//ramp mesh dimensions default:
+	float RampMeshX = 100.0f;
+	float RampMeshY = 100.0f;
+	float RampMeshZ = 100.0f;
+
 
 };

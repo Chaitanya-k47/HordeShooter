@@ -15,9 +15,13 @@ AArenaManager::AArenaManager()
 
 	GridMesh = CreateDefaultSubobject<UInstancedStaticMeshComponent>(TEXT("GridMesh"));
 	RootComponent = GridMesh;
-	
+
+	RampMesh = CreateDefaultSubobject<UInstancedStaticMeshComponent>(TEXT("RampMesh"));
+	RampMesh->SetupAttachment(RootComponent);
+
 	//allows collision to update when instances move
 	GridMesh->bUseDefaultCollision = true;
+	RampMesh->bUseDefaultCollision = true;
 }
 
 // Called when the game starts or when spawned
@@ -31,16 +35,29 @@ void AArenaManager::BeginPlay()
 	TargetHeights.Init(0.f, TotalBlocks);
 	InstanceTransforms.Init(FTransform::Identity, TotalBlocks);
 
-	float MeshSizeX = 100.f;
-	float MeshSizeY = 100.f;
-	float MeshSizeZ = 100.f;
-
+	//block dimensions:
 	if(GridMesh->GetStaticMesh())
 	{
-		FBox BoundingBox = GridMesh->GetStaticMesh()->GetBoundingBox();
-		MeshSizeX = BoundingBox.GetSize().X;
-		MeshSizeY = BoundingBox.GetSize().Y;
-		MeshSizeZ = BoundingBox.GetSize().Z;
+		FBox CubeBox = GridMesh->GetStaticMesh()->GetBoundingBox();
+		MeshSizeX = CubeBox.GetSize().X;
+		MeshSizeY = CubeBox.GetSize().Y;
+		MeshSizeZ = CubeBox.GetSize().Z;
+		
+		//max Z coordinate on the unscaled cube.
+		CachedCubeMaxZ = CubeBox.Max.Z;
+		CachedCubeLocalCenter = CubeBox.GetCenter();
+	}
+
+	//ramp dimensions:
+	if (RampMesh->GetStaticMesh())
+	{
+		FBox RBox = RampMesh->GetStaticMesh()->GetBoundingBox();
+		RampMeshX = RBox.GetSize().X;
+		RampMeshY = RBox.GetSize().Y;
+		RampMeshZ = RBox.GetSize().Z;
+
+		CachedRampLocalCenter = RBox.GetCenter(); 
+		CachedRampMinZ = RBox.Min.Z;
 	}
 
 	//calculate max wall height:
@@ -49,9 +66,12 @@ void AArenaManager::BeginPlay()
 	//this block is to be scaled along Z, hence the dimension in Z to be scaled upto:
 	float TotalPillarHeight = (MaxStairSteps * BlockSize) + BlockSize; //adding a block more to the height for safety.
 
+	//calculate the factor to scale the ramp to the size of block
+	CachedRampScale = FVector(BlockSize/RampMeshX, BlockSize/RampMeshY, BlockSize/RampMeshZ);
+
 	//calculate absolute centre of the grid:
-	float CenterX = ((GridSizeX - 1) * BlockSize) / 2.0f;
-	float CenterY = ((GridSizeY - 1) * BlockSize) / 2.0f;
+	float CenterX = ((GridSizeX - 1) * BlockSize)/2.0f;
+	float CenterY = ((GridSizeY - 1) * BlockSize)/2.0f;
 	FVector ArenaCenter = FVector(CenterX, CenterY, 0.0f) + GetActorLocation();
 
 	//autp position the player:
@@ -88,7 +108,6 @@ void AArenaManager::BeginPlay()
 		NavVolume->SetActorScale3D(FVector(ScaleX, ScaleY, ScaleZ));
 	}
 
-
 	//generate flat grid:
 	for(int32 X = 0; X < GridSizeX; ++X)
 	{
@@ -113,10 +132,12 @@ void AArenaManager::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 
+	//animating pillars and ramps:
 	if(bIsTransitioning)
 	{
 		bool bStillMoving = false;
 		
+		//PILLARS:
 		//smoothly transition current heights to target heights
 		for(int32 i = 0; i < CurrentHeights.Num(); ++i)
 		{
@@ -135,6 +156,24 @@ void AArenaManager::Tick(float DeltaTime)
 		//params: (start index, array of Transforms, Rebuild Navigation?)
 		GridMesh->BatchUpdateInstancesTransforms(0, InstanceTransforms, true, true);
 	
+		//RAMPS:
+		for (int32 i = 0; i < CurrentRampTransforms.Num(); ++i)
+		{
+			FVector CurrentLoc = CurrentRampTransforms[i].GetLocation();
+			FVector TargetLoc = TargetRampTransforms[i].GetLocation();
+
+			// Smoothly slide the ramps up!
+			CurrentLoc.Z = FMath::FInterpTo(CurrentLoc.Z, TargetLoc.Z, DeltaTime, TransitionSpeed);
+			
+			CurrentRampTransforms[i].SetLocation(CurrentLoc);
+		}
+
+		//PUSH THE RAMP DATA TO THE GPU
+		if (CurrentRampTransforms.Num() > 0)
+		{
+			RampMesh->BatchUpdateInstancesTransforms(0, CurrentRampTransforms, true, true);
+		}
+
 		//if target height reached by all blocks:
 		if(!bStillMoving) bIsTransitioning = false;
 	}
@@ -143,6 +182,10 @@ void AArenaManager::Tick(float DeltaTime)
 //Procedural generation:
 void AArenaManager::GenerateNewLayout()
 {
+	RampMesh->ClearInstances();
+	CurrentRampTransforms.Empty();
+	TargetRampTransforms.Empty();
+
 	float MaxBlockHeight = BlockLocZ + (MaxStairSteps * BlockSize);
 
 	for(int32 X = 0; X < GridSizeX; ++X)
@@ -164,6 +207,95 @@ void AArenaManager::GenerateNewLayout()
 		}
 	}
 
-	bIsTransitioning = true; //tell tick to start moving blocks
+	for(int32 X = 1; X < GridSizeX - 1; ++X)
+	{
+		for(int32 Y = 1; Y < GridSizeY - 1; ++Y)
+		{
+			int32 CurrentIndex = (X * GridSizeY) + Y;
+			float CurrentH = TargetHeights[CurrentIndex]; //TargetHeights stores the final height of the block
+
+			//spawn ramp on top of current block only when the neighbour is one block higher
+			float RampTargetHeight = CurrentH + BlockSize;
+
+			//CHECK NEIGHBORS:
+			//check forward(+X)
+			if(TargetHeights[((X + 1) * GridSizeY) + Y] == RampTargetHeight)
+			{
+				SpawnRampTarget(X, Y, CurrentH, 0.0f+90); //0 degrees = facing +X
+			}
+
+			//check backward(-X)
+			else if (TargetHeights[((X - 1) * GridSizeY) + Y] == RampTargetHeight)
+			{
+				SpawnRampTarget(X, Y, CurrentH, 180.0f+90);
+			}
+
+			//check right(+Y)
+			else if(TargetHeights[(X * GridSizeY) + (Y + 1)] == RampTargetHeight)
+			{
+				SpawnRampTarget(X, Y, CurrentH, 90.0f+90);
+			}
+
+			//check left(-Y)
+			else if(TargetHeights[(X * GridSizeY) + (Y - 1)] == RampTargetHeight)
+			{
+				SpawnRampTarget(X, Y, CurrentH, -90.0f+90);
+			}
+		}
+	}
+
+	bIsTransitioning = true;//tell tick to start moving blocks
 }
 
+void AArenaManager::SpawnRampTarget(int32 X, int32 Y, float BaseZ, float YawRotation)
+{
+	FRotator RampRot = FRotator(0.0f, YawRotation, 0.0f);
+
+	//the cube pivot's placement in the world
+	FVector CubePivotXY = FVector(X * BlockSize, Y * BlockSize, 0.0f) + GetActorLocation();
+
+	//the TRUE physical center of the cube by applying its scaled offset
+	FVector CubeScaleXY = FVector(BlockSize/MeshSizeX, BlockSize/MeshSizeY, 1.0f);
+	FVector ScaledCubeOffset = CachedCubeLocalCenter * CubeScaleXY;
+
+	//the actual deadcenter of the physical block geometry, no matter where the pivot is
+	//i.e. cube pivot added to its geometric centre.
+	FVector TrueCellCenterXY = CubePivotXY + FVector(ScaledCubeOffset.X, ScaledCubeOffset.Y, 0.0f);
+
+	//the exact top of the pillar 
+	//BaseZ = CurrentH = TargetHeights[Current block Index] i.e. the final height of the local centre of the cube/block/pillar
+	//CubeScaleZ = Scale of the cube/pillar along Z axis
+	//(CachedCubeMaxZ * CubeScaleZ) => returns the max Z coordinate of the scaled cube/pillar by multiplying original max Z with current cube scale in Z.
+	//i.e. Z coordinate of scaled cube roof relative to the current cube centre BaseZ.
+	//then we get the global Z coordinate of cube/pillar roof by adding BaseZ(local origin/centre of pillar relative to level origin i.e. the global coordinate) to (CachedCubeMaxZ * CubeScaleZ).
+	float CubeScaleZ = ((MaxStairSteps * BlockSize) + BlockSize) / MeshSizeZ; // TotalPillarHeight / DefaultMeshSize
+	float RoofZ = BaseZ + (CachedCubeMaxZ * CubeScaleZ);
+
+	//PIVOT CORRECTION MATH
+	//find how far offcenter the pivot is, and scale it up to BlockSize
+	FVector ScaledCenterOffset = CachedRampLocalCenter * CachedRampScale;
+	
+	//Rotate that offset so it matches the direction the ramp is facing
+	FVector RotatedCenterOffset = RampRot.RotateVector(ScaledCenterOffset);
+
+	//THE FINAL TARGET COORDINATES
+	//force the XY center of the ramp to match the center of the grid cell
+	float TargetX = TrueCellCenterXY.X - RotatedCenterOffset.X;
+	float TargetY = TrueCellCenterXY.Y - RotatedCenterOffset.Y;
+
+	//force the absolute lowest point of the ramp to sit flush on the RoofZ
+	float TargetZ = RoofZ - (CachedRampMinZ * CachedRampScale.Z) + GetActorLocation().Z;
+
+	FVector TargetLoc = FVector(TargetX, TargetY, TargetZ);
+	
+	//start it deep underground
+	FVector StartLoc = FVector(TargetX, TargetY, BlockLocZ - 2000.0f) + GetActorLocation().Z;
+
+	FTransform StartTransform(RampRot, StartLoc, CachedRampScale);
+	FTransform TargetTransform(RampRot, TargetLoc, CachedRampScale);
+
+	RampMesh->AddInstance(StartTransform);
+	
+	CurrentRampTransforms.Add(StartTransform);
+	TargetRampTransforms.Add(TargetTransform);
+}
