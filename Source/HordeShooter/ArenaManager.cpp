@@ -186,30 +186,129 @@ void AArenaManager::GenerateNewLayout()
 	CurrentRampTransforms.Empty();
 	TargetRampTransforms.Empty();
 
-	float MaxBlockHeight = BlockLocZ + (MaxStairSteps * BlockSize);
+	//pick a random seed offset for the noise so every generated layout is unique:
+	FVector2D NoiseOffset = FVector2D(FMath::RandRange(-10000.f, 10000.f), FMath::RandRange(-10000.f, 10000.f));
 
+	//centre index of grid:
+	int32 CenterX = GridSizeX/2;
+	int32 CenterY = GridSizeY/2;
+
+	//GENERATE PERLIN NOISE ARENA:
 	for(int32 X = 0; X < GridSizeX; ++X)
 	{
 		for(int32 Y = 0; Y < GridSizeY; ++Y)
 		{
 			int32 Index = (X * GridSizeY) + Y;
 
-			//make the walls tall:
-			if(X == 0 || X == GridSizeX - 1 || Y == 0 || Y == GridSizeY - 1)
+			//symmetry rule:
+			/*
+				ex. for GridSize = 8
+				Sample[0] == Sample[7]
+				Sample[1] == Sample[6]
+				Sample[2] == Sample[5]
+				Sample[3] == Sample[4]
+				Sample[i] == Sample[GridSize-1-i]
+
+				bilateral condition:
+					if(i >= Centre) mirror i.e. copy from (GridSize-1-i)
+					else dont mirror and keep it i
+
+				ex. i = 0, 1, 2, 3, 4, 5, 6, 7
+					Centre = GridSize/2 = 4
+					hence the samples become: 0, 1, 2, 3 ,3, 2, 3, 0
+			*/
+			int32 SampleX = X;
+			int32 SampleY = Y;
+			if(bUseSymmetry)
 			{
-				TargetHeights[Index] = MaxBlockHeight;
+				SampleX = (X >= CenterX) ? (GridSizeX-1-X) : X;
+				SampleY = (Y >= CenterY) ? (GridSizeY-1-Y) : Y;
 			}
-			else //pick a random height in increments of blocksize
+
+			//Generate perlin noise:
+			/*
+				SampleX, SampleY: which tile of arena is being generated.
+				NoiseFrequency: how "zoomed in" or "zoomed out" the terrain features are (large sweeping hills vs. choppy terrain), basically the sample scale.
+				NoiseOffset: where arena is cut from the infinite Perlin noise landscape, giving a different layout each generation
+				PerlinNoise2D(): samples that infinite smooth field and returns a value between approximately -1 and +1
+			*/
+			float RawNoise = FMath::PerlinNoise2D(
+				FVector2D(
+					SampleX * NoiseFrequency + NoiseOffset.X,
+					SampleY * NoiseFrequency + NoiseOffset.Y
+				)
+			);
+
+			//Normalize the noise between 0 and 1.
+			/*
+				formula: for [-1, 1] to [0, 1]
+				normalized noise = (Raw - RawMin)/(RawMax - RawMin)
+			*/
+			float NormalizedNoise = (RawNoise + 1.f) / 2.f;
+
+			//threshold: if its too low make the height zero i.e. flat ground
+			if(NormalizedNoise < 0.2f) NormalizedNoise = 0.f;
+
+			//quantization: turn smooth gradients into sharp blocky transition
+			int32 HeightMultiplier = FMath::RoundToInt(NormalizedNoise * MaxStairSteps);
+			HeightMultiplier = FMath::Clamp(HeightMultiplier, 0, MaxStairSteps);
+
+			TargetHeights[Index] = BlockLocZ + (BlockSize * HeightMultiplier);
+		}
+	}
+
+	//ACCESSIBILITY PASS:
+	//if a cliff is a 2 step drop, the player cant jump it and ramps wont spawn
+	//this loop pulls steep cliffs down so they gently slope, guaranteeing ramps can connect everywhere
+	if(bEnforceAccessibility)
+	{
+		//the while loop iterates through the whole grid in multiple passes till the accessibility is enforced everywhere.
+
+		bool bNeedsSmoothing = true;
+		while(bNeedsSmoothing)
+		{
+			bNeedsSmoothing = false;
+
+			//now loop through the ENTIRE grid, including the edges
+			for (int32 X = 0; X < GridSizeX; ++X)
 			{
-				int32 HeightMultiplier = FMath::RandRange(0, MaxStairSteps);
-				TargetHeights[Index] = BlockLocZ + (BlockSize * HeightMultiplier);
+				for (int32 Y = 0; Y < GridSizeY; ++Y)
+				{
+					int32 Index = (X * GridSizeY) + Y;
+					float CurrentH = TargetHeights[Index];
+
+					//safely collect valid neighbors(prevent checking outside array bounds)
+					TArray<int32> Neighbors;
+					if (X + 1 < GridSizeX)
+						Neighbors.Add(((X + 1) * GridSizeY) + Y); //forward
+
+					if (X - 1 >= 0)
+						Neighbors.Add(((X - 1) * GridSizeY) + Y); //backward
+
+					if (Y + 1 < GridSizeY)
+						Neighbors.Add((X * GridSizeY) + (Y + 1)); //right
+
+					if (Y - 1 >= 0)
+						Neighbors.Add((X * GridSizeY) + (Y - 1)); // Left
+
+					for (int32 N_Index : Neighbors)
+					{
+						//if this block is more than 1 step higher than its neighbor pull it down.
+						if (CurrentH > TargetHeights[N_Index] + BlockSize)
+						{
+							TargetHeights[Index] = TargetHeights[N_Index] + BlockSize;
+							bNeedsSmoothing = true;
+						}
+					}
+				}
 			}
 		}
 	}
 
-	for(int32 X = 1; X < GridSizeX - 1; ++X)
+	//SPAWN RAMPS:
+	for(int32 X = 0; X < GridSizeX; ++X)
 	{
-		for(int32 Y = 1; Y < GridSizeY - 1; ++Y)
+		for(int32 Y = 0; Y < GridSizeY; ++Y)
 		{
 			int32 CurrentIndex = (X * GridSizeY) + Y;
 			float CurrentH = TargetHeights[CurrentIndex]; //TargetHeights stores the final height of the block
@@ -219,25 +318,25 @@ void AArenaManager::GenerateNewLayout()
 
 			//CHECK NEIGHBORS:
 			//check forward(+X)
-			if(TargetHeights[((X + 1) * GridSizeY) + Y] == RampTargetHeight)
+			if((X + 1 < GridSizeX) && TargetHeights[((X + 1) * GridSizeY) + Y] == RampTargetHeight)
 			{
 				SpawnRampTarget(X, Y, CurrentH, 0.0f+90); //0 degrees = facing +X
 			}
 
 			//check backward(-X)
-			else if (TargetHeights[((X - 1) * GridSizeY) + Y] == RampTargetHeight)
+			else if ((X - 1 >= 0) && TargetHeights[((X - 1) * GridSizeY) + Y] == RampTargetHeight)
 			{
 				SpawnRampTarget(X, Y, CurrentH, 180.0f+90);
 			}
 
 			//check right(+Y)
-			else if(TargetHeights[(X * GridSizeY) + (Y + 1)] == RampTargetHeight)
+			else if((Y + 1 < GridSizeY) && TargetHeights[(X * GridSizeY) + (Y + 1)] == RampTargetHeight)
 			{
 				SpawnRampTarget(X, Y, CurrentH, 90.0f+90);
 			}
 
 			//check left(-Y)
-			else if(TargetHeights[(X * GridSizeY) + (Y - 1)] == RampTargetHeight)
+			else if((Y - 1 >= 0) && TargetHeights[(X * GridSizeY) + (Y - 1)] == RampTargetHeight)
 			{
 				SpawnRampTarget(X, Y, CurrentH, -90.0f+90);
 			}

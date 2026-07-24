@@ -63,7 +63,16 @@ protected:
 	//how high the NavMesh should extend above the tallest wall to allow jumping/spawning
 	UPROPERTY(EditAnywhere, Category = "Arena Config")
 	float NavMeshCeilingPadding = 1000.0f;
+
+	//PROCEDURAL NOISE SETTING:
+	UPROPERTY(EditAnywhere, Category = "Arena Config|Procedural")
+	float NoiseFrequency = 0.1f; //lower=wider hills, higher=choppy terrain
+
+	UPROPERTY(EditAnywhere, Category = "Arena Config|Procedural")
+	bool bUseSymmetry = true; //mirrors the arena
 	
+	UPROPERTY(EditAnywhere, Category = "Arena Config|Procedural")
+	bool bEnforceAccessibility = true; //smooths steep cliffs so ramps can always connect
 
 private:
 	//tracks current and target height of every single block:
