@@ -5,6 +5,7 @@
 #include "Components/InstancedStaticMeshComponent.h"
 #include "Kismet/GameplayStatics.h"
 #include "NavMesh/NavMeshBoundsVolume.h"
+#include "NavigationSystem.h"
 #include "GameFramework/Character.h"
 
 // Sets default values
@@ -151,10 +152,6 @@ void AArenaManager::Tick(float DeltaTime)
 			//if target not reached yet:
 			if(!FMath::IsNearlyEqual(CurrentHeights[i], TargetHeights[i], 1.0f)) bStillMoving = true;
 		}
-
-		//give the data to GPU to handle:
-		//params: (start index, array of Transforms, Rebuild Navigation?)
-		GridMesh->BatchUpdateInstancesTransforms(0, InstanceTransforms, true, true);
 	
 		//RAMPS:
 		for (int32 i = 0; i < CurrentRampTransforms.Num(); ++i)
@@ -164,18 +161,36 @@ void AArenaManager::Tick(float DeltaTime)
 
 			// Smoothly slide the ramps up!
 			CurrentLoc.Z = FMath::FInterpTo(CurrentLoc.Z, TargetLoc.Z, DeltaTime, TransitionSpeed);
-			
 			CurrentRampTransforms[i].SetLocation(CurrentLoc);
+
+			if(!FMath::IsNearlyEqual(CurrentLoc.Z, TargetLoc.Z, 1.0f)) bStillMoving = true;
 		}
 
-		//PUSH THE RAMP DATA TO THE GPU
+		//PUSH THE DATA TO THE GPU
+		//params: (start index, array of Transforms, Rebuild Navigation?)
+		GridMesh->BatchUpdateInstancesTransforms(0, InstanceTransforms, true, true);
+
 		if (CurrentRampTransforms.Num() > 0)
 		{
 			RampMesh->BatchUpdateInstancesTransforms(0, CurrentRampTransforms, true, true);
 		}
 
 		//if target height reached by all blocks:
-		if(!bStillMoving) bIsTransitioning = false;
+		if(!bStillMoving)
+		{
+			bIsTransitioning = false;
+
+			//arena geometry is ready, tell the nav mesh to beging building:
+			//safely release the lock and force the rebuild instantly
+			if (UNavigationSystemV1* NavSys = UNavigationSystemV1::GetCurrent(GetWorld()))
+			{
+				NavSys->RemoveNavigationBuildLock(
+					ENavigationBuildLock::Custom, 
+					UNavigationSystemV1::ELockRemovalRebuildAction::Rebuild
+				); 
+			}
+
+		}
 	}
 }
 
@@ -341,6 +356,12 @@ void AArenaManager::GenerateNewLayout()
 				SpawnRampTarget(X, Y, CurrentH, -90.0f+90);
 			}
 		}
+	}
+
+	//temporarily tell the engine lock navmesh building:
+	if (UNavigationSystemV1* NavSys = UNavigationSystemV1::GetCurrent(GetWorld()))
+	{
+		NavSys->AddNavigationBuildLock(ENavigationBuildLock::Custom);
 	}
 
 	bIsTransitioning = true;//tell tick to start moving blocks
