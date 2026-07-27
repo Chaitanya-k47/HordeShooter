@@ -24,6 +24,8 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Arena")
 	void GenerateNewLayout();
 
+	UFUNCTION(BlueprintCallable, Category = "Arena")
+	FTransform GetRandomSpawnPoint() const;
 
 protected:
 	// Called when the game starts or when spawned
@@ -109,5 +111,10 @@ private:
 	float RampMeshY = 100.0f;
 	float RampMeshZ = 100.0f;
 
+	//tracks which grid cell has got a ramp
+	TArray<bool> BlockHasRamp;
+
+	//stores perfect centre for safe flat block for spawning:
+	TArray<FTransform> ValidSpawnPoints;
 
 };

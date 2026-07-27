@@ -5,6 +5,7 @@
 #include "HordeShooterEnemy.h"
 #include "HordeSpawnPoint.h"
 #include "Kismet/GameplayStatics.h"
+#include "ArenaManager.h"
 
 // Sets default values
 AHordeWaveManager::AHordeWaveManager()
@@ -20,20 +21,12 @@ void AHordeWaveManager::BeginPlay()
 	Super::BeginPlay();
 
 	//find all the spawn points in the level.
-	TArray<AActor*> FoundPoints;
-	UGameplayStatics::GetAllActorsOfClass(GetWorld(), AHordeSpawnPoint::StaticClass(), FoundPoints);
+	AActor* ArenaActor = UGameplayStatics::GetActorOfClass(GetWorld(), AArenaManager::StaticClass());
+	CachedArenaManager = Cast<AArenaManager>(ArenaActor);
 	
-	for(AActor* Actor : FoundPoints)
+	if (!CachedArenaManager || !EnemyClassToSpawn)
 	{
-		if(AHordeSpawnPoint* SpawnPoint = Cast<AHordeSpawnPoint>(Actor))
-		{
-			SpawnPoints.Add(SpawnPoint);
-		}
-	}
-
-	if (SpawnPoints.Num() == 0 || !EnemyClassToSpawn)
-	{
-		if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 10.f, FColor::Red, TEXT("ERROR: Missing Spawn Points or Enemy Class!"));
+		if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 10.f, FColor::Red, TEXT("ERROR: Missing Arena Manager or Enemy Class!"));
 		return;
 	}
 
@@ -41,7 +34,7 @@ void AHordeWaveManager::BeginPlay()
 	InitializePool();
 
 	//start the timer to spawn the first wave
-	GetWorldTimerManager().SetTimer(WaveTransitionTimerHandle, this, &AHordeWaveManager::StartNextWave, 3.0f, false);
+	GetWorldTimerManager().SetTimer(WaveTransitionTimerHandle, this, &AHordeWaveManager::StartNextWave, IntermissionTime, false);
 }
 
 void AHordeWaveManager::InitializePool()
@@ -99,9 +92,8 @@ void AHordeWaveManager::SpawnSingleEnemy()
 	{
 		if(Enemy && !Enemy->bIsActive)
 		{
-			//pick a random spawnpoint
-			int32 RandomSpawnIndex =  FMath::RandRange(0, SpawnPoints.Num() - 1);
-			FTransform SpawnTransform = SpawnPoints[RandomSpawnIndex]->GetActorTransform();
+			//Ask arena manager for random spawn point.
+			FTransform SpawnTransform = CachedArenaManager->GetRandomSpawnPoint();
 
 			Enemy->ActivateEnemy(SpawnTransform);
 			ActiveLivingEnemies++;
@@ -122,7 +114,7 @@ void AHordeWaveManager::OnEnemyDied()
 		
 		if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Yellow, TEXT("WAVE CLEARED! Get ready..."));
 
-		GetWorldTimerManager().SetTimer(WaveTransitionTimerHandle, this, &AHordeWaveManager::StartNextWave, 5.0f, false);
+		GetWorldTimerManager().SetTimer(WaveTransitionTimerHandle, this, &AHordeWaveManager::StartNextWave, IntermissionTime, false);
 	}
 }
 

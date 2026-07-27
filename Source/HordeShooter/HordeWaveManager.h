@@ -7,7 +7,7 @@
 #include "HordeWaveManager.generated.h"
 
 class AHordeShooterEnemy;
-class AHordeSpawnPoint;
+class AArenaManager;
 
 USTRUCT(BlueprintType)
 struct FWaveConfig
@@ -48,14 +48,17 @@ protected:
 	UPROPERTY(EditAnywhere, Category = "Horde Setup")
 	TArray<FWaveConfig> Waves; //array of waves/wave configs.
 
+	UPROPERTY(EditAnywhere, Category = "Horde Setup")
+	float IntermissionTime = 5.f;
+
 
 private:
 	//POOLING AND TRACKING:
 	UPROPERTY()
 	TArray<AHordeShooterEnemy*> EnemyPool;
-
+	
 	UPROPERTY()
-	TArray<AHordeSpawnPoint*> SpawnPoints;
+	AArenaManager* CachedArenaManager;
 
 	int32 CurrentWaveIndex = 0;
 	int32 EnemiesLeftToSpawnThisWave = 0;

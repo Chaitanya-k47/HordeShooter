@@ -68,7 +68,7 @@ void AArenaManager::BeginPlay()
 	float TotalPillarHeight = (MaxStairSteps * BlockSize) + BlockSize; //adding a block more to the height for safety.
 
 	//calculate the factor to scale the ramp to the size of block
-	CachedRampScale = FVector(BlockSize/RampMeshX, BlockSize/RampMeshY, BlockSize/RampMeshZ);
+	CachedRampScale = FVector((BlockSize/RampMeshX), (BlockSize/RampMeshY), BlockSize/RampMeshZ);
 
 	//calculate absolute centre of the grid:
 	float CenterX = ((GridSizeX - 1) * BlockSize)/2.0f;
@@ -200,6 +200,10 @@ void AArenaManager::GenerateNewLayout()
 	RampMesh->ClearInstances();
 	CurrentRampTransforms.Empty();
 	TargetRampTransforms.Empty();
+
+	//initialize trackers:
+	ValidSpawnPoints.Empty();
+	BlockHasRamp.Init(false, GridSizeX * GridSizeY);
 
 	//pick a random seed offset for the noise so every generated layout is unique:
 	FVector2D NoiseOffset = FVector2D(FMath::RandRange(-10000.f, 10000.f), FMath::RandRange(-10000.f, 10000.f));
@@ -336,28 +340,62 @@ void AArenaManager::GenerateNewLayout()
 			if((X + 1 < GridSizeX) && TargetHeights[((X + 1) * GridSizeY) + Y] == RampTargetHeight)
 			{
 				SpawnRampTarget(X, Y, CurrentH, 0.0f+90); //0 degrees = facing +X
+				BlockHasRamp[CurrentIndex] = true;
 			}
 
 			//check backward(-X)
 			else if ((X - 1 >= 0) && TargetHeights[((X - 1) * GridSizeY) + Y] == RampTargetHeight)
 			{
 				SpawnRampTarget(X, Y, CurrentH, 180.0f+90);
+				BlockHasRamp[CurrentIndex] = true;
 			}
 
 			//check right(+Y)
 			else if((Y + 1 < GridSizeY) && TargetHeights[(X * GridSizeY) + (Y + 1)] == RampTargetHeight)
 			{
 				SpawnRampTarget(X, Y, CurrentH, 90.0f+90);
+				BlockHasRamp[CurrentIndex] = true;
 			}
 
 			//check left(-Y)
 			else if((Y - 1 >= 0) && TargetHeights[(X * GridSizeY) + (Y - 1)] == RampTargetHeight)
 			{
 				SpawnRampTarget(X, Y, CurrentH, -90.0f+90);
+				BlockHasRamp[CurrentIndex] = true;
 			}
 		}
 	}
 
+	//CACHE VALID SPAWN POINTS:
+	for (int32 X = 0; X < GridSizeX; ++X)
+	{
+		for (int32 Y = 0; Y < GridSizeY; ++Y)
+		{
+			int32 Index = (X * GridSizeY) + Y;
+
+			if(!BlockHasRamp[Index])
+			{
+				float BaseZ = TargetHeights[Index];
+				float CubeScaleZ = ((MaxStairSteps * BlockSize) + BlockSize) / MeshSizeZ;
+				float RoofZ = BaseZ + (CachedCubeMaxZ * CubeScaleZ) + GetActorLocation().Z;
+
+				FVector CubePivotXY = FVector(X * BlockSize, Y * BlockSize, 0.0f) + GetActorLocation();
+				FVector CubeScaleXY = FVector(BlockSize / MeshSizeX, BlockSize / MeshSizeY, 1.0f);
+				FVector ScaledCubeOffset = CachedCubeLocalCenter * CubeScaleXY;
+				FVector TrueCellCenterXY = CubePivotXY + FVector(ScaledCubeOffset.X, ScaledCubeOffset.Y, 0.0f);
+
+				//exact centre of a grid cell, 100 units above floor
+				FVector SpawnLoc = FVector(TrueCellCenterXY.X, TrueCellCenterXY.Y, RoofZ + 100.0f);
+				
+				//randomize yaw
+				FRotator SpawnRot = FRotator(0.0f, FMath::RandRange(0.0f, 360.0f), 0.0f);
+
+				ValidSpawnPoints.Add(FTransform(SpawnRot, SpawnLoc, FVector(1.0f)));
+			}
+		}
+	}
+
+	//LOCK THE NAV MESH:
 	//temporarily tell the engine lock navmesh building:
 	if (UNavigationSystemV1* NavSys = UNavigationSystemV1::GetCurrent(GetWorld()))
 	{
@@ -418,4 +456,15 @@ void AArenaManager::SpawnRampTarget(int32 X, int32 Y, float BaseZ, float YawRota
 	
 	CurrentRampTransforms.Add(StartTransform);
 	TargetRampTransforms.Add(TargetTransform);
+}
+
+FTransform AArenaManager::GetRandomSpawnPoint() const
+{
+	if(ValidSpawnPoints.Num() > 0)
+	{
+		int32 RandomIndex = FMath::RandRange(0, ValidSpawnPoints.Num() - 1);
+		return ValidSpawnPoints[RandomIndex];
+	}
+
+	return FTransform::Identity;
 }
