@@ -110,9 +110,6 @@ To keep combat unpredictable, the level dynamically flattens and shifts into a n
 
 The primary constraint for the AI system was strict performance. With a 60 FPS cap, the game has a hard frame budget of 16.67ms to calculate all logic, physics, and rendering.
 
-![30 Enemies on Screen](media/30_Enemies_Screen.png)  
-*30+ enemies pathfinding and tracking the player simultaneously while holding a steady 60 FPS on a mid/low-tier target rig.*
-
 To support a massive horde without dropping frames, the AI is built on heavy under-the-hood optimizations:
 
 * **C++ Finite State Machine (10Hz Logic):** Instead of relying on heavy Behavior Trees or running logic in the native `Tick()` function (60+ times a second), the horde runs on a custom, lightweight C++ FSM. The AI brain evaluates and updates its state at a fixed 10 times a second (10Hz). This makes the AI completely framerate independent and drops CPU overhead to near zero.
