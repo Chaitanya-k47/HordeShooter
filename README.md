@@ -1,4 +1,4 @@
-# Horde Shooter (WIP)
+# Horde Shooter - Procedural Arena FPS (WIP)
 **A Fast-Paced, Highly Optimized FPS built in Unreal Engine 5 & C++**
 
 🎥 Watch the full high-fidelity gameplay and audio showcase on YouTube: [Gameplay Showcase](https://youtu.be/RB3LBlga3Fo)
