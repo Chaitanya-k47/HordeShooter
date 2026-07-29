@@ -792,7 +792,7 @@ void AHordeShooterCharacter::GenerateArena()
 	
 	if (AArenaManager* ArenaManager = Cast<AArenaManager>(ArenaActor))
 	{
-		ArenaManager->GenerateNewLayout();
+		ArenaManager->BeginNewLayoutGeneration();
 		
 		if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 2.0f, FColor::Cyan, TEXT("SYSTEM: Reconfiguring Arena Layout..."));
 	}

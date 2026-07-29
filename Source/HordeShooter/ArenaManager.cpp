@@ -134,7 +134,7 @@ void AArenaManager::Tick(float DeltaTime)
 	Super::Tick(DeltaTime);
 
 	//animating pillars and ramps:
-	if(bIsTransitioning)
+	if(TransitionState != EArenaTransitionState::Idle)
 	{
 		bool bStillMoving = false;
 		
@@ -169,33 +169,70 @@ void AArenaManager::Tick(float DeltaTime)
 		//PUSH THE DATA TO THE GPU
 		//params: (start index, array of Transforms, Rebuild Navigation?)
 		GridMesh->BatchUpdateInstancesTransforms(0, InstanceTransforms, true, true);
-
-		if (CurrentRampTransforms.Num() > 0)
+		if(CurrentRampTransforms.Num() > 0)
 		{
 			RampMesh->BatchUpdateInstancesTransforms(0, CurrentRampTransforms, true, true);
 		}
 
-		//if target height reached by all blocks:
+		//STATE MACHINE LOGIC:
+		//if target height reached by all blocks and ramps:
 		if(!bStillMoving)
 		{
-			bIsTransitioning = false;
-
-			//arena geometry is ready, tell the nav mesh to beging building:
-			//safely release the lock and force the rebuild instantly
-			if (UNavigationSystemV1* NavSys = UNavigationSystemV1::GetCurrent(GetWorld()))
+			if(TransitionState == EArenaTransitionState::Flattening)
 			{
-				NavSys->RemoveNavigationBuildLock(
-					ENavigationBuildLock::Custom, 
-					UNavigationSystemV1::ELockRemovalRebuildAction::Rebuild
-				); 
+				//if target height reached(stopped animating) and old state is "Flattening": means flattening done, now rise.
+				GenerateAndRiseNewLayout();
 			}
+			else if(TransitionState == EArenaTransitionState::Rising)
+			{
+				//if target height reached(stopped animating) and old state is "Rising": means rising done, new layout is set, now rest.
+				TransitionState = EArenaTransitionState::Idle;
 
+				//arena geometry is ready, tell the nav mesh to beging building:
+				//safely release the lock and force the rebuild instantly
+				if (UNavigationSystemV1* NavSys = UNavigationSystemV1::GetCurrent(GetWorld()))
+				{
+					NavSys->RemoveNavigationBuildLock(
+						ENavigationBuildLock::Custom, 
+						UNavigationSystemV1::ELockRemovalRebuildAction::Rebuild
+					); 
+				}
+			}
 		}
 	}
 }
 
+void AArenaManager::BeginNewLayoutGeneration()
+{
+	//prevent from spamming generation command:
+	if(TransitionState != EArenaTransitionState::Idle) return;
+
+	//lock the navmesh:
+	if(UNavigationSystemV1* NavSys = UNavigationSystemV1::GetCurrent(GetWorld()))
+	{
+		NavSys->AddNavigationBuildLock(ENavigationBuildLock::Custom);
+	}
+
+	//force all the blocks to target lowest floor level:
+	for(int32 i = 0; i < TargetHeights.Num(); ++i)
+	{
+		TargetHeights[i] = BlockLocZ;
+	}
+
+	//force all EXISTING ramps to target deep below lowest floor level:
+	for(int32 i = 0; i < TargetRampTransforms.Num(); ++i)
+	{
+		FVector TargetLoc = TargetRampTransforms[i].GetLocation();
+		TargetLoc.Z = BlockLocZ - 2000.f;
+		TargetRampTransforms[i].SetLocation(TargetLoc);
+	}
+
+	//inform tick to start flattening anim:
+	TransitionState = EArenaTransitionState::Flattening;
+}
+
 //Procedural generation:
-void AArenaManager::GenerateNewLayout()
+void AArenaManager::GenerateAndRiseNewLayout()
 {
 	RampMesh->ClearInstances();
 	CurrentRampTransforms.Empty();
@@ -395,14 +432,8 @@ void AArenaManager::GenerateNewLayout()
 		}
 	}
 
-	//LOCK THE NAV MESH:
-	//temporarily tell the engine lock navmesh building:
-	if (UNavigationSystemV1* NavSys = UNavigationSystemV1::GetCurrent(GetWorld()))
-	{
-		NavSys->AddNavigationBuildLock(ENavigationBuildLock::Custom);
-	}
-
-	bIsTransitioning = true;//tell tick to start moving blocks
+	//tell the tick to start rising anim:
+	TransitionState = EArenaTransitionState::Rising;
 }
 
 void AArenaManager::SpawnRampTarget(int32 X, int32 Y, float BaseZ, float YawRotation)

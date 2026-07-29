@@ -8,6 +8,14 @@
 
 class UInstancedStaticMeshComponent;
 
+UENUM()
+enum class EArenaTransitionState : uint8
+{
+	Idle,
+	Flattening,
+	Rising
+};
+
 UCLASS()
 class HORDESHOOTER_API AArenaManager : public AActor
 {
@@ -22,7 +30,7 @@ public:
 
 	//procedural generation:
 	UFUNCTION(BlueprintCallable, Category = "Arena")
-	void GenerateNewLayout();
+	void BeginNewLayoutGeneration(); //starts flattening the current layout.
 
 	UFUNCTION(BlueprintCallable, Category = "Arena")
 	FTransform GetRandomSpawnPoint() const;
@@ -91,8 +99,6 @@ private:
 	//helper for ramp spawning
 	void SpawnRampTarget(int32 X, int32 Y, float BaseZ, float YawRotation);
 
-	bool bIsTransitioning = false;
-
 	// --- RAMP/CUBE MATH CACHE ---
 	FVector CachedRampScale;
 	FVector CachedRampLocalCenter; 
@@ -117,4 +123,9 @@ private:
 	//stores perfect centre for safe flat block for spawning:
 	TArray<FTransform> ValidSpawnPoints;
 
+	//Arena state tracker:
+	EArenaTransitionState TransitionState = EArenaTransitionState::Idle;
+
+	//generates new layout and starts transitioning to it.
+	void GenerateAndRiseNewLayout();
 };
