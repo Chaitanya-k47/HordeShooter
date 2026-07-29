@@ -88,8 +88,43 @@ A highly versatile energy weapon utilizing complex state machines for continuous
 
 ---
 
+## 🟩 Procedural Arena Generation
+
+To keep combat unpredictable, the level dynamically flattens and shifts into a new layout upon command, utilizing math-driven Instanced Static Meshes (ISMCs) and dynamic NavMesh rebuilding.
+
+![Arena Bird View](media/Arena_BirdView_GIF.gif)  
+*Bird's-eye view of the C++ State Machine pulling blocks underground before generating and rising a new, valid layout.*
+
+![Arena Runtime View](media/Arena_Runtime_GIF.gif)  
+*Runtime transition viewed from the player's perspective.*
+
+* **The Logic (Noise & Symmetry):** The map topology is generated using layered Perlin Noise, which is quantized into discrete 400-unit steps. The generation coordinates are mirrored bilaterally to give the random noise an intentionally designed, competitive "arena" feel.
+* **The Logic (Accessibility Pass):** To ensure enemies can always reach the player, the generator runs an iterative smoothing loop. If a mathematical cliff is too steep to climb (e.g., a 2-block drop), the loop automatically pulls the tall block down into a 1-step staircase, guaranteeing a ramp can spawn.
+* **The Optimization (ISMC Batching):** Bypassed Actor spawning entirely. Hundreds of individual cubes and ramps are rendered via Instanced Static Mesh Components. The transition animations update a single `TArray<FTransform>`, pushing the data to the GPU via `BatchUpdateInstancesTransforms` to maintain a locked 60 FPS.
+* **The Optimization (NavMesh C++ Locks):** Rebuilding navigation paths while 400 blocks slide up and down would instantly crash the CPU. Instead, the transition State Machine utilizes `AddNavigationBuildLock(ENavigationBuildLock::Custom)`. Once the blocks lock into their final layout, the lock is released and a single, instantaneous Recast rebuild is fired.
+* **The "Micro-Weld" Hack:** Prevented Dynamic Recast voxel-tearing on perfect mathematical seams by applying a 1.01f non-uniform scale to ramps. This forces a microscopic 2-unit overlap, guaranteeing contiguous NavMesh paths up 45-degree slopes without gaps.
+
+---
+
+## 🧟 Enemy AI & Horde Systems
+
+The primary constraint for the AI system was strict performance. With a 60 FPS cap, the game has a hard frame budget of 16.67ms to calculate all logic, physics, and rendering.
+
+![30 Enemies on Screen](media/30_Enemies_Screen.png)  
+*30+ enemies pathfinding and tracking the player simultaneously while holding a steady 60 FPS on a mid/low-tier target rig.*
+
+To support a massive horde without dropping frames, the AI is built on heavy under-the-hood optimizations:
+
+* **C++ Finite State Machine (10Hz Logic):** Instead of relying on heavy Behavior Trees or running logic in the native `Tick()` function (60+ times a second), the horde runs on a custom, lightweight C++ FSM. The AI brain evaluates and updates its state at a fixed 10 times a second (10Hz). This makes the AI completely framerate independent and drops CPU overhead to near zero.
+* **Spatial Hashing over Hitboxes:** Instead of attaching ticking physical collision boxes to enemy hands, the enemy uses `GetWorld()->OverlapMultiByChannel` to sweep for the player at the exact animation frame of the melee strike, completely bypassing continuous physics overlap calculations.
+* **Object Pooling:** To prevent massive Garbage Collection spikes during wave spawning, the Horde Manager pre-allocates a pool of inactive enemy actors and recycles them instantly upon death and respawn.
+* **VSM & Shadow LOD Culling:** Virtual Shadow Maps are heavily restricted. Enemies only cast Dynamic Capsule Shadows at LOD 0 and LOD 1, completely culling complex shadow calculations at a distance to save massive GPU Draw thread time.
+* **Mesh Decimation:** Skeletal Meshes are configured with 4-Tier LODs, drastically decimating polycounts based on screen size.
+
+---
+
 ## 🛠️ Tech Stack & Systems Summary
-* **Engine:** Unreal Engine 5.6.1
+* **Engine:** Unreal Engine 5.4+
 * **Language:** C++ / Blueprints (Hybrid Architecture)
 * **VFX/Shaders:** Niagara GPU/CPU Compute, Substrate Material Workflows.
 * **UI:** Event-Driven UMG. The HUD never ticks. Weapons broadcast Dynamic Multicast Delegates upon firing or reloading, pushing updates to the UI only when memory states explicitly change.

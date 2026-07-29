@@ -29,7 +29,7 @@ public:
 	virtual void Tick(float DeltaTime) override;
 
 	//procedural generation:
-	UFUNCTION(BlueprintCallable, Category = "Arena")
+	UFUNCTION(BlueprintCallable, CallInEditor, Category = "Arena")
 	void BeginNewLayoutGeneration(); //starts flattening the current layout.
 
 	UFUNCTION(BlueprintCallable, Category = "Arena")
