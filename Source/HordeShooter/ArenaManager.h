@@ -8,12 +8,15 @@
 
 class UInstancedStaticMeshComponent;
 
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnArenaLayoutFinishedSignature);
+
 UENUM()
 enum class EArenaTransitionState : uint8
 {
 	Idle,
 	Flattening,
-	Rising
+	Rising,
+	WaitingForNavMesh
 };
 
 UCLASS()
@@ -34,6 +37,9 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category = "Arena")
 	FTransform GetRandomSpawnPoint() const;
+
+	UPROPERTY(BlueprintAssignable, Category = "Arena|Events")
+	FOnArenaLayoutFinishedSignature OnArenaLayoutFinished;
 
 protected:
 	// Called when the game starts or when spawned

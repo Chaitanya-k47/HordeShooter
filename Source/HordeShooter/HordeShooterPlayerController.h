@@ -18,7 +18,6 @@ protected:
 	virtual void BeginPlay() override;
 
 
-
 protected:
 	//UI CONFIG:
 	UPROPERTY(EditDefaultsOnly, Category = "UI")
@@ -27,5 +26,7 @@ protected:
 public:
 	UPROPERTY()
 	UHordeShooterHUDWidget* PlayerHUDWidget; //actual pointer to store the created widget instance
+
+	void ShowGameOverScreen();
 	
 };

@@ -94,6 +94,10 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Mesh")
 	USkeletalMeshComponent* CharacterArms;
 
+	//for casting player shadow:
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Mesh")
+	UStaticMeshComponent* ShadowProxyMesh;
+
 protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Camera")
 	USceneComponent* Pivot;

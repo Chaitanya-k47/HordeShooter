@@ -69,7 +69,12 @@ private:
 	FTimerHandle WaveTransitionTimerHandle;
 
 	void InitializePool();
+
+	UFUNCTION()
+	void OnArenaReady();
+
 	void StartNextWave();
+	
 	void SpawnSingleEnemy();
 
 	//callback for enemy death. to be bound to a delegate in enemy class.

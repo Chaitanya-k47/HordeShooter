@@ -34,8 +34,16 @@ AHordeShooterCharacter::AHordeShooterCharacter()
 	Pivot = CreateDefaultSubobject<USceneComponent>(TEXT("Pivot"));
 	Pivot->SetupAttachment(GetRootComponent());
 
+	ShadowProxyMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("ShadowProxyMesh"));
+	ShadowProxyMesh->SetupAttachment(GetRootComponent());
+	ShadowProxyMesh->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	ShadowProxyMesh->SetCollisionProfileName(TEXT("NoCollision"));
+	ShadowProxyMesh->SetHiddenInGame(true);
+	ShadowProxyMesh->bCastHiddenShadow = true; 
+
 	CharacterArms = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("CharacterArms"));
 	CharacterArms->SetupAttachment(Pivot);
+	CharacterArms->SetCastShadow(false);
 
 	FirstPersonCamera = CreateDefaultSubobject<UCameraComponent>(TEXT("FirstPersonCamera"));
 	FirstPersonCamera->SetupAttachment(CharacterArms, FName("head")); //attach camera to Head bone.
@@ -56,6 +64,7 @@ AHordeShooterCharacter::AHordeShooterCharacter()
 	GetCharacterMovement()->JumpZVelocity = 1000.f;
 	GetCharacterMovement()->AirControl = 0.8f;
 	GetCharacterMovement()->FallingLateralFriction = 3.0f;
+
 }
 
 // Called when the game starts or when spawned
@@ -114,6 +123,38 @@ void AHordeShooterCharacter::BeginPlay()
 			EquipWeapon(SpawnedWeapon);
 		}
 	}
+
+	//wait 0.1 seconds to guarantee the HUD has been created by the playercontroller
+	FTimerHandle HUDInitTimer;
+	GetWorldTimerManager().SetTimer(HUDInitTimer, [this]()
+	{
+		if(AHordeShooterPlayerController* PC = Cast<AHordeShooterPlayerController>(GetController()))
+		{
+			if(PC->PlayerHUDWidget)	PC->PlayerHUDWidget->UpdateHealth(CurrentHealth, MaxHealth);
+		}
+
+		//spawn weapons and add to inventory:
+		for(const TSubclassOf<AHordeShooterWeapon>& WeaponClass : DefaultWeaponClasses)
+		{
+			if(!WeaponClass) continue;
+
+			FActorSpawnParameters SpawnParams;
+			SpawnParams.Owner = this;
+
+			AHordeShooterWeapon* SpawnedWeapon = GetWorld()->SpawnActor<AHordeShooterWeapon>(WeaponClass, SpawnParams);
+
+			int32 Index = Inventory.Add(SpawnedWeapon);
+			SpawnedWeapon->CurrentOwner = this;
+
+			if(Index == CurrentWeaponIndex)
+			{
+				//equip weapon.
+				EquipWeapon(SpawnedWeapon);
+			}
+		}
+
+	}, 0.1f, false);
+
 }
 
 // Called every frame
@@ -743,10 +784,19 @@ bool AHordeShooterCharacter::IsCloseToWall()
 
 bool AHordeShooterCharacter::ReactToHit(float DamageAmount, const FVector& HitImpulse, FName HitBoneName)
 {
+	if(CurrentHealth <= 0.f) return false; //already dead
+
 	CurrentHealth -= DamageAmount;
 
+	//update UI
+	if(AHordeShooterPlayerController* PC = Cast<AHordeShooterPlayerController>(GetController()))
+	{
+		if(PC->PlayerHUDWidget) PC->PlayerHUDWidget->UpdateHealth(CurrentHealth, MaxHealth);
+	}
+
 	if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 2.0f, FColor::Red, FString::Printf(TEXT("PLAYER HIT! Health: %f"), CurrentHealth));
-	if (CurrentHealth <= 0)
+	
+	if(CurrentHealth <= 0)
 	{
 		PlayerDie();
 	}
@@ -757,7 +807,25 @@ bool AHordeShooterCharacter::ReactToHit(float DamageAmount, const FVector& HitIm
 void AHordeShooterCharacter::PlayerDie()
 {
 	if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 5.0f, FColor::Red, TEXT("PLAYER IS DEAD. GAME OVER."));
-	// We will add respawn/menu logic here later
+	
+	//disable player movement and actions
+	GetCharacterMovement()->DisableMovement();
+	bIsAiming = false;
+	bIsSliding = false;
+	bIsDashing = false;
+	
+	//hide/Disable weapon
+	if(CurrentEquippedWeapon)
+	{
+		CurrentEquippedWeapon->StopFire();
+		CurrentEquippedWeapon->bIsEquipped = false;
+	}
+	
+	//tell the Controller to show the Game Over screen
+	if(AHordeShooterPlayerController* PC = Cast<AHordeShooterPlayerController>(GetController()))
+	{
+		PC->ShowGameOverScreen();
+	}
 }
 
 void AHordeShooterCharacter::TogglePause()

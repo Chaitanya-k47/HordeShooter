@@ -33,8 +33,9 @@ void AHordeWaveManager::BeginPlay()
 	//create the enemy pool.
 	InitializePool();
 
-	//start the timer to spawn the first wave
-	GetWorldTimerManager().SetTimer(WaveTransitionTimerHandle, this, &AHordeWaveManager::StartNextWave, IntermissionTime, false);
+	//Bind to Arena layout delegate:
+	CachedArenaManager->OnArenaLayoutFinished.AddDynamic(this, &AHordeWaveManager::OnArenaReady);
+
 }
 
 void AHordeWaveManager::InitializePool()
@@ -52,6 +53,13 @@ void AHordeWaveManager::InitializePool()
 			EnemyPool.Add(NewEnemy);
 		}
 	}
+}
+
+void AHordeWaveManager::OnArenaReady()
+{
+	if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 3.f, FColor::Orange, TEXT("SYSTEM: Arena Secured. Spawning Horde..."));
+
+	GetWorldTimerManager().SetTimer(WaveTransitionTimerHandle, this, &AHordeWaveManager::StartNextWave, IntermissionTime, false);
 }
 
 void AHordeWaveManager::StartNextWave()
@@ -114,7 +122,11 @@ void AHordeWaveManager::OnEnemyDied()
 		
 		if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Yellow, TEXT("WAVE CLEARED! Get ready..."));
 
-		GetWorldTimerManager().SetTimer(WaveTransitionTimerHandle, this, &AHordeWaveManager::StartNextWave, IntermissionTime, false);
+		FTimerHandle ArenaShiftTimer;
+		GetWorldTimerManager().SetTimer(ArenaShiftTimer, [this]()
+		{
+			if(CachedArenaManager) CachedArenaManager->BeginNewLayoutGeneration();
+		}, 2.0f, false);
 	}
 }
 

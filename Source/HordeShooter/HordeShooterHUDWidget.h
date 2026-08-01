@@ -8,6 +8,8 @@
 
 class UTextBlock;
 class UWidget;
+class UProgressBar;
+class UButton;
 
 UCLASS()
 class HORDESHOOTER_API UHordeShooterHUDWidget : public UUserWidget
@@ -27,12 +29,31 @@ protected:
 	UPROPERTY(meta = (BindWidget))
 	UWidget* CrossHair;
 
+	UPROPERTY(meta = (BindWidget))
+	UProgressBar* HealthBar;
+
+	UPROPERTY(meta = (BindWidget))
+	UWidget* GameOverPanel; //a border/canvas containing "Game Over" text and the button
+
+	UPROPERTY(meta = (BindWidget))
+	UButton* RestartButton;
+
+	virtual void NativeConstruct() override;
 
 public:
 
 	UFUNCTION()
 	void UpdateAmmo(int32 CurrentAmmo, int32 MagSize);
+
+	UFUNCTION()
+	void UpdateHealth(float CurrentHealth, float MaxHealth);
 	
 	void ToggleCrosshair(bool bShow);
+	void ShowGameOver();
+
+private:
+
+	UFUNCTION()
+	void OnRestartClicked();
 
 };

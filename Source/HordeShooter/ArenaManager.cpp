@@ -134,7 +134,7 @@ void AArenaManager::Tick(float DeltaTime)
 	Super::Tick(DeltaTime);
 
 	//animating pillars and ramps:
-	if(TransitionState != EArenaTransitionState::Idle)
+	if(TransitionState == EArenaTransitionState::Flattening || TransitionState == EArenaTransitionState::Rising)
 	{
 		bool bStillMoving = false;
 		
@@ -185,8 +185,8 @@ void AArenaManager::Tick(float DeltaTime)
 			}
 			else if(TransitionState == EArenaTransitionState::Rising)
 			{
-				//if target height reached(stopped animating) and old state is "Rising": means rising done, new layout is set, now rest.
-				TransitionState = EArenaTransitionState::Idle;
+				//if target height reached(stopped animating) and old state is "Rising": means rising done, new layout is set, now build navmesh
+				TransitionState = EArenaTransitionState::WaitingForNavMesh;
 
 				//arena geometry is ready, tell the nav mesh to beging building:
 				//safely release the lock and force the rebuild instantly
@@ -197,6 +197,21 @@ void AArenaManager::Tick(float DeltaTime)
 						UNavigationSystemV1::ELockRemovalRebuildAction::Rebuild
 					); 
 				}
+			}
+		}
+	}
+
+	//navmesh check:
+	if(TransitionState == EArenaTransitionState::WaitingForNavMesh)
+	{
+		if(UNavigationSystemV1* NavSys = UNavigationSystemV1::GetCurrent(GetWorld()))
+		{
+			if(!NavSys->IsNavigationBuildInProgress())
+			{
+				TransitionState = EArenaTransitionState::Idle;
+
+				//broadcast
+				OnArenaLayoutFinished.Broadcast();
 			}
 		}
 	}
