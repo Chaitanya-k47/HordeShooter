@@ -54,7 +54,7 @@ AHordeShooterCharacter::AHordeShooterCharacter()
 	SlideAudioComponent->bAutoActivate = false;
 
 	//Movement config:
-	GetCharacterMovement()->MaxWalkSpeed = 1000.f; // Base run speed (up from 600)
+	GetCharacterMovement()->MaxWalkSpeed = 1500.f; // Base run speed (up from 600)
 	GetCharacterMovement()->MaxAcceleration = 4000.f; // Snappy start
 	GetCharacterMovement()->BrakingDecelerationWalking = 4000.f; // Snappy stop (no ice skating)
 	GetCharacterMovement()->GroundFriction = 8.0f;
@@ -378,6 +378,13 @@ void AHordeShooterCharacter::Move(const FInputActionValue& Value)
 {
 	MovementInputValue = Value;
 
+	//disable movement input while sliding, as player must not be able to change direction while sliding.
+	if(bIsSliding)
+	{
+		AddMovementInput(CachedInputDirection, 1.0f);
+		return;
+	}
+
 	FVector2D MovementVector = Value.Get<FVector2D>();
 	if(Controller != nullptr)
 	{
@@ -532,16 +539,23 @@ void AHordeShooterCharacter::StartSlide()
 		SlideAudioComponent->Play();
 	}
 
+	GetCharacterMovement()->MaxWalkSpeed = MaxSlideSpeed; 
+	GetCharacterMovement()->GroundFriction = 0.0f;
+	GetCharacterMovement()->BrakingDecelerationWalking = 1000.0f;
+
+	CachedInputDirection = GetVelocity().GetSafeNormal2D();
+
+	//if player presses slide with no inp direction
+	if(CachedInputDirection.IsNearlyZero()) CachedInputDirection = GetActorForwardVector();
+
 	if(GetCharacterMovement()->IsMovingOnGround())
 	{
-		FVector SlideDirection = GetVelocity().GetSafeNormal();
-		if (SlideDirection.IsNearlyZero()) SlideDirection = GetActorForwardVector();
-
-		GetCharacterMovement()->Velocity += FVector((SlideDirection * SlideSpeed).X, (SlideDirection * SlideSpeed).Y, -200.f);
-
-		GetCharacterMovement()->MaxWalkSpeed = 300.f; 
-		GetCharacterMovement()->GroundFriction = 0.0f;
-		GetCharacterMovement()->BrakingDecelerationWalking = 1000.0f;
+		GetCharacterMovement()->Velocity += FVector((CachedInputDirection * SlideSpeed).X, (CachedInputDirection * SlideSpeed).Y, 0.0f);
+	}
+	else
+	{
+		//if in air:
+		GetCharacterMovement()->Velocity.Z -= 400.f;
 	}
 }
 
@@ -555,7 +569,7 @@ void AHordeShooterCharacter::StopSlide()
 		SlideAudioComponent->FadeOut(0.2f, 0.0f);
 	}
 	
-	GetCharacterMovement()->MaxWalkSpeed = 1000.f;
+	GetCharacterMovement()->MaxWalkSpeed = 1500.f;
 
 	//reset friction and deceleration to default UE values.
 	GetCharacterMovement()->GroundFriction = 8.0f;

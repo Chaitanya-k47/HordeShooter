@@ -179,7 +179,7 @@ protected:
 
 	//Slide config:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement|Slide")
-	float SlideSpeed = 1500.f;
+	float SlideSpeed = 2000.f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement|Slide")
 	float SlideDropInterpSpeed = 12.f;
@@ -188,7 +188,7 @@ protected:
 	float SlideGravityMultiplier = 4000.f; //how fast character accelerate down a slope
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement|Slide")
-	float MaxSlideSpeed = 2500.f; //hHard cap
+	float MaxSlideSpeed = 3000.f; //hHard cap
 
 	UPROPERTY(BlueprintReadOnly)
 	bool bIsSliding = false;
@@ -287,6 +287,8 @@ private:
 	float DefaultHalfHeight;
 	float CrouchedHalfHeight;
 	float TargetHalfHeight;
+
+	FVector CachedInputDirection;
 
 	float AccumulatedStepDistance = 0.f; //for footstep sfx
 	void PlayFootstepSound();
