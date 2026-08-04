@@ -162,6 +162,11 @@ void AHordeShooterCharacter::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 
+	if (bIsSliding)
+	{
+		AddMovementInput(CachedInputDirection, 1.0f);
+	}
+	
 	//DEBUG
 	if (GEngine)
 	{
@@ -379,11 +384,7 @@ void AHordeShooterCharacter::Move(const FInputActionValue& Value)
 	MovementInputValue = Value;
 
 	//disable movement input while sliding, as player must not be able to change direction while sliding.
-	if(bIsSliding)
-	{
-		AddMovementInput(CachedInputDirection, 1.0f);
-		return;
-	}
+	if(bIsSliding) return;
 
 	FVector2D MovementVector = Value.Get<FVector2D>();
 	if(Controller != nullptr)
@@ -543,10 +544,10 @@ void AHordeShooterCharacter::StartSlide()
 	GetCharacterMovement()->GroundFriction = 0.0f;
 	GetCharacterMovement()->BrakingDecelerationWalking = 1000.0f;
 
-	CachedInputDirection = GetVelocity().GetSafeNormal2D();
-
-	//if player presses slide with no inp direction
-	if(CachedInputDirection.IsNearlyZero()) CachedInputDirection = GetActorForwardVector();
+	FVector InputDirection = GetLastMovementInputVector();
+	CachedInputDirection = (InputDirection.IsNearlyZero()) ? GetActorForwardVector() : InputDirection.GetSafeNormal();
+	CachedInputDirection.Z = 0.f; //keep slide horizontal
+	CachedInputDirection.Normalize();
 
 	if(GetCharacterMovement()->IsMovingOnGround())
 	{
@@ -555,7 +556,7 @@ void AHordeShooterCharacter::StartSlide()
 	else
 	{
 		//if in air:
-		GetCharacterMovement()->Velocity.Z -= 400.f;
+		GetCharacterMovement()->Velocity.Z -= 1000.f;
 	}
 }
 
@@ -649,10 +650,24 @@ void AHordeShooterCharacter::EquipWeapon(AHordeShooterWeapon* NewWeapon)
 void AHordeShooterCharacter::FinishEquipping()
 {
 	bIsSwitchingWeapons = false;
+
+	//input buffering execution:
+	if(bIsFireButtonDown)
+	{
+		FireWeapon();
+	}
+	
+	if(bIsAimButtonDown)
+	{
+		StartAiming();
+	}
 }
 
 void AHordeShooterCharacter::FireWeapon()
 {
+	//cache input:
+	bIsFireButtonDown = true;
+
 	if(bIsSwitchingWeapons) return;
 
 	if(CurrentEquippedWeapon)
@@ -663,7 +678,10 @@ void AHordeShooterCharacter::FireWeapon()
 
 void AHordeShooterCharacter::StopFiringWeapon()
 {
-	if(CurrentEquippedWeapon && !bIsSwitchingWeapons)
+	//cache input:
+	bIsFireButtonDown = false;
+
+	if(CurrentEquippedWeapon)
 	{
 		CurrentEquippedWeapon->StopFire();
 	}
@@ -714,6 +732,9 @@ void AHordeShooterCharacter::PerformWeaponSwitch()
 
 void AHordeShooterCharacter::StartAiming()
 {
+	//cache input:
+	bIsAimButtonDown = true;
+
 	if(!CurrentEquippedWeapon || bIsSliding || bIsDashing || bIsSwitchingWeapons) return;
 	
 	if(CurrentEquippedWeapon->bCanAim)
@@ -735,6 +756,9 @@ void AHordeShooterCharacter::StartAiming()
 
 void AHordeShooterCharacter::StopAiming()
 {
+	//cache input:
+	bIsAimButtonDown = false;
+
 	if(!CurrentEquippedWeapon || bIsSliding || bIsDashing) return;
 	
 	if(CurrentEquippedWeapon->bCanAim)
@@ -763,6 +787,22 @@ void AHordeShooterCharacter::ReloadWeapon()
 	{
 		CurrentEquippedWeapon->Reload();
 	}
+}
+
+void AHordeShooterCharacter::FinishReloading()
+{
+	//input buffering execution:
+	if(bIsFireButtonDown)
+	{
+		FireWeapon();
+	}
+	
+	if(bIsAimButtonDown)
+	{
+		StartAiming();
+	}
+
+	return;
 }
 
 bool AHordeShooterCharacter::IsCloseToWall()
@@ -795,6 +835,7 @@ bool AHordeShooterCharacter::IsCloseToWall()
 
 	return bHit;
 }
+
 
 bool AHordeShooterCharacter::ReactToHit(float DamageAmount, const FVector& HitImpulse, FName HitBoneName)
 {

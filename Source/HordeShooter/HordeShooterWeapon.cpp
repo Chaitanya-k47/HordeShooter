@@ -441,6 +441,8 @@ void AHordeShooterWeapon::FinishReload()
 
 	//broadcast
 	OnAmmoChanged.Broadcast(CurrentAmmo, MagSize);
+
+	if(CurrentOwner) CurrentOwner->FinishReloading();
 }
 
 

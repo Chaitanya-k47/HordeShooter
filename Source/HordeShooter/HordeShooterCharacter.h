@@ -98,6 +98,7 @@ public:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Mesh")
 	UStaticMeshComponent* ShadowProxyMesh;
 
+
 protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Camera")
 	USceneComponent* Pivot;
@@ -216,7 +217,6 @@ protected:
 	UFUNCTION(BlueprintCallable, Category = "Weapon")
 	virtual void EquipWeapon(AHordeShooterWeapon* NewWeapon);
 
-
 	//Weapon collision/clipping config:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Weapon")
 	float WallCheckDistance = 100.f;
@@ -224,6 +224,8 @@ protected:
 public:
 	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Weapon")
 	bool IsCloseToWall();
+
+	void FinishReloading();
 
 protected:
 	//Input callbacks:
@@ -267,6 +269,7 @@ protected:
 	//Generate new arena layout callback:
 	void GenerateArena();
 
+
 private:
 	//State variables:
 	bool bIsDashing = false;
@@ -288,7 +291,10 @@ private:
 	float CrouchedHalfHeight;
 	float TargetHalfHeight;
 
+	//input buffering
 	FVector CachedInputDirection;
+	bool bIsFireButtonDown = false;
+	bool bIsAimButtonDown = false;
 
 	float AccumulatedStepDistance = 0.f; //for footstep sfx
 	void PlayFootstepSound();
@@ -302,6 +308,5 @@ private:
 
 	void PerformWeaponSwitch(); //happens after holster anim finishes.(updates backend and UI)
 	void FinishEquipping(); //happens after equip anim finishes.
-
 
 };

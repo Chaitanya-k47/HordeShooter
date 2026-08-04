@@ -143,7 +143,7 @@ void AHordeShooterEnemy::ExecuteAttack()
 		QueryParams
 	);
 
-	DrawDebugSphere(GetWorld(), StrikeLocation, StrikeRadius, 12, bHit ? FColor::Red : FColor::Green, false, 1.0f);
+	//DrawDebugSphere(GetWorld(), StrikeLocation, StrikeRadius, 12, bHit ? FColor::Red : FColor::Green, false, 1.0f);
 
 	if(bHit)
 	{
