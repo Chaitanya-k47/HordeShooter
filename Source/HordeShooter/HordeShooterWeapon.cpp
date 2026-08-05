@@ -430,18 +430,25 @@ void AHordeShooterWeapon::OnHolstered()
 
 	bIsReloading = false;
 	GetWorldTimerManager().ClearTimer(ReloadTimerHandle);
+
+	if (Mesh && Mesh->GetAnimInstance())
+	{
+		//Montage_Stop with a 0.1s blend out. 
+		//passing nullptr tells it to stop whatever montage is currently playing (Reload, Fire, etc.)
+		Mesh->GetAnimInstance()->Montage_Stop(0.1f, nullptr);
+	}
 }
 
-
+void AHordeShooterWeapon::RefillMagazine()
+{
+	//called by anim notif the exact moment when mag is inserted
+	CurrentAmmo = MagSize;
+	OnAmmoChanged.Broadcast(CurrentAmmo, MagSize);
+}
 
 void AHordeShooterWeapon::FinishReload()
 {
-	CurrentAmmo = MagSize;
 	bIsReloading = false;
-
-	//broadcast
-	OnAmmoChanged.Broadcast(CurrentAmmo, MagSize);
-
 	if(CurrentOwner) CurrentOwner->FinishReloading();
 }
 

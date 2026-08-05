@@ -104,25 +104,6 @@ void AHordeShooterCharacter::BeginPlay()
 		}
 	}
 
-	//spawn weapons and add to inventory:
-	for(const TSubclassOf<AHordeShooterWeapon>& WeaponClass : DefaultWeaponClasses)
-	{
-		if(!WeaponClass) continue;
-
-		FActorSpawnParameters SpawnParams;
-		SpawnParams.Owner = this;
-
-		AHordeShooterWeapon* SpawnedWeapon = GetWorld()->SpawnActor<AHordeShooterWeapon>(WeaponClass, SpawnParams);
-
-		int32 Index = Inventory.Add(SpawnedWeapon);
-		SpawnedWeapon->CurrentOwner = this;
-
-		if(Index == CurrentWeaponIndex)
-		{
-			//equip weapon.
-			EquipWeapon(SpawnedWeapon);
-		}
-	}
 
 	//wait 0.1 seconds to guarantee the HUD has been created by the playercontroller
 	FTimerHandle HUDInitTimer;
@@ -604,6 +585,15 @@ void AHordeShooterCharacter::EquipWeapon(AHordeShooterWeapon* NewWeapon)
 	//unequip/holster current weapon if we have one
 	if(CurrentEquippedWeapon)
 	{
+		//unbind the HUD from old weapon
+		if(AHordeShooterPlayerController* PC = Cast<AHordeShooterPlayerController>(GetController()))
+		{
+			if (PC->PlayerHUDWidget)
+			{
+				CurrentEquippedWeapon->OnAmmoChanged.RemoveAll(PC->PlayerHUDWidget);
+			}
+		}
+
 		CurrentEquippedWeapon->SetActorHiddenInGame(true);
 		CurrentEquippedWeapon->SetActorEnableCollision(false);
 		CurrentEquippedWeapon->bIsEquipped = false;
@@ -625,8 +615,8 @@ void AHordeShooterCharacter::EquipWeapon(AHordeShooterWeapon* NewWeapon)
 	{
 		if(PC->PlayerHUDWidget)
 		{
+			//update the hud for new weapon
 			PC->PlayerHUDWidget->UpdateAmmo(CurrentEquippedWeapon->CurrentAmmo, CurrentEquippedWeapon->MagSize);
-			CurrentEquippedWeapon->OnAmmoChanged.RemoveAll(PC->PlayerHUDWidget);
 
 			//bind delegate to update HUD when ammo changes:
 			CurrentEquippedWeapon->OnAmmoChanged.AddDynamic(PC->PlayerHUDWidget, &UHordeShooterHUDWidget::UpdateAmmo);

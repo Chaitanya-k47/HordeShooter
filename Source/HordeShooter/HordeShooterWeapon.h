@@ -184,6 +184,10 @@ public:
 	virtual void StartAltFire();
 	virtual void StopAltFire();
 
+	//called via anim notif track:
+	UFUNCTION(BlueprintCallable, Category = "Weapon")
+	virtual void RefillMagazine();
+
 protected:
 	//this fn performs raycast.
 	virtual void PerformFire();
