@@ -40,3 +40,11 @@ void AHordeShooterPlayerController::ShowGameOverScreen()
 	FInputModeUIOnly InputMode;
     SetInputMode(InputMode);
 }
+
+void AHordeShooterPlayerController::SetSlideFX(bool bIsSliding)
+{
+	if (PlayerHUDWidget)
+	{
+		PlayerHUDWidget->ToggleSlideFX(bIsSliding);
+	}
+}

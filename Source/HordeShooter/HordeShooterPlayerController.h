@@ -28,5 +28,7 @@ public:
 	UHordeShooterHUDWidget* PlayerHUDWidget; //actual pointer to store the created widget instance
 
 	void ShowGameOverScreen();
+
+	void SetSlideFX(bool bIsSliding);
 	
 };

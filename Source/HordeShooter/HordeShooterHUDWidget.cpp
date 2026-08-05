@@ -71,6 +71,7 @@ void UHordeShooterHUDWidget::ShowGameOver()
 	}
 }
 
+
 void UHordeShooterHUDWidget::OnRestartClicked()
 {
     UWorld* World = GetWorld();
@@ -89,3 +90,18 @@ void UHordeShooterHUDWidget::OnRestartClicked()
     }
 }
 
+
+void UHordeShooterHUDWidget::ToggleSlideFX(bool bIsSliding)
+{
+	if(SlideAnim)
+	{
+		if(bIsSliding)
+		{
+			PlayAnimation(SlideAnim);
+		}
+		else
+		{
+			PlayAnimation(SlideAnim, 0.0f, 1, EUMGSequencePlayMode::Reverse);
+		}
+	}	
+}

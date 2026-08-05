@@ -182,6 +182,11 @@ void AHordeShooterCharacter::Tick(float DeltaTime)
 		{
 			bIsDashing = false;
 
+			if(AHordeShooterPlayerController* PC = Cast<AHordeShooterPlayerController>(GetController()))
+			{
+				PC->SetSlideFX(false);
+			}
+
 			//kill dash momentum if in air
 			if(GetCharacterMovement()->IsFalling())
 			{
@@ -440,7 +445,12 @@ void AHordeShooterCharacter::Dash()
 	bIsDashing = true;
 	DashTimer = DashDuration;
 
-	if (DashSound)
+	if(AHordeShooterPlayerController* PC = Cast<AHordeShooterPlayerController>(GetController()))
+	{
+		PC->SetSlideFX(true);
+	}
+
+	if(DashSound)
 	{
 		UGameplayStatics::PlaySoundAtLocation(GetWorld(), DashSound, GetActorLocation());
 	}
@@ -539,6 +549,11 @@ void AHordeShooterCharacter::StartSlide()
 		//if in air:
 		GetCharacterMovement()->Velocity.Z -= 1000.f;
 	}
+
+	if(AHordeShooterPlayerController* PC = Cast<AHordeShooterPlayerController>(GetController()))
+	{
+		PC->SetSlideFX(true);
+	}
 }
 
 void AHordeShooterCharacter::StopSlide()
@@ -556,6 +571,11 @@ void AHordeShooterCharacter::StopSlide()
 	//reset friction and deceleration to default UE values.
 	GetCharacterMovement()->GroundFriction = 8.0f;
 	GetCharacterMovement()->BrakingDecelerationWalking = 2048.0f;
+
+	if(AHordeShooterPlayerController* PC = Cast<AHordeShooterPlayerController>(GetController()))
+	{
+		PC->SetSlideFX(false);
+	}
 }
 
 void AHordeShooterCharacter::OnJumped_Implementation()

@@ -38,6 +38,13 @@ protected:
 	UPROPERTY(meta = (BindWidget))
 	UButton* RestartButton;
 
+	UPROPERTY(meta = (BindWidget))
+	class UImage* SpeedLinesImage;
+
+	//this binds to an anim created in bp editor
+	UPROPERTY(meta = (BindWidgetAnim), Transient)
+	class UWidgetAnimation* SlideAnim;
+
 	virtual void NativeConstruct() override;
 
 public:
@@ -50,6 +57,8 @@ public:
 	
 	void ToggleCrosshair(bool bShow);
 	void ShowGameOver();
+
+	void ToggleSlideFX(bool bIsSliding);
 
 private:
 
