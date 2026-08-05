@@ -327,6 +327,33 @@ void ARayGun::OnHolstered()
 	GetWorldTimerManager().ClearTimer(BeamDamageTimerHandle);
 }
 
+void ARayGun::Reload()
+{
+    if(CurrentAmmo == MagSize || bIsReloading) return;
+
+    //if already charging, kill the charge then reload.
+    if(bIsCharging)
+	{
+		bIsCharging = false;
+		CurrentChargeTime = 0.0f;
+
+		ChargeOrbComp->Deactivate();
+		ChargeAudioComp->FadeOut(0.1f, 0.0f);
+
+		if (CurrentOwner && CurrentOwner->CharacterArms && ArmsChargeLoopMontage)
+		{
+			UAnimInstance* ArmsAnimInstance = CurrentOwner->CharacterArms->GetAnimInstance();
+			if (ArmsAnimInstance)
+			{
+				ArmsAnimInstance->Montage_Stop(0.1f, ArmsChargeLoopMontage);
+			}
+		}
+	}
+
+    //call the base class reload to handle the actual ammo refill and HUD update
+	Super::Reload();
+}
+
 
 void ARayGun::PerformAltFire()
 {

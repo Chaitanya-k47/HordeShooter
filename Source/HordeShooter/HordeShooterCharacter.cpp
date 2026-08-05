@@ -749,7 +749,7 @@ void AHordeShooterCharacter::StopAiming()
 	//cache input:
 	bIsAimButtonDown = false;
 
-	if(!CurrentEquippedWeapon || bIsSliding || bIsDashing) return;
+	if(!CurrentEquippedWeapon) return;
 	
 	if(CurrentEquippedWeapon->bCanAim)
 	{

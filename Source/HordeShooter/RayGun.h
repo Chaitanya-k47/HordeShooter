@@ -30,6 +30,7 @@ public:
 	virtual void StartAltFire() override;
 	virtual void StopAltFire() override;
 	virtual void OnHolstered() override;
+	virtual void Reload() override;
 
 
 protected:
