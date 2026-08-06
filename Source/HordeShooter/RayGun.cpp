@@ -264,7 +264,13 @@ void ARayGun::PerformBeamTick()
 
 void ARayGun::StartAltFire()
 {
-    if(CurrentAmmo < AltFireAmmoCost || bIsReloading || bIsCharging || bIsFiringBeam || !bCanFire || !bCanAltFire) return;
+    if(CurrentAmmo < AltFireAmmoCost || bIsReloading || bIsCharging || bIsFiringBeam || !bCanFire || !bCanAltFire)
+    {
+        GEngine->AddOnScreenDebugMessage(-1, 2.0f, FColor::Red, FString::Printf(TEXT("bIsCharging: %s"), bIsCharging ? TEXT("true") : TEXT("false")));
+        GEngine->AddOnScreenDebugMessage(-1, 2.0f, FColor::Red, FString::Printf(TEXT("bCanFire: %s"), bCanFire ? TEXT("true") : TEXT("false")));
+        GEngine->AddOnScreenDebugMessage(-1, 2.0f, FColor::Red, FString::Printf(TEXT("bCanAltFire: %s"), bCanAltFire ? TEXT("true") : TEXT("false")));
+        return;
+    }
 
     bIsCharging = true;
     CurrentChargeTime = 0.0f;

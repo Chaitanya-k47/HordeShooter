@@ -45,6 +45,12 @@ protected:
 	UPROPERTY(meta = (BindWidgetAnim), Transient)
 	class UWidgetAnimation* SlideAnim;
 
+	UPROPERTY(meta = (BindWidget))
+	UProgressBar* DashBar1; //left Bar
+
+	UPROPERTY(meta = (BindWidget))
+	UProgressBar* DashBar2; //right Bar
+
 	virtual void NativeConstruct() override;
 
 public:
@@ -54,6 +60,9 @@ public:
 
 	UFUNCTION()
 	void UpdateHealth(float CurrentHealth, float MaxHealth);
+
+	UFUNCTION()
+	void UpdateDashBars(int32 AvailableDashes, float TimeRemaining, float TotalCooldown, bool bCanDash);
 	
 	void ToggleCrosshair(bool bShow);
 	void ShowGameOver();

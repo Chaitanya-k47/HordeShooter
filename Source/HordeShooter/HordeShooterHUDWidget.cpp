@@ -58,6 +58,54 @@ void UHordeShooterHUDWidget::UpdateHealth(float CurrentHealth, float MaxHealth)
     }   
 }
 
+void UHordeShooterHUDWidget::UpdateDashBars(int32 AvailableDashes, float TimeRemaining, float TotalCooldown, bool bCanDash)
+{
+	if(!DashBar1 || !DashBar2) return;
+
+	//set color based on whether the player can dash or not
+	FLinearColor ActiveColor = FLinearColor(0.0f, 0.8f, 1.0f, 1.0f); //Cyan
+	FLinearColor LockedColor = FLinearColor(0.3f, 0.3f, 0.3f, 1.0f); //Grey
+
+	FLinearColor CurrentColor = bCanDash ? ActiveColor : LockedColor;
+	DashBar1->SetFillColorAndOpacity(CurrentColor);
+	DashBar2->SetFillColorAndOpacity(CurrentColor);
+
+	//STATE 3: fully charged
+	if(AvailableDashes == 2)
+	{
+		DashBar1->SetPercent(1.0f);
+		DashBar2->SetPercent(1.0f);
+		return;
+	}
+
+	//calculate overall progress percentage:
+	float Progress = 1.f - (TimeRemaining/TotalCooldown);
+
+	//STATE 2: one dash used
+	if(AvailableDashes == 1)
+	{
+		DashBar1->SetPercent(1.0f); // Left bar stays full
+		DashBar2->SetPercent(Progress); // Right bar fills up
+	}
+
+	//STATE 1: both dases used (long penalty cooldown)
+	else if(AvailableDashes == 0)
+	{
+		//we split the progress into two halves, one for each bar
+		if(Progress < 0.5f)
+		{
+			//DashBar1 fills up first and DashBar2 stays empty
+			DashBar1->SetPercent(Progress * 2.0f);
+			DashBar2->SetPercent(0.0f);
+		}
+		else
+		{
+			DashBar1->SetPercent(1.0f); //left bar stays full
+			DashBar2->SetPercent((Progress - 0.5f) * 2.0f); //right bar fills up
+		}
+	} 
+}
+
 void UHordeShooterHUDWidget::ShowGameOver()
 {
 	if(GameOverPanel)

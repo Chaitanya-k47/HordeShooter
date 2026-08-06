@@ -143,13 +143,13 @@ void AHordeShooterCharacter::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 
-	if (bIsSliding)
+	if(bIsSliding)
 	{
 		AddMovementInput(CachedInputDirection, 1.0f);
 	}
 	
 	//DEBUG
-	if (GEngine)
+	if(GEngine)
 	{
 		FString DashStatus = FString::Printf(TEXT("Available Dashes: %d / %d | Air Dashes Used: %d"), AvailableDashes, MaxDashes, AirDashesUsed);
 		GEngine->AddOnScreenDebugMessage(0, 0.0f, FColor::Cyan, DashStatus);
@@ -202,6 +202,31 @@ void AHordeShooterCharacter::Tick(float DeltaTime)
 				GetCharacterMovement()->Velocity = FVector(HorizontalVelocity.X, HorizontalVelocity.Y, CurrentVelocity.Z);
 
 			}
+		}
+	}
+
+	//dash ui update:
+	if(AHordeShooterPlayerController* PC = Cast<AHordeShooterPlayerController>(Controller))
+	{
+		if(PC->PlayerHUDWidget)
+		{
+			float TimeLeft = 0.f;
+			float TotalCooldown = SingleDashCooldown;
+
+			//if a dash is currently recharging grab the exact time remaining
+			if(GetWorldTimerManager().IsTimerActive(DashTimerHandle))
+			{
+				TimeLeft = GetWorldTimerManager().GetTimerRemaining(DashTimerHandle);
+				TotalCooldown = (AvailableDashes <= 0) ? DoubleDashCooldown : SingleDashCooldown;
+			}
+
+			bool bCanDash = (AvailableDashes > 0) && !bIsSliding && !bIsAiming;
+			if(GetCharacterMovement()->IsFalling() && AirDashesUsed >= MaxDashes)
+			{
+				bCanDash = false;
+			}
+
+			PC->PlayerHUDWidget->UpdateDashBars(AvailableDashes, TimeLeft, TotalCooldown, bCanDash);
 		}
 	}
 
@@ -745,13 +770,15 @@ void AHordeShooterCharacter::StartAiming()
 	//cache input:
 	bIsAimButtonDown = true;
 
-	if(!CurrentEquippedWeapon || bIsSliding || bIsDashing || bIsSwitchingWeapons) return;
+	if(!CurrentEquippedWeapon || bIsSwitchingWeapons) return;
 	
 	if(CurrentEquippedWeapon->bCanAim)
 	{
+		if(bIsSliding || bIsDashing) return;
+
 		bIsAiming = true;
 
-		// Hide Crosshair
+		//hide Crosshair
 		if (AHordeShooterPlayerController* PC = Cast<AHordeShooterPlayerController>(GetController()))
 		{
 			if (PC->PlayerHUDWidget) PC->PlayerHUDWidget->ToggleCrosshair(false);
