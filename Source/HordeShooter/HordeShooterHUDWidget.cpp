@@ -6,6 +6,8 @@
 #include "Components/TextBlock.h"
 #include "Components/ProgressBar.h"
 #include "Components/Button.h"
+#include "Components/CanvasPanel.h"
+#include "Components/CanvasPanelSlot.h"
 #include "Kismet/GameplayStatics.h"
 
 void UHordeShooterHUDWidget::NativeConstruct()
@@ -152,4 +154,28 @@ void UHordeShooterHUDWidget::ToggleSlideFX(bool bIsSliding)
 			PlayAnimation(SlideAnim, 0.0f, 1, EUMGSequencePlayMode::Reverse);
 		}
 	}	
+}
+
+void UHordeShooterHUDWidget::ShowDamageIndicator(float Angle)
+{
+	if(DamageIndicatorClass && IndicatorCanvas)
+	{
+		//spawn sub-widget
+		UUserWidget* IndicatorWidget = CreateWidget<UUserWidget>(this, DamageIndicatorClass);
+		if(IndicatorWidget)
+		{
+			//add this subwidget to the specific canvas panel
+			UCanvasPanelSlot* CanvasSlot = IndicatorCanvas->AddChildToCanvas(IndicatorWidget);
+			if(CanvasSlot)
+			{
+				CanvasSlot->SetAnchors(FAnchors(0.5f));
+				CanvasSlot->SetAlignment(FVector2D(0.5f, 0.5f));
+				CanvasSlot->SetPosition(FVector2D(0.f, 0.f));
+				CanvasSlot->SetAutoSize(true);
+			}
+
+			//rotate the widget to face teh damage source
+			IndicatorWidget->SetRenderTransformAngle(Angle);
+		}
+	}
 }

@@ -880,10 +880,30 @@ bool AHordeShooterCharacter::ReactToHit(float DamageAmount, const FVector& HitIm
 
 	CurrentHealth -= DamageAmount;
 
+	GetCharacterMovement()->AddImpulse(HitImpulse, true);
+
+	//calculate damage direction angle
+	FVector DamageDirection = -HitImpulse.GetSafeNormal2D();
+	if(DamageDirection.IsNearlyZero()) DamageDirection = GetActorForwardVector();
+
+	FVector CamForward = FirstPersonCamera->GetForwardVector().GetSafeNormal2D();
+	FVector CamRight = FirstPersonCamera->GetRightVector().GetSafeNormal2D();
+
+	//now we decompose the damage direction into forward and right components of camera's orientation
+	float ForwardDot = FVector::DotProduct(DamageDirection, CamForward); //X component (FWD of camera)
+	float RightDot = FVector::DotProduct(DamageDirection, CamRight); //Y component (RGT of camera)
+
+	//Atan2(Y, X) converts the X and Y components into an angle in radians
+	float HitAngle = FMath::RadiansToDegrees(FMath::Atan2(RightDot, ForwardDot));
+
 	//update UI
 	if(AHordeShooterPlayerController* PC = Cast<AHordeShooterPlayerController>(GetController()))
 	{
-		if(PC->PlayerHUDWidget) PC->PlayerHUDWidget->UpdateHealth(CurrentHealth, MaxHealth);
+		if(PC->PlayerHUDWidget)
+		{
+			PC->PlayerHUDWidget->UpdateHealth(CurrentHealth, MaxHealth);
+			PC->PlayerHUDWidget->ShowDamageIndicator(HitAngle);
+		}
 	}
 
 	if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 2.0f, FColor::Red, FString::Printf(TEXT("PLAYER HIT! Health: %f"), CurrentHealth));

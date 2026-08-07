@@ -514,3 +514,22 @@ FTransform AArenaManager::GetRandomSpawnPoint() const
 
 	return FTransform::Identity;
 }
+
+void AArenaManager::EndPlay(const EEndPlayReason::Type EndPlayReason)
+{
+	//FAILSAFE: If the player restarts the level or quits while the arena is moving
+	//release the NavMesh lock so the Engine doesnt crash
+	if(TransitionState != EArenaTransitionState::Idle)
+	{
+		if(UNavigationSystemV1* NavSys = UNavigationSystemV1::GetCurrent(GetWorld()))
+		{
+			//release the lock, and tell it NOT to rebuild (since the world is being destroyed anyway)
+			NavSys->RemoveNavigationBuildLock(
+				ENavigationBuildLock::Custom, 
+				UNavigationSystemV1::ELockRemovalRebuildAction::NoRebuild
+			);
+		}
+	}
+
+	Super::EndPlay(EndPlayReason);
+}

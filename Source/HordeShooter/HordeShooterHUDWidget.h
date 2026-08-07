@@ -10,6 +10,7 @@ class UTextBlock;
 class UWidget;
 class UProgressBar;
 class UButton;
+class UCanvasPanel;
 
 UCLASS()
 class HORDESHOOTER_API UHordeShooterHUDWidget : public UUserWidget
@@ -51,6 +52,13 @@ protected:
 	UPROPERTY(meta = (BindWidget))
 	UProgressBar* DashBar2; //right Bar
 
+	UPROPERTY(meta = (BindWidget))
+	UCanvasPanel* IndicatorCanvas;
+
+	//bp class for sub widget that shows damage direction indicator
+	UPROPERTY(EditDefaultsOnly, Category = "UI")
+	TSubclassOf<UUserWidget> DamageIndicatorClass;
+
 	virtual void NativeConstruct() override;
 
 public:
@@ -68,6 +76,8 @@ public:
 	void ShowGameOver();
 
 	void ToggleSlideFX(bool bIsSliding);
+
+	void ShowDamageIndicator(float Angle);
 
 private:
 
