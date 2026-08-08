@@ -70,7 +70,13 @@ void AEnemyAIController::UpdateAILogic()
         ControlledEnemy->GetCharacterMovement()->bUseControllerDesiredRotation = false;
         ClearFocus(EAIFocusPriority::Gameplay); //stop looking at the player while chasing.
 
-        MoveToPlayer();
+        //optimization:
+        float PlayerDistMovedSq = FVector::DistSquared(PlayerTarget->GetActorLocation(), LastKnownPlayerLocation);
+        if(PlayerDistMovedSq > PathUpdateThresholdSquared)
+        {
+            MoveToPlayer();
+            LastKnownPlayerLocation = PlayerTarget->GetActorLocation(); //cache the new location
+        }
 
         //check LOS if in range:
         if(DistSquared <= AttackRangeSquared && CheckLineOfSight())
@@ -90,6 +96,7 @@ void AEnemyAIController::UpdateAILogic()
         ControlledEnemy->PerformMeleeAttack();
 
         MoveToPlayer();
+        LastKnownPlayerLocation = PlayerTarget->GetActorLocation();
     }
     
 }
@@ -105,7 +112,7 @@ bool AEnemyAIController::CheckLineOfSight()
 	FCollisionQueryParams Params;
 	Params.AddIgnoredActor(ControlledEnemy);
 
-	bool bHit = GetWorld()->LineTraceSingleByChannel(Hit, Start, End, ECC_Visibility, Params);
+	bool bHit = GetWorld()->LineTraceSingleByChannel(Hit, Start, End, ECC_Pawn, Params);
 
 	//if we hit the player, or hit nothing at all LOS is clear
 	if(bHit && Hit.GetActor() == PlayerTarget) return true;

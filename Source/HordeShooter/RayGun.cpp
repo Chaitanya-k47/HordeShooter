@@ -402,11 +402,14 @@ void ARayGun::PerformAltFire()
     TArray<FOverlapResult> OverlapResults;
     FCollisionShape SphereCol = FCollisionShape::MakeSphere(AltFireRadius);
 
-    bool bHasOverlaps = GetWorld()->OverlapMultiByChannel(
+    FCollisionObjectQueryParams ObjectQueryParams;
+    ObjectQueryParams.AddObjectTypesToQuery(ECC_Pawn);
+
+    bool bHasOverlaps = GetWorld()->OverlapMultiByObjectType(
         OverlapResults,
         ImpactPoint,
         FQuat::Identity,
-        ECC_Pawn, //only look for enemies(pawns), ignore walls and other objects
+        ObjectQueryParams, //only look for enemies(pawns), ignore walls and other objects
         SphereCol,
         QueryParams
     );

@@ -33,6 +33,14 @@ AHordeShooterEnemy::AHordeShooterEnemy()
 	SprintAudioComp->SetupAttachment(GetMesh(), FName("Head"));
 	SprintAudioComp->bAutoActivate = false;
 
+	//CPU OPTIMIZATIONS:
+	MoveComp->bSweepWhileNavWalking = false;
+	MoveComp->bUseRVOAvoidance = true; 
+	MoveComp->AvoidanceConsiderationRadius = 50.f;
+	MoveComp->bEnablePhysicsInteraction = false;
+	GetMesh()->bEnableUpdateRateOptimizations = true;
+	GetCapsuleComponent()->PrimaryComponentTick.bCanEverTick = false;
+	GetCapsuleComponent()->SetCanEverAffectNavigation(false);
 	//anim culling:
 	/*
 		AlwaysTickPoseAndRefreshBones (default), (expensive)
@@ -297,6 +305,8 @@ void AHordeShooterEnemy::OnDeath_Implementation()
 	GetMesh()->SetSimulatePhysics(true);
 
 	GetMesh()->bPauseAnims = true;
+
+	GetMesh()->SetCollisionResponseToChannel(ECC_Pawn, ECR_Ignore);
 
 	//so that ragdoll doesnt ignore bullets.
 	GetMesh()->SetCollisionResponseToChannel(ECC_Visibility, ECR_Block);

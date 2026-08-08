@@ -62,5 +62,8 @@ private:
 
 	void MoveToPlayer();
 	FVector LastEdgeLocation = FVector::ZeroVector;
+
+	FVector LastKnownPlayerLocation = FVector::ZeroVector;
+	float PathUpdateThresholdSquared = 40000.f; //squared distance threshold for updating path to player (200 units)
 	
 };
