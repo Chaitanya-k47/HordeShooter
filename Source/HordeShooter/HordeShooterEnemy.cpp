@@ -10,6 +10,7 @@
 #include "DrawDebugHelpers.h"
 #include "Kismet/GameplayStatics.h"
 #include "EnemyAIController.h"
+#include "Components/AudioComponent.h"
 
 // Sets default values
 AHordeShooterEnemy::AHordeShooterEnemy()
@@ -27,6 +28,10 @@ AHordeShooterEnemy::AHordeShooterEnemy()
 	MoveComp->bOrientRotationToMovement = true;
 	MoveComp->bUseControllerDesiredRotation = false;
 	MoveComp->RotationRate = FRotator(0.f, 600.f, 0.f);
+
+	SprintAudioComp = CreateDefaultSubobject<UAudioComponent>(TEXT("SprintAudioComp"));
+	SprintAudioComp->SetupAttachment(GetMesh(), FName("Head"));
+	SprintAudioComp->bAutoActivate = false;
 
 	//anim culling:
 	/*
@@ -85,6 +90,9 @@ void AHordeShooterEnemy::ActivateEnemy(const FTransform& SpawnTransform)
 	SetActorHiddenInGame(false);
 	GetMesh()->bPauseAnims = false;
 
+	//wakeup audio comp
+	if (SprintAudioComp && SprintAudioComp->Sound) SprintAudioComp->Play();
+
 	//wakeup the enemy AI.
 	if(AEnemyAIController* AICon = Cast<AEnemyAIController>(GetController())) AICon->WakeAI();
 }
@@ -105,6 +113,9 @@ void AHordeShooterEnemy::DeactivateEnemy()
 	//hide
 	SetActorHiddenInGame(true);
 	SetActorLocation(FVector(0.0f, 0.0f, -10000.0f), false, nullptr, ETeleportType::TeleportPhysics);
+
+	//stop audio comp
+	if(SprintAudioComp) SprintAudioComp->Stop();
 }
 
 //COMBAT ACTIONS:
@@ -114,6 +125,11 @@ void AHordeShooterEnemy::PerformMeleeAttack()
 
 	bIsAttacking = true;
 	int32 RandomIndex = FMath::RandRange(0, AttackMontages.Num() - 1);
+
+	if(AttackSound)
+	{
+		UGameplayStatics::SpawnSoundAttached(AttackSound, GetMesh(), FName("Head"));
+	}
 
 	if(GetMesh()->GetAnimInstance())
 	{
@@ -221,8 +237,6 @@ bool AHordeShooterEnemy::ReactToHit(float DamageAmount, const FVector& HitImpuls
 
 		if(Multiplier > 1.0f && GEngine)
 		{
-			GEngine->AddOnScreenDebugMessage(-1, 2.0f, FColor::Red, TEXT("CRITICAL HIT!"));
-
 			if((HitBoneName == FName("Head")))
 			{
 				bIsHeadshot = true;
@@ -236,8 +250,6 @@ bool AHordeShooterEnemy::ReactToHit(float DamageAmount, const FVector& HitImpuls
 	LastHitBoneName = HitBoneName;
 	
 	OnHit(FinalDamage); // Triggers Blueprint logic, then C++ default
-
-	if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 2.0f, FColor::Yellow, FString::Printf(TEXT("Enemy Hit for %f! Health: %f"), FinalDamage, CurrentHealth));
 
 	if(CurrentHealth <= 0.f)
 	{
@@ -255,6 +267,11 @@ void AHordeShooterEnemy::Die()
 {
 	if(bIsDead) return;
 	bIsDead = true;
+
+	if(SprintAudioComp)
+	{
+		SprintAudioComp->Stop();
+	}
 
 	OnEnemyKilled.Broadcast(); //tell wave manager this enemy is dead
 	

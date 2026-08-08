@@ -9,6 +9,8 @@
 #include "HordeShooterEnemy.generated.h"
 
 class UAnimMontage;
+class UAudioComponent;
+class USoundBase;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnAttackFinishedSignature);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnEnemyKilledSignature);
@@ -47,6 +49,14 @@ public:
 
 	UPROPERTY(EditDefaultsOnly, Category = "Combat|Animation")
 	TArray<UAnimMontage*> HitReactionMontages;
+
+
+	//Audio:
+	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Components")
+	UAudioComponent* SprintAudioComp;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Combat|Audio")
+	USoundBase* AttackSound;
 
 
 	//STATE flags (read by AI controller):

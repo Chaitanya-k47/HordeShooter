@@ -147,29 +147,8 @@ void AHordeShooterCharacter::Tick(float DeltaTime)
 	{
 		AddMovementInput(CachedInputDirection, 1.0f);
 	}
-	
-	//DEBUG
-	if(GEngine)
-	{
-		FString DashStatus = FString::Printf(TEXT("Available Dashes: %d / %d | Air Dashes Used: %d"), AvailableDashes, MaxDashes, AirDashesUsed);
-		GEngine->AddOnScreenDebugMessage(0, 0.0f, FColor::Cyan, DashStatus);
-
-		// Show if a timer is active
-		if (GetWorldTimerManager().IsTimerActive(DashTimerHandle))
-		{
-			float TimeLeft = GetWorldTimerManager().GetTimerRemaining(DashTimerHandle);
-			FString TimerStatus = FString::Printf(TEXT("Recharging in: %.2f sec"), TimeLeft);
-			GEngine->AddOnScreenDebugMessage(1, 0.0f, FColor::Orange, TimerStatus);
-		}
-		else
-		{
-			GEngine->AddOnScreenDebugMessage(1, 0.0f, FColor::Green, TEXT("Dashes Fully Charged"));
-		}
-	}
-	//DEBUG
 
 	Pivot->SetRelativeRotation(FRotator(GetControlRotation().Pitch, 0.f, 0.f));
-	
 
 	//dash traversal logic:
 	if(bIsDashing)
@@ -419,22 +398,9 @@ void AHordeShooterCharacter::Look(const FInputActionValue& Value)
 
 void AHordeShooterCharacter::Dash()
 {
-	if(AvailableDashes <= 0 || bIsDashing || bIsSliding || bIsAiming)
-	{
-		//DEBUG
-		if (AvailableDashes <= 0) GEngine->AddOnScreenDebugMessage(-1, 3.0f, FColor::Red, TEXT("FAILED: Out of Dashes!"));
-		else if (bIsSliding) GEngine->AddOnScreenDebugMessage(-1, 1.0f, FColor::Orange, TEXT("FAILED: Cannot dash while sliding!"));
-		else if(bIsAiming)  GEngine->AddOnScreenDebugMessage(-1, 1.0f, FColor::Orange, TEXT("FAILED: Cannot dash while aiming!"));
+	if(AvailableDashes <= 0 || bIsDashing || bIsSliding || bIsAiming) return;
 
-		return;
-	}
-	if(GetCharacterMovement()->IsFalling() && AirDashesUsed >= MaxDashes)
-	{
-		//DEBUG
-		GEngine->AddOnScreenDebugMessage(-1, 4.0f, FColor::Red, TEXT("FAILED: Air Dash limit reached! Touch the ground."));		
-		
-		return;
-	}
+	if(GetCharacterMovement()->IsFalling() && AirDashesUsed >= MaxDashes) return;
 
 	//get input direction i.e. WASD:
 	FVector InputDirection = GetLastMovementInputVector();
@@ -452,8 +418,6 @@ void AHordeShooterCharacter::Dash()
 		//project dash direction onto the floor plane:
 		CurrentDashDirection = FVector::VectorPlaneProject(CurrentDashDirection, FloorNormal).GetSafeNormal();
 
-		//DEBUG
-		GEngine->AddOnScreenDebugMessage(-1, 4.0f, FColor::White, TEXT("Ground Dash Used!"));
 	}
 	else
 	{
@@ -461,8 +425,6 @@ void AHordeShooterCharacter::Dash()
 		CurrentDashDirection.Normalize();
 		AirDashesUsed++;
 
-		//DEBUG
-		GEngine->AddOnScreenDebugMessage(-1, 4.0f, FColor::Purple, FString::Printf(TEXT("Air Dash Used! (%d allowed)"), MaxDashes));
 	}
 
 	//trigger state:
@@ -486,17 +448,6 @@ void AHordeShooterCharacter::Dash()
 	//handle cooldown:
 	float CooldownTime = (AvailableDashes <= 0) ? DoubleDashCooldown : SingleDashCooldown;
 
-	//DEBUG
-	if (AvailableDashes <= 0)
-	{
-		GEngine->AddOnScreenDebugMessage(-1, 4.0f, FColor::Red, TEXT("Both dashes used! LONG PENALTY COOLDOWN STARTED."));
-	}
-	else
-	{
-		GEngine->AddOnScreenDebugMessage(-1, 4.0f, FColor::Yellow, TEXT("One dash used! Short cooldown started."));
-	}
-	//DEBUG
-
 	GetWorldTimerManager().SetTimer(
 		DashTimerHandle,
 		this,
@@ -511,17 +462,11 @@ void AHordeShooterCharacter::RechargeDash()
 	if(AvailableDashes == 0)
 	{
 		AvailableDashes = MaxDashes;
-
-		//DEBUG
-		GEngine->AddOnScreenDebugMessage(-1, 2.0f, FColor::Green, TEXT("Penalty Over! ALL dashes restored."));
 	}
 	else if (AvailableDashes < MaxDashes)
 	{
 		//Just give one back
 		AvailableDashes++;
-
-		//DEBUG
-		GEngine->AddOnScreenDebugMessage(-1, 2.0f, FColor::Green, FString::Printf(TEXT("Dash Recharged! (%d/%d)"), AvailableDashes, MaxDashes));
 	}
 }
 
@@ -531,22 +476,13 @@ void AHordeShooterCharacter::Landed(const FHitResult& Hit)
 
 	if (AirDashesUsed > 0)
 	{
-		GEngine->AddOnScreenDebugMessage(-1, 4.0f, FColor::Cyan, TEXT("Landed! Air Dashes Reset."));
 		AirDashesUsed = 0;
 	}
 }
 
 void AHordeShooterCharacter::StartSlide()
 {
-	if(bIsSliding || bIsDashing || bIsAiming)
-	{
-		//DEBUG
-		if (bIsDashing) GEngine->AddOnScreenDebugMessage(-1, 1.0f, FColor::Orange, TEXT("FAILED: Cannot slide while dashing!"));
-		else if (bIsSliding) GEngine->AddOnScreenDebugMessage(-1, 1.0f, FColor::Orange, TEXT("FAILED: Already sliding!"));
-		else if (bIsAiming) GEngine->AddOnScreenDebugMessage(-1, 1.0f, FColor::Orange, TEXT("FAILED: Cannot slide while aiming!"));
-
-		return;
-	}
+	if(bIsSliding || bIsDashing || bIsAiming) return;
 
 	bIsSliding = true;
 	TargetHalfHeight = CrouchedHalfHeight;
@@ -905,8 +841,6 @@ bool AHordeShooterCharacter::ReactToHit(float DamageAmount, const FVector& HitIm
 			PC->PlayerHUDWidget->ShowDamageIndicator(HitAngle);
 		}
 	}
-
-	if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 2.0f, FColor::Red, FString::Printf(TEXT("PLAYER HIT! Health: %f"), CurrentHealth));
 	
 	if(CurrentHealth <= 0)
 	{
@@ -918,8 +852,6 @@ bool AHordeShooterCharacter::ReactToHit(float DamageAmount, const FVector& HitIm
 
 void AHordeShooterCharacter::PlayerDie()
 {
-	if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 5.0f, FColor::Red, TEXT("PLAYER IS DEAD. GAME OVER."));
-	
 	//disable player movement and actions
 	GetCharacterMovement()->DisableMovement();
 	bIsAiming = false;
@@ -973,7 +905,5 @@ void AHordeShooterCharacter::GenerateArena()
 	if (AArenaManager* ArenaManager = Cast<AArenaManager>(ArenaActor))
 	{
 		ArenaManager->BeginNewLayoutGeneration();
-		
-		if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 2.0f, FColor::Cyan, TEXT("SYSTEM: Reconfiguring Arena Layout..."));
 	}
 }
