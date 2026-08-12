@@ -7,6 +7,9 @@
 #include "NavMesh/NavMeshBoundsVolume.h"
 #include "NavigationSystem.h"
 #include "GameFramework/Character.h"
+#include "Components/BoxComponent.h"
+#include "DamageableInterface.h"
+
 
 // Sets default values
 AArenaManager::AArenaManager()
@@ -19,6 +22,13 @@ AArenaManager::AArenaManager()
 
 	RampMesh = CreateDefaultSubobject<UInstancedStaticMeshComponent>(TEXT("RampMesh"));
 	RampMesh->SetupAttachment(RootComponent);
+
+	KillVolume = CreateDefaultSubobject<UBoxComponent>(TEXT("KillVolume"));
+	KillVolume->SetupAttachment(RootComponent);
+
+	//purely for overlap event, no physics collisions.
+	KillVolume->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
+	KillVolume->SetCollisionResponseToAllChannels(ECR_Overlap);
 
 	//allows collision to update when instances move
 	GridMesh->bUseDefaultCollision = true;
@@ -74,6 +84,11 @@ void AArenaManager::BeginPlay()
 	float CenterX = ((GridSizeX - 1) * BlockSize)/2.0f;
 	float CenterY = ((GridSizeY - 1) * BlockSize)/2.0f;
 	FVector ArenaCenter = FVector(CenterX, CenterY, 0.0f) + GetActorLocation();
+
+	//Scale and position kill volume:
+	KillVolume->SetBoxExtent(FVector(1000000.0f, 1000000.0f, 100.0f));
+	KillVolume->SetRelativeLocation(FVector(CenterX, CenterY, BlockLocZ - 10000.0f));
+	KillVolume->OnComponentBeginOverlap.AddDynamic(this, &AArenaManager::OnKillVolumeOverlap);
 
 	//autp position the player:
 	ACharacter* PlayerChar = UGameplayStatics::GetPlayerCharacter(GetWorld(), 0);
@@ -532,4 +547,17 @@ void AArenaManager::EndPlay(const EEndPlayReason::Type EndPlayReason)
 	}
 
 	Super::EndPlay(EndPlayReason);
+}
+
+void AArenaManager::OnKillVolumeOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
+{
+	if (!OtherActor || OtherActor == this) return;
+
+	if (OtherActor->GetClass()->ImplementsInterface(UDamageableInterface::StaticClass()))
+	{
+		if (IDamageableInterface* DamageableActor = Cast<IDamageableInterface>(OtherActor))
+		{
+			DamageableActor->ReactToHit(99999.0f, FVector::ZeroVector, NAME_None);
+		}
+	}
 }

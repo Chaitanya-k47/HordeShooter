@@ -7,6 +7,7 @@
 #include "ArenaManager.generated.h"
 
 class UInstancedStaticMeshComponent;
+class UBoxComponent;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnArenaLayoutFinishedSignature);
 
@@ -54,6 +55,8 @@ protected:
 	UPROPERTY(VisibleAnywhere, Category = "Arena")
 	UInstancedStaticMeshComponent* RampMesh;
 
+	UPROPERTY(VisibleAnywhere, Category = "Arena")
+	UBoxComponent* KillVolume;
 
 	UPROPERTY(EditAnywhere, Category = "Arena Config")
 	int32 GridSizeX = 20; //20 bloacks wide.
@@ -136,4 +139,7 @@ private:
 
 	//generates new layout and starts transitioning to it.
 	void GenerateAndRiseNewLayout();
+
+	UFUNCTION()
+	void OnKillVolumeOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult);
 };

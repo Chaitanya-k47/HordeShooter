@@ -17,6 +17,7 @@ class USceneComponent;
 class HordeShooterWeapon;
 class USoundBase;
 class UAudioComponent;
+class UNiagaraSystem;
 
 UCLASS()
 class HORDESHOOTER_API AHordeShooterCharacter : public ACharacter, public IDamageableInterface
@@ -191,8 +192,62 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement|Slide")
 	float MaxSlideSpeed = 3000.f; //hHard cap
 
-	UPROPERTY(BlueprintReadOnly)
+	UPROPERTY(BlueprintReadOnly, Category = "Movement|Slide")
 	bool bIsSliding = false;
+
+
+	//Slam config:
+	UPROPERTY(BlueprintReadOnly, Category = "Movement|Slam")
+	bool bIsSlamming = false;
+
+	bool bIsSlamDropping = false; //tracks the actual downward rush
+	float CachedSlamVelocityZ = 0.0f;
+
+	float SlamStartZ = 0.f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement|Slam")
+	float MinSlamSpeed = 5000.f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement|Slam")
+	float MaxSlamSpeed = 20000.f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement|Slam")
+	float SlamDropTime = 0.2f; //exactly how many seconds the drop should take
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement|Slam")
+	float MinSlamHeight = 200.f; //minimum fall distance/height to trigger scaling
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement|Slam")
+	float MaxSlamHeight = 1500.f; //height at which the slam causes max damage.
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement|Slam")
+	FVector2D SlamRadiusRange = FVector2D(300.f, 800.f); //min and max radius of slam aoe
+	
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement|Slam")
+	FVector2D SlamDamageRange = FVector2D(5.f, 50.f); //min and max damage of slam aoe
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement|Slam")
+	FVector2D SlamImpulseRange = FVector2D(2000.0f, 6000.0f);
+
+	FTimerHandle SlamHangTimerHandle; //tracks the freeze time
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement|Slam")
+	float SlamHangTime = 0.15f;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Movement|Slam")
+	TSubclassOf<class UCameraShakeBase> SlamCameraShake;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Movement|Slam")
+	UNiagaraSystem* SlamVFX;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Movement|Slam")
+	USoundBase* SlamSound;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Movement|Slam")
+	class UNiagaraComponent* FallVFXComp;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Movement|Slam")
+	class UAudioComponent* FallAudioComp;
 
 
 	//Weapon config:
@@ -268,6 +323,9 @@ protected:
 
 	//Generate new arena layout callback:
 	void GenerateArena();
+
+	//Slam callback:
+	void ExecuteSlamDrop();
 
 
 private:

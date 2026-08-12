@@ -26,7 +26,6 @@ void AHordeWaveManager::BeginPlay()
 	
 	if (!CachedArenaManager || !EnemyClassToSpawn)
 	{
-		if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 10.f, FColor::Red, TEXT("ERROR: Missing Arena Manager or Enemy Class!"));
 		return;
 	}
 
@@ -57,8 +56,6 @@ void AHordeWaveManager::InitializePool()
 
 void AHordeWaveManager::OnArenaReady()
 {
-	if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 3.f, FColor::Orange, TEXT("SYSTEM: Arena Secured. Spawning Horde..."));
-
 	GetWorldTimerManager().SetTimer(WaveTransitionTimerHandle, this, &AHordeWaveManager::StartNextWave, IntermissionTime, false);
 }
 
@@ -66,15 +63,13 @@ void AHordeWaveManager::StartNextWave()
 {
 	if (CurrentWaveIndex >= Waves.Num())
 	{
-		if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 10.f, FColor::Green, TEXT("ALL WAVES CLEARED! YOU SURVIVED!"));
+
 		return;
 	}
 
 	//read wave data
 	FWaveConfig CurrentWave = Waves[CurrentWaveIndex];
 	EnemiesLeftToSpawnThisWave = CurrentWave.EnemiesToSpawn;
-
-	if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Cyan, FString::Printf(TEXT("WAVE %d STARTING!"), CurrentWaveIndex + 1));
 
 	//start spawn timer:
 	GetWorldTimerManager().SetTimer(SpawnTimerHandle, this, &AHordeWaveManager::SpawnSingleEnemy, CurrentWave.SpawnDelay, true);
@@ -119,8 +114,6 @@ void AHordeWaveManager::OnEnemyDied()
 	if (ActiveLivingEnemies <= 0 && EnemiesLeftToSpawnThisWave <= 0)
 	{
 		CurrentWaveIndex++;
-		
-		if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Yellow, TEXT("WAVE CLEARED! Get ready..."));
 
 		FTimerHandle ArenaShiftTimer;
 		GetWorldTimerManager().SetTimer(ArenaShiftTimer, [this]()
@@ -128,6 +121,14 @@ void AHordeWaveManager::OnEnemyDied()
 			if(CachedArenaManager) CachedArenaManager->BeginNewLayoutGeneration();
 		}, 2.0f, false);
 	}
+
+	//Wave replenishment
+	else if(EnemiesLeftToSpawnThisWave > 0 && ActiveLivingEnemies < MaxEnemiesOnScreen)
+	{
+		float RandomReplenishDelay = FMath::RandRange(0.2f, 0.8f);
+		FTimerHandle ReplenishTimer;
+		GetWorldTimerManager().SetTimer(ReplenishTimer, this, &AHordeWaveManager::SpawnSingleEnemy, RandomReplenishDelay, false);
+	}	
 }
 
 

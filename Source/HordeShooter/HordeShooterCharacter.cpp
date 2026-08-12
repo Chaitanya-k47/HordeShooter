@@ -16,6 +16,8 @@
 #include "EnhancedInputComponent.h"
 #include "EnhancedInputSubsystems.h"
 #include "Components/SceneComponent.h"
+#include "NiagaraComponent.h"
+#include "NiagaraFunctionLibrary.h"
 
 #include "HordeShooterWeapon.h"
 #include "HordeShooterPlayerController.h"
@@ -52,6 +54,18 @@ AHordeShooterCharacter::AHordeShooterCharacter()
 	SlideAudioComponent = CreateDefaultSubobject<UAudioComponent>(TEXT("SlideAudioComponent"));
 	SlideAudioComponent->SetupAttachment(GetRootComponent());
 	SlideAudioComponent->bAutoActivate = false;
+
+	FallVFXComp = CreateDefaultSubobject<UNiagaraComponent>(TEXT("FallVFXComp"));
+	FallVFXComp->SetupAttachment(CharacterArms);
+	FallVFXComp->bAutoActivate = false;
+	
+	//ignore camera rotation, stay vertical still
+	FallVFXComp->SetUsingAbsoluteRotation(true); 
+	FallVFXComp->SetWorldRotation(FRotator::ZeroRotator);
+
+	FallAudioComp = CreateDefaultSubobject<UAudioComponent>(TEXT("FallAudioComp"));
+	FallAudioComp->SetupAttachment(GetRootComponent());
+	FallAudioComp->bAutoActivate = false;
 
 	//Movement config:
 	GetCharacterMovement()->MaxWalkSpeed = 1500.f; // Base run speed (up from 600)
@@ -148,6 +162,11 @@ void AHordeShooterCharacter::Tick(float DeltaTime)
 		AddMovementInput(CachedInputDirection, 1.0f);
 	}
 
+	if(bIsSlamDropping)
+	{
+		GetCharacterMovement()->Velocity = FVector(0.0f, 0.0f, CachedSlamVelocityZ);
+	}
+
 	Pivot->SetRelativeRotation(FRotator(GetControlRotation().Pitch, 0.f, 0.f));
 
 	//dash traversal logic:
@@ -199,7 +218,7 @@ void AHordeShooterCharacter::Tick(float DeltaTime)
 				TotalCooldown = (AvailableDashes <= 0) ? DoubleDashCooldown : SingleDashCooldown;
 			}
 
-			bool bCanDash = (AvailableDashes > 0) && !bIsSliding && !bIsAiming;
+			bool bCanDash = (AvailableDashes > 0) && !bIsSliding && !bIsAiming && !bIsSlamming;
 			if(GetCharacterMovement()->IsFalling() && AirDashesUsed >= MaxDashes)
 			{
 				bCanDash = false;
@@ -374,7 +393,7 @@ void AHordeShooterCharacter::Move(const FInputActionValue& Value)
 	MovementInputValue = Value;
 
 	//disable movement input while sliding, as player must not be able to change direction while sliding.
-	if(bIsSliding) return;
+	if(bIsSliding || bIsSlamming) return;
 
 	FVector2D MovementVector = Value.Get<FVector2D>();
 	if(Controller != nullptr)
@@ -398,7 +417,7 @@ void AHordeShooterCharacter::Look(const FInputActionValue& Value)
 
 void AHordeShooterCharacter::Dash()
 {
-	if(AvailableDashes <= 0 || bIsDashing || bIsSliding || bIsAiming) return;
+	if(AvailableDashes <= 0 || bIsDashing || bIsSliding || bIsAiming || bIsSlamming) return;
 
 	if(GetCharacterMovement()->IsFalling() && AirDashesUsed >= MaxDashes) return;
 
@@ -478,51 +497,177 @@ void AHordeShooterCharacter::Landed(const FHitResult& Hit)
 	{
 		AirDashesUsed = 0;
 	}
+
+	//SLAM impact logic:
+	if(bIsSlamming)
+	{
+		bIsSlamming = false;
+		bIsSlamDropping = false;
+
+		//clear hang timer if lander early:
+		GetWorldTimerManager().ClearTimer(SlamHangTimerHandle);
+		
+		//gravity restor
+		GetCharacterMovement()->GravityScale = 2.0f;
+
+		//turn collision back on
+		GetCapsuleComponent()->SetCollisionResponseToChannel(ECC_Pawn, ECR_Block);
+
+		//kill th drop effect and sound:
+		if(FallVFXComp) FallVFXComp->Deactivate();
+		if(FallAudioComp) FallAudioComp->FadeOut(0.15f, 0.0f);
+
+		//fall distance:
+		float FallDistance = SlamStartZ - GetActorLocation().Z;
+
+		//map the fall to min/max ranges:
+		FVector2D HeightRange(MinSlamHeight, MaxSlamHeight);
+
+		//FMath::GetMappedRangeValueClamped(InputRange, OutputRange, Value);
+		float Radius = FMath::GetMappedRangeValueClamped(HeightRange, SlamRadiusRange, FallDistance);
+		float Damage = FMath::GetMappedRangeValueClamped(HeightRange, SlamDamageRange, FallDistance);
+		float Impulse = FMath::GetMappedRangeValueClamped(HeightRange, SlamImpulseRange, FallDistance);
+
+		//camera shake:
+		if(SlamCameraShake && FallDistance > MinSlamHeight)
+		{
+			if(AHordeShooterPlayerController* PC = Cast<AHordeShooterPlayerController>(GetController()))
+			{
+				//shake intensity: 1x for short falls, up to 5x for massive drops
+				float ShakeScale = FMath::GetMappedRangeValueClamped(HeightRange, FVector2D(1.f, 5.f), FallDistance);
+				PC->ClientStartCameraShake(SlamCameraShake, ShakeScale);
+			}
+		}
+
+		//execute AOE overlap:
+		TArray<FOverlapResult> OverlapResults;
+		FCollisionShape SphereCol = FCollisionShape::MakeSphere(Radius);
+		FCollisionQueryParams QueryParams;
+		QueryParams.AddIgnoredActor(this); //ignore player character
+
+		FCollisionObjectQueryParams ObjectQueryParams;
+		ObjectQueryParams.AddObjectTypesToQuery(ECC_Pawn); //only hit enemies
+
+		bool bHasOverlaps = GetWorld()->OverlapMultiByObjectType(
+			OverlapResults,
+			GetActorLocation(),
+			FQuat::Identity,
+			ObjectQueryParams,
+			SphereCol,
+			QueryParams
+		);
+
+		if(bHasOverlaps)
+		{
+			TSet<AActor*> DamagedActors; //tracks whose been already hit
+
+			for(const FOverlapResult& Overlap : OverlapResults)
+			{
+				AActor* HitActor = Overlap.GetActor();
+
+				if(HitActor && !DamagedActors.Contains(HitActor))
+				{
+					if(HitActor && HitActor->GetClass()->ImplementsInterface(UDamageableInterface::StaticClass()))
+					{
+						if(IDamageableInterface* DamageableActor = Cast<IDamageableInterface>(HitActor))
+						{
+							DamagedActors.Add(HitActor); //mark hit.
+							FVector PushDirection = (HitActor->GetActorLocation() - GetActorLocation()).GetSafeNormal();
+							PushDirection.Z = 0.8f;
+							DamageableActor->ReactToHit(Damage, PushDirection * Impulse, NAME_None);
+						}
+					}
+				}
+			}
+		}
+
+		if(SlamSound) UGameplayStatics::PlaySoundAtLocation(GetWorld(), SlamSound, GetActorLocation());
+		if (SlamVFX)
+		{
+			float HalfHeight = GetCapsuleComponent()->GetScaledCapsuleHalfHeight();
+			FVector FloorLocation = GetActorLocation() - FVector(0.0f, 0.0f, HalfHeight+10);
+
+			UNiagaraComponent* Blast = UNiagaraFunctionLibrary::SpawnSystemAtLocation(GetWorld(), SlamVFX, GetActorLocation(), FRotator::ZeroRotator);
+			if (Blast)
+			{
+				//send the dynamically calculated radius to niagara material
+				Blast->SetFloatParameter(FName("BlastScale"), Radius); 
+			}
+		}
+	}
 }
 
 void AHordeShooterCharacter::StartSlide()
 {
-	if(bIsSliding || bIsDashing || bIsAiming) return;
-
-	bIsSliding = true;
-	TargetHalfHeight = CrouchedHalfHeight;
-
-	if (SlideAudioComponent && SlideAudioComponent->Sound)
-	{
-		SlideAudioComponent->Play();
-	}
-
-	GetCharacterMovement()->MaxWalkSpeed = MaxSlideSpeed; 
-	GetCharacterMovement()->GroundFriction = 0.0f;
-	GetCharacterMovement()->BrakingDecelerationWalking = 1000.0f;
-
-	FVector InputDirection = GetLastMovementInputVector();
-	CachedInputDirection = (InputDirection.IsNearlyZero()) ? GetActorForwardVector() : InputDirection.GetSafeNormal();
-	CachedInputDirection.Z = 0.f; //keep slide horizontal
-	CachedInputDirection.Normalize();
+	if(bIsSliding || bIsDashing || bIsAiming || bIsSlamming) return;
 
 	if(GetCharacterMovement()->IsMovingOnGround())
 	{
+		bIsSliding = true;
+		TargetHalfHeight = CrouchedHalfHeight;
+
+		if(SlideAudioComponent && SlideAudioComponent->Sound) SlideAudioComponent->Play();
+
+		GetCharacterMovement()->MaxWalkSpeed = MaxSlideSpeed; 
+		GetCharacterMovement()->GroundFriction = 0.0f;
+		GetCharacterMovement()->BrakingDecelerationWalking = 1000.0f;
+
+		GetCapsuleComponent()->SetCollisionResponseToChannel(ECC_Pawn, ECR_Ignore);
+
+		FVector InputDirection = GetLastMovementInputVector();
+		CachedInputDirection = (InputDirection.IsNearlyZero()) ? GetActorForwardVector() : InputDirection.GetSafeNormal();
+		CachedInputDirection.Z = 0.f; //keep slide horizontal
+		CachedInputDirection.Normalize();
+
 		GetCharacterMovement()->Velocity += FVector((CachedInputDirection * SlideSpeed).X, (CachedInputDirection * SlideSpeed).Y, 0.0f);
+		
+		if(AHordeShooterPlayerController* PC = Cast<AHordeShooterPlayerController>(GetController()))
+		{
+			PC->SetSlideFX(true);
+		}
 	}
-	else
+	else if(!bIsSlamming)
 	{
-		//if in air:
-		GetCharacterMovement()->Velocity.Z -= 1000.f;
+		//if in air, do Slam:
+		//height check, if too low to slam. a short line trace of length MinSlamHeight from capsule bottom to floor
+		//if this hits the floor means character is too low on height to slam.
+		FHitResult Hit;
+		FVector Start = GetActorLocation();
+
+		float TraceLength = GetCapsuleComponent()->GetScaledCapsuleHalfHeight() + MinSlamHeight;
+		FVector End = Start - FVector(0.0f, 0.0f, TraceLength);
+
+		FCollisionQueryParams Params;
+		Params.AddIgnoredActor(this);
+
+		//if hit abort slam.
+		if(GetWorld()->LineTraceSingleByChannel(Hit, Start, End, ECC_Visibility, Params)) return;
+
+		//else perform slam:
+		bIsSlamming = true;
+		SlamStartZ = GetActorLocation().Z; //cache the height
+
+		//freeze mid air
+		GetCharacterMovement()->Velocity = FVector::ZeroVector;
+		GetCharacterMovement()->GravityScale = 0.0f;
+
+		GetCapsuleComponent()->SetCollisionResponseToChannel(ECC_Pawn, ECR_Ignore);
+
+		//start hang timer:
+		GetWorldTimerManager().SetTimer(SlamHangTimerHandle, this, &AHordeShooterCharacter::ExecuteSlamDrop, SlamHangTime, false);
 	}
 
-	if(AHordeShooterPlayerController* PC = Cast<AHordeShooterPlayerController>(GetController()))
-	{
-		PC->SetSlideFX(true);
-	}
 }
 
 void AHordeShooterCharacter::StopSlide()
 {
+	//if slamming and not sliding the fn aborts instantly.
+	if(!bIsSliding) return;
+
 	bIsSliding = false;
 	TargetHalfHeight = DefaultHalfHeight;
 
-	if (SlideAudioComponent)
+	if(SlideAudioComponent)
 	{
 		SlideAudioComponent->FadeOut(0.2f, 0.0f);
 	}
@@ -533,10 +678,43 @@ void AHordeShooterCharacter::StopSlide()
 	GetCharacterMovement()->GroundFriction = 8.0f;
 	GetCharacterMovement()->BrakingDecelerationWalking = 2048.0f;
 
+	GetCapsuleComponent()->SetCollisionResponseToChannel(ECC_Pawn, ECR_Block);
+	
 	if(AHordeShooterPlayerController* PC = Cast<AHordeShooterPlayerController>(GetController()))
 	{
 		PC->SetSlideFX(false);
 	}
+}
+
+void AHordeShooterCharacter::ExecuteSlamDrop()
+{
+	if (!bIsSlamming) return; //failsafe
+	
+	//trace down to find floor:
+	FHitResult Hit;
+	FVector Start = GetActorLocation();
+	FVector End = Start - FVector(0.0f, 0.0f, 150000.0f); // Look 1500 meters down
+	FCollisionQueryParams Params;
+	Params.AddIgnoredActor(this);
+
+	float TargetZVelocity = -MinSlamSpeed; //default fallback speed
+
+	if(GetWorld()->LineTraceSingleByChannel(Hit, Start, End, ECC_Visibility, Params))
+	{
+		float DistanceToFloor = Start.Z - Hit.ImpactPoint.Z;
+		TargetZVelocity = -(DistanceToFloor / SlamDropTime);
+
+		//edge case clamp: dont go insanely fast from great height, and dont float slowly from 1 meter up
+		TargetZVelocity = FMath::Clamp(TargetZVelocity, -MaxSlamSpeed, -MinSlamSpeed);
+	}
+	
+	//cache the drop vel and enable drop state:
+	CachedSlamVelocityZ = TargetZVelocity;
+	bIsSlamDropping = true;
+
+	if(FallVFXComp) FallVFXComp->Activate(true);
+	if(FallAudioComp && FallAudioComp->Sound) FallAudioComp->Play();
+
 }
 
 void AHordeShooterCharacter::OnJumped_Implementation()
@@ -853,10 +1031,17 @@ bool AHordeShooterCharacter::ReactToHit(float DamageAmount, const FVector& HitIm
 void AHordeShooterCharacter::PlayerDie()
 {
 	//disable player movement and actions
+	GetWorldTimerManager().ClearTimer(SlamHangTimerHandle);
+	GetCharacterMovement()->GravityScale = 2.0f;
 	GetCharacterMovement()->DisableMovement();
 	bIsAiming = false;
 	bIsSliding = false;
 	bIsDashing = false;
+	bIsSlamming = false;
+	bIsSlamDropping = false;
+
+	if(FallVFXComp) FallVFXComp->Deactivate();
+	if(FallAudioComp) FallAudioComp->FadeOut(0.15f, 0.0f);
 	
 	//hide/Disable weapon
 	if(CurrentEquippedWeapon)

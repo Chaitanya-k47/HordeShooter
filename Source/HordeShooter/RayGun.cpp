@@ -416,19 +416,27 @@ void ARayGun::PerformAltFire()
 
     if(bHasOverlaps)
     {
+        TSet<AActor*> DamagedActors;
+
         for(const FOverlapResult& Overlap : OverlapResults)
         {
             //damageableinterface implementation
             AActor* HitActor = Overlap.GetActor();
-            if(HitActor && HitActor->GetClass()->ImplementsInterface(UDamageableInterface::StaticClass()))
+
+            if(HitActor && !DamagedActors.Contains(HitActor))
             {
-                IDamageableInterface* DamageableActor = Cast<IDamageableInterface>(HitActor);
-                if(DamageableActor)
-                {   
-                    //push the ememies out from the centre of the blast
-                    FVector PushDirection = (HitActor->GetActorLocation() - ImpactPoint).GetSafeNormal();
-                    FVector FinalImpulse = PushDirection * AltFireImpulse;
-                    DamageableActor->ReactToHit(AltFireDamage, FinalImpulse, NAME_None);
+                if(HitActor && HitActor->GetClass()->ImplementsInterface(UDamageableInterface::StaticClass()))
+                {
+                    IDamageableInterface* DamageableActor = Cast<IDamageableInterface>(HitActor);
+                    if(DamageableActor)
+                    {   
+                        DamagedActors.Add(HitActor);
+
+                        //push the ememies out from the centre of the blast
+                        FVector PushDirection = (HitActor->GetActorLocation() - ImpactPoint).GetSafeNormal();
+                        FVector FinalImpulse = PushDirection * AltFireImpulse;
+                        DamageableActor->ReactToHit(AltFireDamage, FinalImpulse, NAME_None);
+                    }
                 }
             }
         }

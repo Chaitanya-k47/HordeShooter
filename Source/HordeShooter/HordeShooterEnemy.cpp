@@ -41,6 +41,12 @@ AHordeShooterEnemy::AHordeShooterEnemy()
 	GetMesh()->bEnableUpdateRateOptimizations = true;
 	GetCapsuleComponent()->PrimaryComponentTick.bCanEverTick = false;
 	GetCapsuleComponent()->SetCanEverAffectNavigation(false);
+	GetCapsuleComponent()->SetGenerateOverlapEvents(true);
+	GetMesh()->SetGenerateOverlapEvents(false);
+	bReplicates = false;
+	PrimaryActorTick.bStartWithTickEnabled = false;
+	PrimaryActorTick.bCanEverTick = false;
+
 	//anim culling:
 	/*
 		AlwaysTickPoseAndRefreshBones (default), (expensive)
@@ -227,9 +233,9 @@ bool AHordeShooterEnemy::ReactToHit(float DamageAmount, const FVector& HitImpuls
 {
 	if(bIsDead)
 	{
-		if (GetMesh()->IsSimulatingPhysics())
+		if(GetMesh()->IsSimulatingPhysics())
 		{
-			GetMesh()->AddImpulse(HitImpulse*0.2f, HitBoneName, true);
+			GetMesh()->AddImpulse(HitImpulse, HitBoneName, true);
 		}
 		
 		return false; //already dead, no crit hit/headshot.
@@ -237,13 +243,15 @@ bool AHordeShooterEnemy::ReactToHit(float DamageAmount, const FVector& HitImpuls
 
 	float FinalDamage = DamageAmount;
 	bool bIsHeadshot = false;
+	FVector NewHitImpulse = HitImpulse;
 
 	if(BoneDamageMultipliers.Contains(HitBoneName))
 	{
 		float Multiplier = BoneDamageMultipliers[HitBoneName];
 		FinalDamage *= Multiplier;
+		NewHitImpulse = HitImpulse * Multiplier;
 
-		if(Multiplier > 1.0f && GEngine)
+		if(Multiplier > 1.0f)
 		{
 			if((HitBoneName == FName("Head")))
 			{
@@ -254,7 +262,7 @@ bool AHordeShooterEnemy::ReactToHit(float DamageAmount, const FVector& HitImpuls
 	}
 	
 	CurrentHealth -= FinalDamage;
-	LastHitImpulse = HitImpulse;
+	LastHitImpulse = NewHitImpulse;
 	LastHitBoneName = HitBoneName;
 	
 	OnHit(FinalDamage); // Triggers Blueprint logic, then C++ default
@@ -266,6 +274,7 @@ bool AHordeShooterEnemy::ReactToHit(float DamageAmount, const FVector& HitImpuls
 	else
 	{
 		PlayHitReaction();
+		LaunchCharacter(HitImpulse, true, true);
 	}
 
 	return bIsHeadshot;
