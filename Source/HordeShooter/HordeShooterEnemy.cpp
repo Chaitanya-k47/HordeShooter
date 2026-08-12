@@ -306,10 +306,14 @@ void AHordeShooterEnemy::OnHit_Implementation(float DamageAmount)
 
 void AHordeShooterEnemy::OnDeath_Implementation()
 {
-	// 1. Disable Capsule collision so players can walk over the corpse
+	//stop applying gravity, walking, or falling to the capsule.
+	GetCharacterMovement()->DisableMovement();
+	GetCharacterMovement()->StopMovementImmediately();
+
+	//Disable Capsule collision so players can walk over the corpse
 	GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 
-	// 2. Enable Ragdoll
+	//Enable Ragdoll
 	GetMesh()->SetCollisionProfileName(TEXT("Ragdoll"));
 	GetMesh()->SetSimulatePhysics(true);
 
