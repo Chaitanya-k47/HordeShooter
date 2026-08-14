@@ -29,6 +29,9 @@ void AHordeWaveManager::BeginPlay()
 		return;
 	}
 
+	//debug:
+	GetWorldTimerManager().SetTimer(DebugTelemetryTimer, this, &AHordeWaveManager::PrintPoolStats, 0.2f, true);
+
 	//create the enemy pool.
 	InitializePool();
 
@@ -129,6 +132,41 @@ void AHordeWaveManager::OnEnemyDied()
 		FTimerHandle ReplenishTimer;
 		GetWorldTimerManager().SetTimer(ReplenishTimer, this, &AHordeWaveManager::SpawnSingleEnemy, RandomReplenishDelay, false);
 	}	
+}
+
+
+void AHordeWaveManager::PrintPoolStats()
+{
+	if (!GEngine) return;
+
+	int32 AliveCount = 0;
+	int32 DeadRagdollCount = 0;
+	int32 InactivePoolCount = 0;
+
+	for (AHordeShooterEnemy* Enemy : EnemyPool)
+	{
+		if (!Enemy) continue;
+
+		if (Enemy->bIsActive && !Enemy->bIsDead)
+		{
+			AliveCount++;
+		}
+		else if (Enemy->bIsActive && Enemy->bIsDead)
+		{
+			DeadRagdollCount++;
+		}
+		else if (!Enemy->bIsActive)
+		{
+			InactivePoolCount++;
+		}
+	}
+
+	// Use Keys 1-5 so the messages overwrite themselves cleanly instead of spamming down the screen
+	GEngine->AddOnScreenDebugMessage(1, 0.3f, FColor::Green,  FString::Printf(TEXT("[POOL] Alive & Active: %d"), AliveCount));
+	GEngine->AddOnScreenDebugMessage(2, 0.3f, FColor::Red,    FString::Printf(TEXT("[POOL] Dead & Ragdolling: %d"), DeadRagdollCount));
+	GEngine->AddOnScreenDebugMessage(3, 0.3f, FColor::Cyan,   FString::Printf(TEXT("[POOL] Inactive (Ready): %d"), InactivePoolCount));
+	GEngine->AddOnScreenDebugMessage(4, 0.3f, FColor::Yellow, FString::Printf(TEXT("[WAVE] Left to Spawn: %d"), EnemiesLeftToSpawnThisWave));
+	GEngine->AddOnScreenDebugMessage(5, 0.3f, FColor::Orange, FString::Printf(TEXT("[WAVE] Max Screen Budget: %d"), MaxEnemiesOnScreen));
 }
 
 

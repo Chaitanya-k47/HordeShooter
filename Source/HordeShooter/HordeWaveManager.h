@@ -80,4 +80,8 @@ private:
 	//callback for enemy death. to be bound to a delegate in enemy class.
 	UFUNCTION()
 	void OnEnemyDied();
+
+	// --- POOL DEBUGGER ---
+	FTimerHandle DebugTelemetryTimer;
+	void PrintPoolStats();
 };

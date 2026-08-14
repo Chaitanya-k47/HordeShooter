@@ -77,20 +77,7 @@ void AHordeShooterEnemy::ActivateEnemy(const FTransform& SpawnTransform)
 	bIsStunned = false;
 	CurrentHealth = MaxHealth;
 
-	//reset physics and collision first. (order matters)
-	GetMesh()->SetSimulatePhysics(false);
-	GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
-	GetCapsuleComponent()->SetCollisionResponseToChannel(ECC_Visibility, ECR_Ignore);
-
-	//force the mesh back to standing collision profile
-	GetMesh()->SetCollisionProfileName(TEXT("CharacterMesh"));
-	GetMesh()->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
-	GetMesh()->SetCollisionResponseToChannel(ECC_Visibility, ECR_Block);
-
-	//reattach mesh to capsule
-	GetMesh()->AttachToComponent(GetCapsuleComponent(), FAttachmentTransformRules::SnapToTargetIncludingScale);
-	GetMesh()->SetRelativeLocation(FVector(0.0f, 0.0f, -96.0f));
-	GetMesh()->SetRelativeRotation(FRotator(0.0f, -90.0f, 0.0f));
+	GetMesh()->SetSimulatePhysics(false); //Failsafe
 
 	//reset the capusle rotation i.e. we take only the yaw, the direction in which spawnpoint arrow points. 
 	FRotator SafeRotation = FRotator(0.0f, SpawnTransform.Rotator().Yaw, 0.0f);
@@ -100,9 +87,24 @@ void AHordeShooterEnemy::ActivateEnemy(const FTransform& SpawnTransform)
 	FVector SafeLocation = SpawnTransform.GetLocation() + FVector(0.0f, 0.0f, 50.0f);
 	SetActorLocation(SafeLocation, false, nullptr, ETeleportType::TeleportPhysics);
 
-	//wakeup visuals and anims.
-	SetActorHiddenInGame(false);
+	//reset physics and collision first. (order matters)
+	GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
+	GetCapsuleComponent()->SetCollisionResponseToChannel(ECC_Visibility, ECR_Ignore);
+
+	//force the mesh back to standing collision profile
+	GetMesh()->SetCollisionProfileName(TEXT("CharacterMesh"));
+	GetMesh()->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
+	GetMesh()->SetCollisionResponseToChannel(ECC_Visibility, ECR_Block);
+
+	GetCharacterMovement()->SetMovementMode(MOVE_Walking);
 	GetMesh()->bPauseAnims = false;
+	if(GetMesh()->GetAnimInstance())
+	{
+		GetMesh()->GetAnimInstance()->Montage_Stop(0.0f, nullptr); 
+	}
+
+	//wakeup visuals
+	SetActorHiddenInGame(false);
 
 	//wakeup audio comp
 	if (SprintAudioComp && SprintAudioComp->Sound) SprintAudioComp->Play();
@@ -115,21 +117,27 @@ void AHordeShooterEnemy::DeactivateEnemy()
 {
 	bIsActive = false;
 
-	//physics off
+	//stop audio comp
+	if(SprintAudioComp) SprintAudioComp->Stop();
+
+	//kill physics first
+	GetMesh()->PutAllRigidBodiesToSleep();
 	GetMesh()->SetSimulatePhysics(false);
 	GetMesh()->bPauseAnims = true;
 
 	//collision off
 	GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	GetMesh()->SetCollisionProfileName(TEXT("NoCollision")); //extra safety net
 	GetMesh()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
-	GetMesh()->SetCollisionProfileName(TEXT("NoCollision")); // Extra safety net
+
+	//re-attach the mesh
+	GetMesh()->AttachToComponent(GetCapsuleComponent(), FAttachmentTransformRules::KeepWorldTransform);
+	GetMesh()->SetRelativeLocation(FVector(0.0f, 0.0f, -96.0f));
+	GetMesh()->SetRelativeRotation(FRotator(0.0f, -90.0f, 0.0f));
 
 	//hide
 	SetActorHiddenInGame(true);
 	SetActorLocation(FVector(0.0f, 0.0f, -10000.0f), false, nullptr, ETeleportType::TeleportPhysics);
-
-	//stop audio comp
-	if(SprintAudioComp) SprintAudioComp->Stop();
 }
 
 //COMBAT ACTIONS:
@@ -235,7 +243,8 @@ bool AHordeShooterEnemy::ReactToHit(float DamageAmount, const FVector& HitImpuls
 	{
 		if(GetMesh()->IsSimulatingPhysics())
 		{
-			GetMesh()->AddImpulse(HitImpulse, HitBoneName, true);
+			//Force mode.
+			GetMesh()->AddImpulse(HitImpulse, HitBoneName, false);
 		}
 		
 		return false; //already dead, no crit hit/headshot.
@@ -257,7 +266,6 @@ bool AHordeShooterEnemy::ReactToHit(float DamageAmount, const FVector& HitImpuls
 			{
 				bIsHeadshot = true;
 			}
-			
 		}
 	}
 	
@@ -265,7 +273,7 @@ bool AHordeShooterEnemy::ReactToHit(float DamageAmount, const FVector& HitImpuls
 	LastHitImpulse = NewHitImpulse;
 	LastHitBoneName = HitBoneName;
 	
-	OnHit(FinalDamage); // Triggers Blueprint logic, then C++ default
+	OnHit(FinalDamage); //triggers Blueprint logic, then C++ default
 
 	if(CurrentHealth <= 0.f)
 	{
@@ -274,7 +282,12 @@ bool AHordeShooterEnemy::ReactToHit(float DamageAmount, const FVector& HitImpuls
 	else
 	{
 		PlayHitReaction();
-		LaunchCharacter(HitImpulse, true, true);
+
+		//velocity mode by default but we trick it into Force mode by Dividing impulse(momentum vector) by mass to get real velocity.
+		float EnemyMass = GetCharacterMovement()->Mass;
+		if(EnemyMass <= 0.0f) EnemyMass = 100.0f; //fail safe
+		FVector CalculatedVelocity = LastHitImpulse/EnemyMass;
+		LaunchCharacter(CalculatedVelocity, true, true);
 	}
 
 	return bIsHeadshot;
@@ -309,22 +322,22 @@ void AHordeShooterEnemy::OnDeath_Implementation()
 	//stop applying gravity, walking, or falling to the capsule.
 	GetCharacterMovement()->DisableMovement();
 	GetCharacterMovement()->StopMovementImmediately();
-
-	//Disable Capsule collision so players can walk over the corpse
 	GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 
 	//Enable Ragdoll
 	GetMesh()->SetCollisionProfileName(TEXT("Ragdoll"));
+	GetMesh()->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
 	GetMesh()->SetSimulatePhysics(true);
-
 	GetMesh()->bPauseAnims = true;
 
-	GetMesh()->SetCollisionResponseToChannel(ECC_Pawn, ECR_Ignore);
+	//detach mesh:
+	GetMesh()->DetachFromComponent(FDetachmentTransformRules::KeepWorldTransform);
 
-	//so that ragdoll doesnt ignore bullets.
+	//mesh ignores living pawns but react to bullets
+	GetMesh()->SetCollisionResponseToChannel(ECC_Pawn, ECR_Ignore);
 	GetMesh()->SetCollisionResponseToChannel(ECC_Visibility, ECR_Block);
 
-	//Add directional shot impulse!
-	GetMesh()->AddImpulse(LastHitImpulse, LastHitBoneName, true);
+	//add impulse (Force mode.)
+	GetMesh()->AddImpulse(LastHitImpulse, LastHitBoneName, false);
 }
 
