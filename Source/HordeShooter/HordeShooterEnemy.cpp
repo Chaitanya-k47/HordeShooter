@@ -18,6 +18,7 @@ AHordeShooterEnemy::AHordeShooterEnemy()
 	PrimaryActorTick.bCanEverTick = false;
 
 	GetCapsuleComponent()->InitCapsuleSize(42.f, 96.f);
+	GetMesh()->SetRenderCustomDepth(true);
 
 	//let the AI Controller handle rotation, not the actor itself
 	bUseControllerRotationPitch = false;

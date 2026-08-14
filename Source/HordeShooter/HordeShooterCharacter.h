@@ -244,10 +244,12 @@ protected:
 	USoundBase* SlamSound;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Movement|Slam")
-	class UNiagaraComponent* FallVFXComp;
-
-	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Movement|Slam")
 	class UAudioComponent* FallAudioComp;
+
+
+	//spped lines:
+	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Movement")
+	class UNiagaraComponent* SpeedLinesVFXComp;
 
 
 	//Weapon config:

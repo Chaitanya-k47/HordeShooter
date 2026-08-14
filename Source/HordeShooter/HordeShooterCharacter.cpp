@@ -46,6 +46,7 @@ AHordeShooterCharacter::AHordeShooterCharacter()
 	CharacterArms = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("CharacterArms"));
 	CharacterArms->SetupAttachment(Pivot);
 	CharacterArms->SetCastShadow(false);
+	CharacterArms->SetRenderCustomDepth(true);
 
 	FirstPersonCamera = CreateDefaultSubobject<UCameraComponent>(TEXT("FirstPersonCamera"));
 	FirstPersonCamera->SetupAttachment(CharacterArms, FName("head")); //attach camera to Head bone.
@@ -55,13 +56,13 @@ AHordeShooterCharacter::AHordeShooterCharacter()
 	SlideAudioComponent->SetupAttachment(GetRootComponent());
 	SlideAudioComponent->bAutoActivate = false;
 
-	FallVFXComp = CreateDefaultSubobject<UNiagaraComponent>(TEXT("FallVFXComp"));
-	FallVFXComp->SetupAttachment(CharacterArms);
-	FallVFXComp->bAutoActivate = false;
+	SpeedLinesVFXComp = CreateDefaultSubobject<UNiagaraComponent>(TEXT("SpeedLinesVFXComp"));
+	SpeedLinesVFXComp->SetupAttachment(CharacterArms);
+	SpeedLinesVFXComp->bAutoActivate = false;
 	
-	//ignore camera rotation, stay vertical still
-	FallVFXComp->SetUsingAbsoluteRotation(true); 
-	FallVFXComp->SetWorldRotation(FRotator::ZeroRotator);
+	//keep absolute Rotation TRUE so we can manually control exactly where it points
+	SpeedLinesVFXComp->SetUsingAbsoluteRotation(true);
+	//FallVFXComp->SetWorldRotation(FRotator::ZeroRotator);
 
 	FallAudioComp = CreateDefaultSubobject<UAudioComponent>(TEXT("FallAudioComp"));
 	FallAudioComp->SetupAttachment(GetRootComponent());
@@ -180,10 +181,7 @@ void AHordeShooterCharacter::Tick(float DeltaTime)
 		{
 			bIsDashing = false;
 
-			if(AHordeShooterPlayerController* PC = Cast<AHordeShooterPlayerController>(GetController()))
-			{
-				PC->SetSlideFX(false);
-			}
+			if(SpeedLinesVFXComp) SpeedLinesVFXComp->Deactivate();
 
 			//kill dash momentum if in air
 			if(GetCharacterMovement()->IsFalling())
@@ -451,9 +449,10 @@ void AHordeShooterCharacter::Dash()
 	bIsDashing = true;
 	DashTimer = DashDuration;
 
-	if(AHordeShooterPlayerController* PC = Cast<AHordeShooterPlayerController>(GetController()))
+	if(SpeedLinesVFXComp)
 	{
-		PC->SetSlideFX(true);
+		SpeedLinesVFXComp->SetWorldRotation(CurrentDashDirection.Rotation());
+		SpeedLinesVFXComp->Activate(true);
 	}
 
 	if(DashSound)
@@ -514,7 +513,7 @@ void AHordeShooterCharacter::Landed(const FHitResult& Hit)
 		GetCapsuleComponent()->SetCollisionResponseToChannel(ECC_Pawn, ECR_Block);
 
 		//kill th drop effect and sound:
-		if(FallVFXComp) FallVFXComp->Deactivate();
+		if(SpeedLinesVFXComp) SpeedLinesVFXComp->Deactivate();
 		if(FallAudioComp) FallAudioComp->FadeOut(0.15f, 0.0f);
 
 		//fall distance:
@@ -620,10 +619,11 @@ void AHordeShooterCharacter::StartSlide()
 		CachedInputDirection.Normalize();
 
 		GetCharacterMovement()->Velocity += FVector((CachedInputDirection * SlideSpeed).X, (CachedInputDirection * SlideSpeed).Y, 0.0f);
-		
-		if(AHordeShooterPlayerController* PC = Cast<AHordeShooterPlayerController>(GetController()))
+	
+		if (SpeedLinesVFXComp)
 		{
-			PC->SetSlideFX(true);
+			SpeedLinesVFXComp->SetWorldRotation(CachedInputDirection.Rotation());
+			SpeedLinesVFXComp->Activate(true);
 		}
 	}
 	else if(!bIsSlamming)
@@ -680,10 +680,7 @@ void AHordeShooterCharacter::StopSlide()
 
 	GetCapsuleComponent()->SetCollisionResponseToChannel(ECC_Pawn, ECR_Block);
 	
-	if(AHordeShooterPlayerController* PC = Cast<AHordeShooterPlayerController>(GetController()))
-	{
-		PC->SetSlideFX(false);
-	}
+	if(SpeedLinesVFXComp) SpeedLinesVFXComp->Deactivate();
 }
 
 void AHordeShooterCharacter::ExecuteSlamDrop()
@@ -712,7 +709,12 @@ void AHordeShooterCharacter::ExecuteSlamDrop()
 	CachedSlamVelocityZ = TargetZVelocity;
 	bIsSlamDropping = true;
 
-	if(FallVFXComp) FallVFXComp->Activate(true);
+	if (SpeedLinesVFXComp)
+	{
+		//FVector(0, 0, -1) points straight at the floor
+		SpeedLinesVFXComp->SetWorldRotation(FVector(0.0f, 0.0f, -1.0f).Rotation());
+		SpeedLinesVFXComp->Activate(true);
+	}	
 	if(FallAudioComp && FallAudioComp->Sound) FallAudioComp->Play();
 
 }
@@ -1040,7 +1042,7 @@ void AHordeShooterCharacter::PlayerDie()
 	bIsSlamming = false;
 	bIsSlamDropping = false;
 
-	if(FallVFXComp) FallVFXComp->Deactivate();
+	if(SpeedLinesVFXComp) SpeedLinesVFXComp->Deactivate();
 	if(FallAudioComp) FallAudioComp->FadeOut(0.15f, 0.0f);
 	
 	//hide/Disable weapon

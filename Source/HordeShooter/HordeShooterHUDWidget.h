@@ -40,13 +40,6 @@ protected:
 	UButton* RestartButton;
 
 	UPROPERTY(meta = (BindWidget))
-	class UImage* SpeedLinesImage;
-
-	//this binds to an anim created in bp editor
-	UPROPERTY(meta = (BindWidgetAnim), Transient)
-	class UWidgetAnimation* SlideAnim;
-
-	UPROPERTY(meta = (BindWidget))
 	UProgressBar* DashBar1; //left Bar
 
 	UPROPERTY(meta = (BindWidget))
@@ -74,8 +67,6 @@ public:
 	
 	void ToggleCrosshair(bool bShow);
 	void ShowGameOver();
-
-	void ToggleSlideFX(bool bIsSliding);
 
 	void ShowDamageIndicator(float Angle);
 

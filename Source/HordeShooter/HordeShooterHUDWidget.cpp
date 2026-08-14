@@ -140,22 +140,6 @@ void UHordeShooterHUDWidget::OnRestartClicked()
     }
 }
 
-
-void UHordeShooterHUDWidget::ToggleSlideFX(bool bIsSliding)
-{
-	if(SlideAnim)
-	{
-		if(bIsSliding)
-		{
-			PlayAnimation(SlideAnim);
-		}
-		else
-		{
-			PlayAnimation(SlideAnim, 0.0f, 1, EUMGSequencePlayMode::Reverse);
-		}
-	}	
-}
-
 void UHordeShooterHUDWidget::ShowDamageIndicator(float Angle)
 {
 	if(DamageIndicatorClass && IndicatorCanvas)

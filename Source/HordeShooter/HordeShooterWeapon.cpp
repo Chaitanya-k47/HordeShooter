@@ -31,11 +31,13 @@ AHordeShooterWeapon::AHordeShooterWeapon()
 	Mesh = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("Mesh"));
 	Mesh->SetupAttachment(Root);
 	Mesh->SetCastShadow(false);
+	Mesh->SetRenderCustomDepth(true);
 
 	Magazine = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("Magazine"));
 	Magazine->SetupAttachment(Mesh, FName("Magazine"));
 	Magazine->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 	Magazine->SetCastShadow(false);
+	Magazine->SetRenderCustomDepth(true);
 
 	BarrelSmokeComp = CreateDefaultSubobject<UNiagaraComponent>(TEXT("BarrelSmokeComponent"));
 	BarrelSmokeComp->SetupAttachment(Mesh, FName("SOC_MuzzleFlash"));
