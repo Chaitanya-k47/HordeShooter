@@ -268,14 +268,21 @@ void AArenaManager::Tick(float DeltaTime)
 						PlayerCampTimer = 0.f;
 					
 						//find the exact floor location and execute strike:
-						float FloorZ = TargetHeights[CurrentBlockIndex];
-						FVector BaseFloorLoc = FVector(GridX * BlockSize, GridY * BlockSize, FloorZ) + ArenaLoc;
+						float BaseZ = TargetHeights[CurrentBlockIndex];
+						float CubeScaleZ = ((MaxStairSteps * BlockSize) + BlockSize) / MeshSizeZ;
+						float RoofZ = BaseZ + (CachedCubeMaxZ * CubeScaleZ) + ArenaLoc.Z;
+
+						// Pivot Correction for XY
+						FVector CubePivotXY = FVector(GridX * BlockSize, GridY * BlockSize, 0.0f) + ArenaLoc;
+						FVector CubeScaleXY = FVector(BlockSize / MeshSizeX, BlockSize / MeshSizeY, 1.0f);
+						FVector ScaledCubeOffset = CachedCubeLocalCenter * CubeScaleXY;
+						FVector TrueCellCenterXY = CubePivotXY + FVector(ScaledCubeOffset.X, ScaledCubeOffset.Y, 0.0f);
 
 						float OffsetLimit = (BlockSize / 2.0f) - 150.0f;
 						float RandX = FMath::RandRange(-OffsetLimit, OffsetLimit);
 						float RandY = FMath::RandRange(-OffsetLimit, OffsetLimit);
 
-						FVector StrikeLoc = BaseFloorLoc + FVector(RandX, RandY, 0.0f);
+						FVector StrikeLoc = FVector(TrueCellCenterXY.X + RandX, TrueCellCenterXY.Y + RandY, RoofZ);
 					
 						ExecuteLightningStrike(StrikeLoc);
 					}
@@ -296,6 +303,10 @@ void AArenaManager::BeginNewLayoutGeneration()
 {
 	UWorld* World = GetWorld();
 	if (!World) return;
+
+	//cancel active lightning strikes:
+	RemainingLightningStrikes = 0;
+	GetWorldTimerManager().ClearTimer(LightningWaveTimerHandle);
 
 	//prevent from spamming generation command:
 	if(TransitionState != EArenaTransitionState::Idle) return;
@@ -636,6 +647,8 @@ void AArenaManager::ExecuteLightningStrike(const FVector& StrikeLocation)
 		if(Bolt) Bolt->SetVectorParameter(FName("TraceEnd"), StrikeLocation);
 	}
 
+	if(LightningImpactVFX) UNiagaraFunctionLibrary::SpawnSystemAtLocation(GetWorld(), LightningImpactVFX, StrikeLocation);
+
 	if(LightningSound) UGameplayStatics::PlaySoundAtLocation(GetWorld(), LightningSound, StrikeLocation);
 
 	//AOE Damage:
@@ -685,3 +698,59 @@ void AArenaManager::ExecuteLightningStrike(const FVector& StrikeLocation)
 
 }
 
+void AArenaManager::StartLightningWave(int32 NumStrikes)
+{
+	//dont overlap waves
+	if(RemainingLightningStrikes > 0) return;
+	RemainingLightningStrikes = NumStrikes;
+
+	if(GEngine) GEngine->AddOnScreenDebugMessage(-1, 3.f, FColor::Orange, TEXT("HAZARD: LIGHTNING STORM INCOMING!"));
+
+	//start strike wave:
+	DropNextLightningInWave();
+}
+
+void AArenaManager::DropNextLightningInWave()
+{
+	if(RemainingLightningStrikes <= 0) return;
+
+	RemainingLightningStrikes--;
+
+	//pick a random grid block:
+	int32 RandX = FMath::RandRange(0, GridSizeX - 1);
+	int32 RandY = FMath::RandRange(0, GridSizeY - 1);
+	int32 RandomBlockIndex = (RandX * GridSizeY) + RandY;
+
+	//calculate the exact floor location of that block
+	float BaseZ = TargetHeights[RandomBlockIndex];
+	float CubeScaleZ = ((MaxStairSteps * BlockSize) + BlockSize) / MeshSizeZ;
+	float RoofZ = BaseZ + (CachedCubeMaxZ * CubeScaleZ) + GetActorLocation().Z;
+
+	FVector CubePivotXY = FVector(RandX * BlockSize, RandY * BlockSize, 0.0f) + GetActorLocation();
+	FVector CubeScaleXY = FVector(BlockSize / MeshSizeX, BlockSize / MeshSizeY, 1.0f);
+	FVector ScaledCubeOffset = CachedCubeLocalCenter * CubeScaleXY;
+	FVector TrueCellCenterXY = CubePivotXY + FVector(ScaledCubeOffset.X, ScaledCubeOffset.Y, 0.0f);
+
+	//add a slight random offset so they dont always hit dead center
+	float OffsetLimit = (BlockSize / 2.0f) - 150.0f;
+	float OffsetX = FMath::RandRange(-OffsetLimit, OffsetLimit);
+	float OffsetY = FMath::RandRange(-OffsetLimit, OffsetLimit);
+
+	FVector StrikeLoc = FVector(TrueCellCenterXY.X + OffsetX, TrueCellCenterXY.Y + OffsetY, RoofZ);
+
+	//fire
+	ExecuteLightningStrike(StrikeLoc);
+
+	//if we have strikes left queue up the next one with random delay
+	if (RemainingLightningStrikes > 0)
+	{
+		float NextStrikeDelay = FMath::RandRange(0.1f, 0.4f);
+		GetWorldTimerManager().SetTimer(LightningWaveTimerHandle, this, &AArenaManager::DropNextLightningInWave, NextStrikeDelay, false);
+	}
+}
+
+void AArenaManager::TestLightningStorm()
+{
+	// Drop 15 bolts of lightning whenever we click the button in the editor!
+	StartLightningWave(15); 
+}

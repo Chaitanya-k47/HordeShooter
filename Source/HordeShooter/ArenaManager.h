@@ -42,6 +42,13 @@ public:
 	UPROPERTY(BlueprintAssignable, Category = "Arena|Events")
 	FOnArenaLayoutFinishedSignature OnArenaLayoutFinished;
 
+	UFUNCTION(BlueprintCallable, Category = "Arena|Hazards")
+	void StartLightningWave(int32 NumStrikes = 10);
+	
+	UFUNCTION(CallInEditor, Category = "Arena|Hazards")
+	void TestLightningStorm();
+
+
 protected:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
@@ -119,6 +126,9 @@ protected:
 	class UNiagaraSystem* LightningVFX;
 
 	UPROPERTY(EditDefaultsOnly, Category = "Arena Config|Anti-Camping")
+	class UNiagaraSystem* LightningImpactVFX;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Arena Config|Anti-Camping")
 	class USoundBase* LightningSound;
 
 private:
@@ -174,5 +184,12 @@ private:
 	float PlayerCampTimer = 0.f;
 
 	void ExecuteLightningStrike(const FVector& StrikeLocation);
+
+	//lightning tracker:
+	int32 RemainingLightningStrikes = 0;
+	FTimerHandle LightningWaveTimerHandle;
+
+	//recursive fn that fires strikes.
+	void DropNextLightningInWave();
 
 };

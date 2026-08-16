@@ -52,5 +52,7 @@ protected:
 private:
 	bool bHasBounced = false;
 	FTimerHandle DeactivateTimerHandle; //timer to return to the pool
-	
+
+	FTimerHandle PhysicsSleepTimerHandle;
+	void SleepPhysics();
 };

@@ -47,6 +47,7 @@ void AHordeShooterCasing::ActivateAndEject(const FTransform& StartTransform, FVe
 	//reset state:
 	bHasBounced = false;
 	GetWorldTimerManager().ClearTimer(DeactivateTimerHandle);
+	GetWorldTimerManager().ClearTimer(PhysicsSleepTimerHandle);
 
 	//teleport to the spawn location and activate physics:
 	SetActorTransform(StartTransform, false, nullptr, ETeleportType::TeleportPhysics);
@@ -95,10 +96,14 @@ void AHordeShooterCasing::OnHit(
 		bHasBounced = true;//only play sound on first bounce
 
 		//we wait for 0.5 sec after collision before putting the casing to sleep.
-		FTimerHandle PhysicsSleepTimerHandle;
-		GetWorldTimerManager().SetTimer(PhysicsSleepTimerHandle, [this]()
-		{
-			if(CasingMesh) CasingMesh->SetSimulatePhysics(false);
-		}, 0.5f, false);
+		GetWorldTimerManager().SetTimer(PhysicsSleepTimerHandle, this, &AHordeShooterCasing::SleepPhysics, 0.5f, false);
+	}
+}
+
+void AHordeShooterCasing::SleepPhysics()
+{
+	if (CasingMesh)
+	{
+		CasingMesh->SetSimulatePhysics(false);
 	}
 }

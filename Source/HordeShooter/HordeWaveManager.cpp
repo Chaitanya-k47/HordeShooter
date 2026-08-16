@@ -119,10 +119,7 @@ void AHordeWaveManager::OnEnemyDied()
 		CurrentWaveIndex++;
 
 		FTimerHandle ArenaShiftTimer;
-		GetWorldTimerManager().SetTimer(ArenaShiftTimer, [this]()
-		{
-			if(CachedArenaManager) CachedArenaManager->BeginNewLayoutGeneration();
-		}, 2.0f, false);
+		GetWorldTimerManager().SetTimer(ArenaShiftTimer, CachedArenaManager, &AArenaManager::BeginNewLayoutGeneration, 2.0f, false);
 	}
 
 	//Wave replenishment
