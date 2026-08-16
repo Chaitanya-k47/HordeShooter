@@ -9,6 +9,11 @@
 #include "GameFramework/Character.h"
 #include "Components/BoxComponent.h"
 #include "DamageableInterface.h"
+#include "NiagaraFunctionLibrary.h"
+#include "NiagaraComponent.h"
+#include "DamageableInterface.h"
+#include "GameFramework/CharacterMovementComponent.h"
+#include "HordeShooterCharacter.h"
 
 
 // Sets default values
@@ -230,10 +235,68 @@ void AArenaManager::Tick(float DeltaTime)
 			}
 		}
 	}
+
+	//Anti Camping Tracker:
+	if(ACharacter* PlayerChar = UGameplayStatics::GetPlayerCharacter(GetWorld(), 0))
+	{
+		//if airborne reset timer.
+		if (!PlayerChar->GetCharacterMovement()->IsMovingOnGround())
+		{
+			PlayerCampTimer = 0.0f;
+		}
+		else
+		{
+			FVector PlayerLoc = PlayerChar->GetActorLocation();
+			FVector ArenaLoc = GetActorLocation();
+
+			//convert the player location to grid index:
+			//PlayerLoc - ArenaLoc => arena to player displacement vector. i.e. how far is player from arena
+			int32 GridX = FMath::RoundToInt((PlayerLoc.X - ArenaLoc.X)/BlockSize);
+			int32 GridY = FMath::RoundToInt((PlayerLoc.Y - ArenaLoc.Y)/BlockSize);
+
+			if(GridX >= 0 && GridX < GridSizeX && GridY >= 0 && GridY < GridSizeY)
+			{
+				int32 CurrentBlockIndex = (GridX * GridSizeY) + GridY;
+
+				if(CurrentBlockIndex == LastPlayerBlockIndex)
+				{
+					PlayerCampTimer += DeltaTime;
+
+					if(PlayerCampTimer >= MaxCampTime)
+					{
+						//drop lightning, and and reset the timer.
+						PlayerCampTimer = 0.f;
+					
+						//find the exact floor location and execute strike:
+						float FloorZ = TargetHeights[CurrentBlockIndex];
+						FVector BaseFloorLoc = FVector(GridX * BlockSize, GridY * BlockSize, FloorZ) + ArenaLoc;
+
+						float OffsetLimit = (BlockSize / 2.0f) - 150.0f;
+						float RandX = FMath::RandRange(-OffsetLimit, OffsetLimit);
+						float RandY = FMath::RandRange(-OffsetLimit, OffsetLimit);
+
+						FVector StrikeLoc = BaseFloorLoc + FVector(RandX, RandY, 0.0f);
+					
+						ExecuteLightningStrike(StrikeLoc);
+					}
+
+				}
+				else
+				{
+					LastPlayerBlockIndex = CurrentBlockIndex;
+					PlayerCampTimer = 0.f;
+				}
+			}
+		}
+		
+	}
 }
 
 void AArenaManager::BeginNewLayoutGeneration()
 {
+	UWorld* World = GetWorld();
+	if (!World) return;
+
 	//prevent from spamming generation command:
 	if(TransitionState != EArenaTransitionState::Idle) return;
 
@@ -561,3 +624,64 @@ void AArenaManager::OnKillVolumeOverlap(UPrimitiveComponent* OverlappedComponent
 		}
 	}
 }
+
+void AArenaManager::ExecuteLightningStrike(const FVector& StrikeLocation)
+{
+	float SkyZ = BlockLocZ + (MaxStairSteps * BlockSize) + LightningSpawnOffset;
+	FVector SkyLocation = FVector(StrikeLocation.X, StrikeLocation.Y, SkyZ);
+
+	if(LightningVFX)
+	{
+		UNiagaraComponent* Bolt = UNiagaraFunctionLibrary::SpawnSystemAtLocation(GetWorld(), LightningVFX, SkyLocation);
+		if(Bolt) Bolt->SetVectorParameter(FName("TraceEnd"), StrikeLocation);
+	}
+
+	if(LightningSound) UGameplayStatics::PlaySoundAtLocation(GetWorld(), LightningSound, StrikeLocation);
+
+	//AOE Damage:
+	TArray<FOverlapResult> OverlapResults;
+	FCollisionShape SphereCol = FCollisionShape::MakeSphere(LightningRadius);
+	FCollisionQueryParams QueryParams;
+
+	FCollisionObjectQueryParams ObjectQueryParams;
+	ObjectQueryParams.AddObjectTypesToQuery(ECC_Pawn); //both player and enemy
+
+	bool bHasOverlaps = GetWorld()->OverlapMultiByObjectType(
+		OverlapResults,
+		StrikeLocation,
+		FQuat::Identity,
+		ObjectQueryParams,
+		SphereCol,
+		QueryParams
+	);
+
+	if(bHasOverlaps)
+	{
+		TSet<AActor*> DamagedActors;
+
+		for(const FOverlapResult& Overlap : OverlapResults)
+		{
+			AActor* HitActor =  Overlap.GetActor();
+			if(HitActor && !DamagedActors.Contains(HitActor) && HitActor->GetClass()->ImplementsInterface(UDamageableInterface::StaticClass()))
+			{
+				DamagedActors.Add(HitActor);
+				IDamageableInterface* DamageableActor = Cast<IDamageableInterface>(HitActor);
+
+				float DamageToApply = LightningEnemyDamage;
+				if(HitActor->IsA(AHordeShooterCharacter::StaticClass()))
+				{
+					DamageToApply = LightningPlayerDamage;
+					if(GEngine) GEngine->AddOnScreenDebugMessage(-1, 2.0f, FColor::Red, TEXT("ANTI-CAMP: ZEUS STRIKE!"));
+				}
+
+				FVector PushDirection = (HitActor->GetActorLocation() - StrikeLocation).GetSafeNormal2D();
+				PushDirection.Z += 0.25f;
+				PushDirection.Normalize();
+
+				DamageableActor->ReactToHit(DamageToApply, PushDirection * LightningImpulse, NAME_None);
+			}
+		}
+	}
+
+}
+

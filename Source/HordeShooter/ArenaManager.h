@@ -95,6 +95,32 @@ protected:
 	UPROPERTY(EditAnywhere, Category = "Arena Config|Procedural")
 	bool bEnforceAccessibility = true; //smooths steep cliffs so ramps can always connect
 
+
+	//anti camping:
+	UPROPERTY(EditAnywhere, Category = "Arena Config|Anti-Camping")
+	float MaxCampTime = 5.f; //seconds before the lightning strikes.
+
+	UPROPERTY(EditAnywhere, Category = "Arena Config|Anti-Camping")
+	float LightningPlayerDamage = 20.0f; 
+
+	UPROPERTY(EditAnywhere, Category = "Arena Config|Anti-Camping")
+	float LightningEnemyDamage = 5.0f;
+
+	UPROPERTY(EditAnywhere, Category = "Arena Config|Anti-Camping")
+	float LightningRadius = 200.0f;
+
+	UPROPERTY(EditAnywhere, Category = "Arena Config|Anti-Camping")
+	float LightningImpulse = 30000.0f;
+
+	UPROPERTY(EditAnywhere, Category = "Arena Config|Anti-Camping")
+	float LightningSpawnOffset = 5000.f;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Arena Config|Anti-Camping")
+	class UNiagaraSystem* LightningVFX;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Arena Config|Anti-Camping")
+	class USoundBase* LightningSound;
+
 private:
 	//tracks current and target height of every single block:
 	TArray<float> CurrentHeights;
@@ -142,4 +168,11 @@ private:
 
 	UFUNCTION()
 	void OnKillVolumeOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult);
+
+	//track player's position.
+	int32 LastPlayerBlockIndex = -1;
+	float PlayerCampTimer = 0.f;
+
+	void ExecuteLightningStrike(const FVector& StrikeLocation);
+
 };

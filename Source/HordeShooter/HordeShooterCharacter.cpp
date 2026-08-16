@@ -996,7 +996,7 @@ bool AHordeShooterCharacter::ReactToHit(float DamageAmount, const FVector& HitIm
 
 	CurrentHealth -= DamageAmount;
 
-	GetCharacterMovement()->AddImpulse(HitImpulse, true);
+	GetCharacterMovement()->AddImpulse(HitImpulse, false);
 
 	//calculate damage direction angle
 	FVector DamageDirection = -HitImpulse.GetSafeNormal2D();
