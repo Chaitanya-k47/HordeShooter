@@ -70,6 +70,8 @@ void AHordeWaveManager::StartNextWave()
 		return;
 	}
 
+	CachedArenaManager->StartLightningWave(15);`
+
 	//read wave data
 	FWaveConfig CurrentWave = Waves[CurrentWaveIndex];
 	EnemiesLeftToSpawnThisWave = CurrentWave.EnemiesToSpawn;
