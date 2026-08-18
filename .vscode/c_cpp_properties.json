@@ -1,20 +1,25 @@
 {
-	"configurations": [
-		{
-			"name": "HordeShooterEditor Editor Win64 Development (HordeShooter)",
-			"compilerPath": "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.38.33130\\bin\\Hostx64\\x64\\cl.exe",
-			"cStandard": "c17",
-			"cppStandard": "c++20",
-			"intelliSenseMode": "msvc-x64",
-			"compileCommands": "D:\\Unreal Projects\\HordeShooter\\.vscode\\compileCommands_HordeShooter.json"
-		},
-		{
-			"name": "Win32",
-			"compilerPath": "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.38.33130\\bin\\Hostx64\\x64\\cl.exe",
-			"cStandard": "c17",
-			"cppStandard": "c++20",
-			"intelliSenseMode": "msvc-x64",
-			"compileCommands": "D:\\Unreal Projects\\HordeShooter\\.vscode\\compileCommands_Default.json"
-		}
-	]
+    "configurations": [
+        {
+            "name": "HordeShooterEditor Editor Win64 Development (HordeShooter)",
+            "compilerPath": "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\bin\\Hostx64\\x64\\cl.exe",
+            "cStandard": "c17",
+            "cppStandard": "c++20",
+            "intelliSenseMode": "msvc-x64",
+            "compileCommands": [
+                "D:\\Unreal Projects\\HordeShooter\\.vscode\\compileCommands_HordeShooter.json"
+            ]
+        },
+        {
+            "name": "Win32",
+            "compilerPath": "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\bin\\Hostx64\\x64\\cl.exe",
+            "cStandard": "c17",
+            "cppStandard": "c++20",
+            "intelliSenseMode": "msvc-x64",
+            "compileCommands": [
+                "D:\\Unreal Projects\\HordeShooter\\.vscode\\compileCommands_Default.json"
+            ]
+        }
+    ],
+    "version": 4
 }

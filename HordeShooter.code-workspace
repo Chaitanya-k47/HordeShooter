@@ -18,8 +18,7 @@
 			"DOTNET_HOST_PATH": "D:\\UE_5.6\\Engine\\Binaries\\ThirdParty\\DotNet\\8.0.300\\win-x64\\dotnet.exe",
 			"DOTNET_MULTILEVEL_LOOKUP": "0",
 			"DOTNET_ROLL_FORWARD": "LatestMajor"
-		},
-		"dotnet.preferCSharpExtension": true
+		}
 	},
 	"extensions": {
 		"recommendations": [

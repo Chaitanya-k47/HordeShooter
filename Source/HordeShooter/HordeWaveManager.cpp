@@ -70,7 +70,7 @@ void AHordeWaveManager::StartNextWave()
 		return;
 	}
 
-	CachedArenaManager->StartLightningWave(15);`
+	CachedArenaManager->StartLightningWave(15);
 
 	//read wave data
 	FWaveConfig CurrentWave = Waves[CurrentWaveIndex];
