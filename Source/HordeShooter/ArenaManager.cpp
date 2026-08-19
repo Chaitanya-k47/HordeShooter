@@ -272,17 +272,16 @@ void AArenaManager::Tick(float DeltaTime)
 						float CubeScaleZ = ((MaxStairSteps * BlockSize) + BlockSize) / MeshSizeZ;
 						float RoofZ = BaseZ + (CachedCubeMaxZ * CubeScaleZ) + ArenaLoc.Z;
 
-						// Pivot Correction for XY
-						FVector CubePivotXY = FVector(GridX * BlockSize, GridY * BlockSize, 0.0f) + ArenaLoc;
-						FVector CubeScaleXY = FVector(BlockSize / MeshSizeX, BlockSize / MeshSizeY, 1.0f);
-						FVector ScaledCubeOffset = CachedCubeLocalCenter * CubeScaleXY;
-						FVector TrueCellCenterXY = CubePivotXY + FVector(ScaledCubeOffset.X, ScaledCubeOffset.Y, 0.0f);
+						//calculate lightning position just in front of player:
+						FVector CamForward = PlayerChar->GetViewRotation().Vector().GetSafeNormal2D();
+						FVector CamRight = FVector::CrossProduct(FVector::UpVector, CamForward);
 
-						float OffsetLimit = (BlockSize / 2.0f) - 150.0f;
-						float RandX = FMath::RandRange(-OffsetLimit, OffsetLimit);
-						float RandY = FMath::RandRange(-OffsetLimit, OffsetLimit);
+						float ForwardDist = FMath::RandRange(200.0f, 400.0f);
+						float RightDist = FMath::RandRange(-150.0f, 150.0f);
 
-						FVector StrikeLoc = FVector(TrueCellCenterXY.X + RandX, TrueCellCenterXY.Y + RandY, RoofZ);
+						FVector StrikeOffset = (CamForward*ForwardDist) + (CamRight*RightDist);
+						FVector StrikeLoc = PlayerChar->GetActorLocation() + StrikeOffset;
+						StrikeLoc.Z = RoofZ;
 					
 						ExecuteLightningStrike(StrikeLoc);
 					}
