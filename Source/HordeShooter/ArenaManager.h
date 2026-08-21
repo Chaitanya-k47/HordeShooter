@@ -114,7 +114,7 @@ protected:
 	float LightningEnemyDamage = 5.0f;
 
 	UPROPERTY(EditAnywhere, Category = "Arena Config|Anti-Camping")
-	float LightningRadius = 200.0f;
+	float LightningRadius = 600.0f;
 
 	UPROPERTY(EditAnywhere, Category = "Arena Config|Anti-Camping")
 	float LightningImpulse = 30000.0f;
@@ -129,7 +129,22 @@ protected:
 	class UNiagaraSystem* LightningImpactVFX;
 
 	UPROPERTY(EditDefaultsOnly, Category = "Arena Config|Anti-Camping")
+	class UNiagaraSystem* LightningTelegraphVFX;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Arena Config|Anti-Camping")
 	class USoundBase* LightningSound;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Arena Config|Anti-Camping")
+	TSubclassOf<class UCameraShakeBase> LightningCameraShake;
+
+	UPROPERTY(EditAnywhere, Category = "Arena Config|Anti-Camping")
+	float LightningShakeInnerRadius = 600.0f; //max shake when inside. keep this same as damage radius
+
+	UPROPERTY(EditAnywhere, Category = "Arena Config|Anti-Camping")
+	float LightningShakeOuterRadius = 4000.0f; //shake fades out to 0 if player is further than this.
+
+	UPROPERTY(EditAnywhere, Category = "Arena Config|Anti-Camping")
+	float TelegraphTime = 1.0f; //how long the warning stays before it strikes
 
 private:
 	//tracks current and target height of every single block:
@@ -183,7 +198,7 @@ private:
 	int32 LastPlayerBlockIndex = -1;
 	float PlayerCampTimer = 0.f;
 
-	void ExecuteLightningStrike(const FVector& StrikeLocation);
+	void ExecuteLightningStrike(FVector StrikeLocation);
 
 	//lightning tracker:
 	int32 RemainingLightningStrikes = 0;

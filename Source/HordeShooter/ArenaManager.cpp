@@ -285,7 +285,6 @@ void AArenaManager::Tick(float DeltaTime)
 					
 						ExecuteLightningStrike(StrikeLoc);
 					}
-
 				}
 				else
 				{
@@ -635,7 +634,7 @@ void AArenaManager::OnKillVolumeOverlap(UPrimitiveComponent* OverlappedComponent
 	}
 }
 
-void AArenaManager::ExecuteLightningStrike(const FVector& StrikeLocation)
+void AArenaManager::ExecuteLightningStrike(FVector StrikeLocation)
 {
 	float SkyZ = BlockLocZ + (MaxStairSteps * BlockSize) + LightningSpawnOffset;
 	FVector SkyLocation = FVector(StrikeLocation.X, StrikeLocation.Y, SkyZ);
@@ -646,9 +645,28 @@ void AArenaManager::ExecuteLightningStrike(const FVector& StrikeLocation)
 		if(Bolt) Bolt->SetVectorParameter(FName("TraceEnd"), StrikeLocation);
 	}
 
-	if(LightningImpactVFX) UNiagaraFunctionLibrary::SpawnSystemAtLocation(GetWorld(), LightningImpactVFX, StrikeLocation);
+
+	if(LightningImpactVFX)
+	{
+		FVector SparkLoc = StrikeLocation + FVector(0.0f, 0.0f, 15.0f);
+		UNiagaraFunctionLibrary::SpawnSystemAtLocation(GetWorld(), LightningImpactVFX, SparkLoc);
+	}
 
 	if(LightningSound) UGameplayStatics::PlaySoundAtLocation(GetWorld(), LightningSound, StrikeLocation);
+
+	if(LightningCameraShake)
+	{
+		//automatically calculates distance from player and scales camera shake
+		UGameplayStatics::PlayWorldCameraShake(
+			GetWorld(),
+			LightningCameraShake,
+			StrikeLocation,
+			LightningShakeInnerRadius,
+			LightningShakeOuterRadius,
+			1.f, // 1 = linear fadeout
+			false //bOrientShakeTowardsEpicenter
+		);
+	}
 
 	//AOE Damage:
 	TArray<FOverlapResult> OverlapResults;
@@ -715,33 +733,70 @@ void AArenaManager::DropNextLightningInWave()
 
 	RemainingLightningStrikes--;
 
-	//pick a random grid block:
-	int32 RandX = FMath::RandRange(0, GridSizeX - 1);
-	int32 RandY = FMath::RandRange(0, GridSizeY - 1);
-	int32 RandomBlockIndex = (RandX * GridSizeY) + RandY;
+	// //pick a random grid block:
+	// int32 RandX = FMath::RandRange(0, GridSizeX - 1);
+	// int32 RandY = FMath::RandRange(0, GridSizeY - 1);
+	// int32 RandomBlockIndex = (RandX * GridSizeY) + RandY;
 
-	//calculate the exact floor location of that block
-	float BaseZ = TargetHeights[RandomBlockIndex];
-	float CubeScaleZ = ((MaxStairSteps * BlockSize) + BlockSize) / MeshSizeZ;
-	float RoofZ = BaseZ + (CachedCubeMaxZ * CubeScaleZ) + GetActorLocation().Z;
+	// //calculate the exact floor location of that block
+	// float BaseZ = TargetHeights[RandomBlockIndex];
+	// float CubeScaleZ = ((MaxStairSteps * BlockSize) + BlockSize) / MeshSizeZ;
+	// float RoofZ = BaseZ + (CachedCubeMaxZ * CubeScaleZ) + GetActorLocation().Z;
 
-	FVector CubePivotXY = FVector(RandX * BlockSize, RandY * BlockSize, 0.0f) + GetActorLocation();
-	FVector CubeScaleXY = FVector(BlockSize / MeshSizeX, BlockSize / MeshSizeY, 1.0f);
-	FVector ScaledCubeOffset = CachedCubeLocalCenter * CubeScaleXY;
-	FVector TrueCellCenterXY = CubePivotXY + FVector(ScaledCubeOffset.X, ScaledCubeOffset.Y, 0.0f);
+	// FVector CubePivotXY = FVector(RandX * BlockSize, RandY * BlockSize, 0.0f) + GetActorLocation();
+	// FVector CubeScaleXY = FVector(BlockSize / MeshSizeX, BlockSize / MeshSizeY, 1.0f);
+	// FVector ScaledCubeOffset = CachedCubeLocalCenter * CubeScaleXY;
+	// FVector TrueCellCenterXY = CubePivotXY + FVector(ScaledCubeOffset.X, ScaledCubeOffset.Y, 0.0f);
 
-	//add a slight random offset so they dont always hit dead center
-	float OffsetLimit = (BlockSize / 2.0f) - 150.0f;
-	float OffsetX = FMath::RandRange(-OffsetLimit, OffsetLimit);
-	float OffsetY = FMath::RandRange(-OffsetLimit, OffsetLimit);
+	// //add a slight random offset so they dont always hit dead center
+	// float OffsetLimit = (BlockSize / 2.0f) - 150.0f;
+	// float OffsetX = FMath::RandRange(-OffsetLimit, OffsetLimit);
+	// float OffsetY = FMath::RandRange(-OffsetLimit, OffsetLimit);
 
-	FVector StrikeLoc = FVector(TrueCellCenterXY.X + OffsetX, TrueCellCenterXY.Y + OffsetY, RoofZ);
+	// FVector StrikeLoc = FVector(TrueCellCenterXY.X + OffsetX, TrueCellCenterXY.Y + OffsetY, RoofZ);
 
-	//fire
-	ExecuteLightningStrike(StrikeLoc);
+	if(ACharacter* PlayerChar = UGameplayStatics::GetPlayerCharacter(GetWorld(), 0))
+	{
+		FVector PlayerLoc = PlayerChar->GetActorLocation();	
 
+		//pick a random xy coordinate in 1000 meter radius of player:
+		float RandomAngle = FMath::RandRange(0.0f, 360.0f);
+		float RandomDist = FMath::RandRange(0.0f, 1000.0f);
+		FVector Offset = FVector(FMath::Cos(RandomAngle), FMath::Sin(RandomAngle), 0.f) * RandomDist;
+
+		FVector TargetXY = PlayerLoc + Offset;
+
+		//do a line trace from above the player to the ground to find the floor Z.
+		FHitResult Hit;
+		FVector TraceStart = FVector(TargetXY.X, TargetXY.Y, PlayerLoc.Z + 2000.f);
+		FVector TraceEnd = FVector(TraceStart.X, TraceStart.Y, TraceStart.Z - 10000.f);
+		FCollisionQueryParams Params;
+		Params.AddIgnoredActor(PlayerChar);
+
+		if(GetWorld()->LineTraceSingleByChannel(Hit, TraceStart, TraceEnd, ECC_Visibility, Params))
+		{
+			FVector StrikeLoc = Hit.ImpactPoint;
+			
+			if(LightningTelegraphVFX)
+			{
+				UNiagaraFunctionLibrary::SpawnSystemAtLocation(GetWorld(), LightningTelegraphVFX, StrikeLoc);
+			}
+
+			FTimerHandle StrikeHandle;
+			FTimerDelegate StrikeDelegate = FTimerDelegate::CreateUObject(
+				this,
+				&AArenaManager::ExecuteLightningStrike,
+				StrikeLoc
+			);
+
+			GetWorldTimerManager().SetTimer(StrikeHandle, StrikeDelegate, TelegraphTime, false);
+		}
+
+	}
+
+	
 	//if we have strikes left queue up the next one with random delay
-	if (RemainingLightningStrikes > 0)
+	if(RemainingLightningStrikes > 0)
 	{
 		float NextStrikeDelay = FMath::RandRange(0.1f, 0.4f);
 		GetWorldTimerManager().SetTimer(LightningWaveTimerHandle, this, &AArenaManager::DropNextLightningInWave, NextStrikeDelay, false);
