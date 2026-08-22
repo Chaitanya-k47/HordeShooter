@@ -45,6 +45,12 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Arena|Hazards")
 	void StartLightningWave(int32 NumStrikes = 10);
 
+	UFUNCTION(BlueprintCallable, Category = "Arena|Hazards")
+	void SetCombatActive(bool bIsActive);
+
+	UPROPERTY(BlueprintReadOnly, Category = "Arena|Hazards")
+	bool bIsCombatActive = false;
+
 
 protected:
 	// Called when the game starts or when spawned

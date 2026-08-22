@@ -237,63 +237,66 @@ void AArenaManager::Tick(float DeltaTime)
 	}
 
 	//Anti Camping Tracker:
-	if(ACharacter* PlayerChar = UGameplayStatics::GetPlayerCharacter(GetWorld(), 0))
+	if(bIsCombatActive)
 	{
-		//if airborne reset timer.
-		if (!PlayerChar->GetCharacterMovement()->IsMovingOnGround())
+		if(ACharacter* PlayerChar = UGameplayStatics::GetPlayerCharacter(GetWorld(), 0))
 		{
-			PlayerCampTimer = 0.0f;
-		}
-		else
-		{
-			FVector PlayerLoc = PlayerChar->GetActorLocation();
-			FVector ArenaLoc = GetActorLocation();
-
-			//convert the player location to grid index:
-			//PlayerLoc - ArenaLoc => arena to player displacement vector. i.e. how far is player from arena
-			int32 GridX = FMath::RoundToInt((PlayerLoc.X - ArenaLoc.X)/BlockSize);
-			int32 GridY = FMath::RoundToInt((PlayerLoc.Y - ArenaLoc.Y)/BlockSize);
-
-			if(GridX >= 0 && GridX < GridSizeX && GridY >= 0 && GridY < GridSizeY)
+			//if airborne reset timer.
+			if (!PlayerChar->GetCharacterMovement()->IsMovingOnGround())
 			{
-				int32 CurrentBlockIndex = (GridX * GridSizeY) + GridY;
+				PlayerCampTimer = 0.0f;
+			}
+			else
+			{
+				FVector PlayerLoc = PlayerChar->GetActorLocation();
+				FVector ArenaLoc = GetActorLocation();
 
-				if(CurrentBlockIndex == LastPlayerBlockIndex)
+				//convert the player location to grid index:
+				//PlayerLoc - ArenaLoc => arena to player displacement vector. i.e. how far is player from arena
+				int32 GridX = FMath::RoundToInt((PlayerLoc.X - ArenaLoc.X)/BlockSize);
+				int32 GridY = FMath::RoundToInt((PlayerLoc.Y - ArenaLoc.Y)/BlockSize);
+
+				if(GridX >= 0 && GridX < GridSizeX && GridY >= 0 && GridY < GridSizeY)
 				{
-					PlayerCampTimer += DeltaTime;
+					int32 CurrentBlockIndex = (GridX * GridSizeY) + GridY;
 
-					if(PlayerCampTimer >= MaxCampTime)
+					if(CurrentBlockIndex == LastPlayerBlockIndex)
 					{
-						//drop lightning, and and reset the timer.
+						PlayerCampTimer += DeltaTime;
+
+						if(PlayerCampTimer >= MaxCampTime)
+						{
+							//drop lightning, and and reset the timer.
+							PlayerCampTimer = 0.f;
+						
+							//find the exact floor location and execute strike:
+							float BaseZ = TargetHeights[CurrentBlockIndex];
+							float CubeScaleZ = ((MaxStairSteps * BlockSize) + BlockSize) / MeshSizeZ;
+							float RoofZ = BaseZ + (CachedCubeMaxZ * CubeScaleZ) + ArenaLoc.Z;
+
+							//calculate lightning position just in front of player:
+							FVector CamForward = PlayerChar->GetViewRotation().Vector().GetSafeNormal2D();
+							FVector CamRight = FVector::CrossProduct(FVector::UpVector, CamForward);
+
+							float ForwardDist = FMath::RandRange(200.0f, 400.0f);
+							float RightDist = FMath::RandRange(-150.0f, 150.0f);
+
+							FVector StrikeOffset = (CamForward*ForwardDist) + (CamRight*RightDist);
+							FVector StrikeLoc = PlayerChar->GetActorLocation() + StrikeOffset;
+							StrikeLoc.Z = RoofZ;
+						
+							ExecuteLightningStrike(StrikeLoc);
+						}
+					}
+					else
+					{
+						LastPlayerBlockIndex = CurrentBlockIndex;
 						PlayerCampTimer = 0.f;
-					
-						//find the exact floor location and execute strike:
-						float BaseZ = TargetHeights[CurrentBlockIndex];
-						float CubeScaleZ = ((MaxStairSteps * BlockSize) + BlockSize) / MeshSizeZ;
-						float RoofZ = BaseZ + (CachedCubeMaxZ * CubeScaleZ) + ArenaLoc.Z;
-
-						//calculate lightning position just in front of player:
-						FVector CamForward = PlayerChar->GetViewRotation().Vector().GetSafeNormal2D();
-						FVector CamRight = FVector::CrossProduct(FVector::UpVector, CamForward);
-
-						float ForwardDist = FMath::RandRange(200.0f, 400.0f);
-						float RightDist = FMath::RandRange(-150.0f, 150.0f);
-
-						FVector StrikeOffset = (CamForward*ForwardDist) + (CamRight*RightDist);
-						FVector StrikeLoc = PlayerChar->GetActorLocation() + StrikeOffset;
-						StrikeLoc.Z = RoofZ;
-					
-						ExecuteLightningStrike(StrikeLoc);
 					}
 				}
-				else
-				{
-					LastPlayerBlockIndex = CurrentBlockIndex;
-					PlayerCampTimer = 0.f;
-				}
 			}
+			
 		}
-		
 	}
 }
 
@@ -718,7 +721,7 @@ void AArenaManager::ExecuteLightningStrike(FVector StrikeLocation)
 void AArenaManager::StartLightningWave(int32 NumStrikes)
 {
 	//dont overlap waves
-	if(RemainingLightningStrikes > 0) return;
+	if(!bIsCombatActive || RemainingLightningStrikes > 0) return;
 	RemainingLightningStrikes = NumStrikes;
 
 	if(GEngine) GEngine->AddOnScreenDebugMessage(-1, 3.f, FColor::Orange, TEXT("HAZARD: LIGHTNING STORM INCOMING!"));
@@ -733,28 +736,6 @@ void AArenaManager::DropNextLightningInWave()
 
 	RemainingLightningStrikes--;
 
-	// //pick a random grid block:
-	// int32 RandX = FMath::RandRange(0, GridSizeX - 1);
-	// int32 RandY = FMath::RandRange(0, GridSizeY - 1);
-	// int32 RandomBlockIndex = (RandX * GridSizeY) + RandY;
-
-	// //calculate the exact floor location of that block
-	// float BaseZ = TargetHeights[RandomBlockIndex];
-	// float CubeScaleZ = ((MaxStairSteps * BlockSize) + BlockSize) / MeshSizeZ;
-	// float RoofZ = BaseZ + (CachedCubeMaxZ * CubeScaleZ) + GetActorLocation().Z;
-
-	// FVector CubePivotXY = FVector(RandX * BlockSize, RandY * BlockSize, 0.0f) + GetActorLocation();
-	// FVector CubeScaleXY = FVector(BlockSize / MeshSizeX, BlockSize / MeshSizeY, 1.0f);
-	// FVector ScaledCubeOffset = CachedCubeLocalCenter * CubeScaleXY;
-	// FVector TrueCellCenterXY = CubePivotXY + FVector(ScaledCubeOffset.X, ScaledCubeOffset.Y, 0.0f);
-
-	// //add a slight random offset so they dont always hit dead center
-	// float OffsetLimit = (BlockSize / 2.0f) - 150.0f;
-	// float OffsetX = FMath::RandRange(-OffsetLimit, OffsetLimit);
-	// float OffsetY = FMath::RandRange(-OffsetLimit, OffsetLimit);
-
-	// FVector StrikeLoc = FVector(TrueCellCenterXY.X + OffsetX, TrueCellCenterXY.Y + OffsetY, RoofZ);
-
 	if(ACharacter* PlayerChar = UGameplayStatics::GetPlayerCharacter(GetWorld(), 0))
 	{
 		FVector PlayerLoc = PlayerChar->GetActorLocation();	
@@ -763,7 +744,7 @@ void AArenaManager::DropNextLightningInWave()
 		FVector CamForward = PlayerChar->GetViewRotation().Vector().GetSafeNormal2D();
 		FVector CamRight = FVector::CrossProduct(FVector::UpVector, CamForward);
 
-		float RandomAngle = FMath::DegreesToRadians(FMath::RandRange(-30.f, 30.f));
+		float RandomAngle = FMath::DegreesToRadians(FMath::RandRange(-90.f, 90.f));
 		float RandomDist = FMath::RandRange(400.f, 1000.0f);
 		
 		FVector Direction = CamForward * FMath::Cos(RandomAngle) + CamRight * FMath::Sin(RandomAngle);
@@ -806,5 +787,17 @@ void AArenaManager::DropNextLightningInWave()
 	{
 		float NextStrikeDelay = FMath::RandRange(0.1f, 0.4f);
 		GetWorldTimerManager().SetTimer(LightningWaveTimerHandle, this, &AArenaManager::DropNextLightningInWave, NextStrikeDelay, false);
+	}
+}
+
+void AArenaManager::SetCombatActive(bool bIsActive)
+{
+	bIsCombatActive = bIsActive;
+
+	if(!bIsCombatActive)
+	{
+		PlayerCampTimer = 0.f;
+		RemainingLightningStrikes = 0;
+		GetWorldTimerManager().ClearTimer(LightningWaveTimerHandle);
 	}
 }

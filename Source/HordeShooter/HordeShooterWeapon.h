@@ -95,6 +95,12 @@ public:
 	UPROPERTY(EditDefaultsOnly, Category = "Weapon Stats")
 	float ShotImpulse = 8000.f; //force applied to enemies on kill or hit.
 
+	UPROPERTY(EditDefaultsOnly, Category = "Weapon Stats|Recoil")
+	class UCurveVector* RecoilCurve;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Weapon Stats|Recoil")
+	float RecoilMultiplier = 1.0f;
+
 
 	//AMMO SYSTEM:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Weapon Stats|Ammo")

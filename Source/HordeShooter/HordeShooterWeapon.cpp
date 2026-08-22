@@ -17,6 +17,7 @@
 #include "HordeShooterCasing.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "DamageableInterface.h"
+#include "Curves/CurveVector.h"
 
 
 // Sets default values
@@ -167,7 +168,17 @@ void AHordeShooterWeapon::PerformFire()
 	GetWorldTimerManager().ClearTimer(SmokeTimerHandle);
 	
 	BulletsFiredConsecutively++;
-	
+
+	//apply recoil:
+	if(RecoilCurve && CurrentOwner && CurrentOwner->Controller)
+	{
+		//retrieve recoil vector for specific bullet no. in consecutive fire.
+		FVector RecoilData = RecoilCurve->GetVectorValue(static_cast<float>(BulletsFiredConsecutively));
+
+		CurrentOwner->AddControllerPitchInput(-RecoilData.X * RecoilMultiplier); // negative pitch pushes camera up.
+		CurrentOwner->AddControllerYawInput(RecoilData.Y * RecoilMultiplier);
+	}	
+
 	//restart the 0.5s countdown. If we don't shoot again in 0.5s, it triggers EvaluateAndPlaySmoke().
 	GetWorldTimerManager().SetTimer(SmokeEvalTimerHandle, this, &AHordeShooterWeapon::EvaluateAndPlaySmoke, SmokeEvalWindow, false);
 

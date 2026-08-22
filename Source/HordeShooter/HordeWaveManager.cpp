@@ -70,14 +70,14 @@ void AHordeWaveManager::StartNextWave()
 		return;
 	}
 
-	CachedArenaManager->StartLightningWave(15);
-
 	//read wave data
 	FWaveConfig CurrentWave = Waves[CurrentWaveIndex];
 	EnemiesLeftToSpawnThisWave = CurrentWave.EnemiesToSpawn;
 
 	//start spawn timer:
 	GetWorldTimerManager().SetTimer(SpawnTimerHandle, this, &AHordeWaveManager::SpawnSingleEnemy, CurrentWave.SpawnDelay, true);
+	if (CachedArenaManager) CachedArenaManager->SetCombatActive(true);
+	CachedArenaManager->StartLightningWave(25);
 }
 
 void AHordeWaveManager::SpawnSingleEnemy()
@@ -119,6 +119,8 @@ void AHordeWaveManager::OnEnemyDied()
 	if (ActiveLivingEnemies <= 0 && EnemiesLeftToSpawnThisWave <= 0)
 	{
 		CurrentWaveIndex++;
+
+		if(CachedArenaManager) CachedArenaManager->SetCombatActive(false);
 
 		FTimerHandle ArenaShiftTimer;
 		GetWorldTimerManager().SetTimer(ArenaShiftTimer, CachedArenaManager, &AArenaManager::BeginNewLayoutGeneration, 2.0f, false);
