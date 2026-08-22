@@ -760,9 +760,15 @@ void AArenaManager::DropNextLightningInWave()
 		FVector PlayerLoc = PlayerChar->GetActorLocation();	
 
 		//pick a random xy coordinate in 1000 meter radius of player:
-		float RandomAngle = FMath::RandRange(0.0f, 360.0f);
-		float RandomDist = FMath::RandRange(0.0f, 1000.0f);
-		FVector Offset = FVector(FMath::Cos(RandomAngle), FMath::Sin(RandomAngle), 0.f) * RandomDist;
+		FVector CamForward = PlayerChar->GetViewRotation().Vector().GetSafeNormal2D();
+		FVector CamRight = FVector::CrossProduct(FVector::UpVector, CamForward);
+
+		float RandomAngle = FMath::DegreesToRadians(FMath::RandRange(-30.f, 30.f));
+		float RandomDist = FMath::RandRange(400.f, 1000.0f);
+		
+		FVector Direction = CamForward * FMath::Cos(RandomAngle) + CamRight * FMath::Sin(RandomAngle);
+
+		FVector Offset = Direction * RandomDist;
 
 		FVector TargetXY = PlayerLoc + Offset;
 
@@ -801,10 +807,4 @@ void AArenaManager::DropNextLightningInWave()
 		float NextStrikeDelay = FMath::RandRange(0.1f, 0.4f);
 		GetWorldTimerManager().SetTimer(LightningWaveTimerHandle, this, &AArenaManager::DropNextLightningInWave, NextStrikeDelay, false);
 	}
-}
-
-void AArenaManager::TestLightningStorm()
-{
-	// Drop 15 bolts of lightning whenever we click the button in the editor!
-	StartLightningWave(15); 
 }

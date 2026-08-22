@@ -44,9 +44,6 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category = "Arena|Hazards")
 	void StartLightningWave(int32 NumStrikes = 10);
-	
-	UFUNCTION(CallInEditor, Category = "Arena|Hazards")
-	void TestLightningStorm();
 
 
 protected:
