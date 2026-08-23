@@ -744,8 +744,8 @@ void AArenaManager::DropNextLightningInWave()
 		FVector CamForward = PlayerChar->GetViewRotation().Vector().GetSafeNormal2D();
 		FVector CamRight = FVector::CrossProduct(FVector::UpVector, CamForward);
 
-		float RandomAngle = FMath::DegreesToRadians(FMath::RandRange(-90.f, 90.f));
-		float RandomDist = FMath::RandRange(400.f, 1000.0f);
+		float RandomAngle = FMath::DegreesToRadians(FMath::RandRange(LightningSpawnAngleRange.Min, LightningSpawnAngleRange.Max));
+		float RandomDist = FMath::RandRange(LightningSpawnRadiusRange.Min, LightningSpawnRadiusRange.Max);
 		
 		FVector Direction = CamForward * FMath::Cos(RandomAngle) + CamRight * FMath::Sin(RandomAngle);
 
@@ -766,7 +766,8 @@ void AArenaManager::DropNextLightningInWave()
 			
 			if(LightningTelegraphVFX)
 			{
-				UNiagaraFunctionLibrary::SpawnSystemAtLocation(GetWorld(), LightningTelegraphVFX, StrikeLoc);
+				UNiagaraComponent* Telegraph = UNiagaraFunctionLibrary::SpawnSystemAtLocation(GetWorld(), LightningTelegraphVFX, StrikeLoc);
+				if(Telegraph) Telegraph->SetVariableFloat(FName("LifetimeOverride"), TelegraphTime);
 			}
 
 			FTimerHandle StrikeHandle;
@@ -785,7 +786,7 @@ void AArenaManager::DropNextLightningInWave()
 	//if we have strikes left queue up the next one with random delay
 	if(RemainingLightningStrikes > 0)
 	{
-		float NextStrikeDelay = FMath::RandRange(0.1f, 0.4f);
+		float NextStrikeDelay = FMath::RandRange(ConsecutiveStrikeDelayRange.Min, ConsecutiveStrikeDelayRange.Max);
 		GetWorldTimerManager().SetTimer(LightningWaveTimerHandle, this, &AArenaManager::DropNextLightningInWave, NextStrikeDelay, false);
 	}
 }

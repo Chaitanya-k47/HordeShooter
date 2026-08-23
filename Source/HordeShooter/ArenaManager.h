@@ -20,6 +20,21 @@ enum class EArenaTransitionState : uint8
 	WaitingForNavMesh
 };
 
+USTRUCT(BlueprintType)
+struct FArenaFloatRange
+{
+	GENERATED_BODY()
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Range")
+    float Min;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Range")
+    float Max;
+
+	FArenaFloatRange() : Min(0.0f), Max(1.0f) {}
+	FArenaFloatRange(float InMin, float InMax) : Min(InMin), Max(InMax) {}
+};
+
 UCLASS()
 class HORDESHOOTER_API AArenaManager : public AActor
 {
@@ -124,6 +139,15 @@ protected:
 
 	UPROPERTY(EditAnywhere, Category = "Arena Config|Anti-Camping")
 	float LightningSpawnOffset = 5000.f;
+
+	UPROPERTY(EditAnywhere, Category = "Arena Config|Anti-Camping")
+	FArenaFloatRange LightningSpawnAngleRange = FArenaFloatRange(-90.f, 90.f);
+
+	UPROPERTY(EditAnywhere, Category = "Arena Config|Anti-Camping")
+	FArenaFloatRange LightningSpawnRadiusRange = FArenaFloatRange(400.f, 1000.f);
+
+	UPROPERTY(EditAnywhere, Category = "Arena Config|Anti-Camping")
+	FArenaFloatRange ConsecutiveStrikeDelayRange = FArenaFloatRange(0.1f, 0.4f);
 
 	UPROPERTY(EditDefaultsOnly, Category = "Arena Config|Anti-Camping")
 	class UNiagaraSystem* LightningVFX;

@@ -95,11 +95,25 @@ public:
 	UPROPERTY(EditDefaultsOnly, Category = "Weapon Stats")
 	float ShotImpulse = 8000.f; //force applied to enemies on kill or hit.
 
+
+	//RECOIL SYSTEM:
 	UPROPERTY(EditDefaultsOnly, Category = "Weapon Stats|Recoil")
 	class UCurveVector* RecoilCurve;
 
 	UPROPERTY(EditDefaultsOnly, Category = "Weapon Stats|Recoil")
 	float RecoilMultiplier = 1.0f;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Weapon Stats|Recoil")
+	FVector2D RecoilJitter = FVector2D(0.2f, 0.3f); //random organic wobble added to each shot (X = Pitch, Y = Yaw)
+
+	UPROPERTY(EditDefaultsOnly, Category = "Weapon Stats|Recoil")
+	float RecoilKickSpeed = 15.0f; //how fast the camera bounces up
+
+	UPROPERTY(EditDefaultsOnly, Category = "Weapon Stats|Recoil")
+	float RecoilRecoverySpeed = 10.f; //how fast the camera snaps back to original position
+
+	UPROPERTY(EditDefaultsOnly, Category = "Weapon Stats|Recoil")
+	float RecoilRecoveryDelay = 0.15f; //how long to wait after the last fired shot and before reseting recoil.
 
 
 	//AMMO SYSTEM:
@@ -237,5 +251,12 @@ private:
 	UPROPERTY()
 	TArray<AHordeShooterCasing*> CasingPool;
 	int32 CurrentCasingIndex = 0;
+
+	//recoil:
+	FVector2D TargetRecoilOffset = FVector2D::ZeroVector;
+	FVector2D CurrentRecoilOffset = FVector2D::ZeroVector;
+	bool bIsRecoveringRecoil = false;
+	FTimerHandle RecoilRecoveryTimerHandle;
+	void StartRecoilRecovery();
 
 };

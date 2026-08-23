@@ -24,7 +24,7 @@
 AHordeShooterWeapon::AHordeShooterWeapon()
 {
  	// Set this actor to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
-	PrimaryActorTick.bCanEverTick = false;
+	PrimaryActorTick.bCanEverTick = true;
 
 	Root = CreateDefaultSubobject<USceneComponent>(TEXT("Root"));
 	RootComponent = Root;
@@ -88,6 +88,32 @@ void AHordeShooterWeapon::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 
+	if(CurrentOwner && (!CurrentRecoilOffset.Equals(TargetRecoilOffset, 0.001f) || bIsRecoveringRecoil))
+	{
+		//if recovering, pull back the target to centre
+		if(bIsRecoveringRecoil) TargetRecoilOffset = FVector2D::ZeroVector;
+		
+		//slightly fast for recoil, slow for recovery
+		float InterpSpeed = bIsRecoveringRecoil ? RecoilRecoverySpeed : RecoilKickSpeed;
+		
+		FVector2D NextRecoil = FMath::Vector2DInterpTo(CurrentRecoilOffset, TargetRecoilOffset, DeltaTime, InterpSpeed);
+		FVector2D DeltaRecoil = NextRecoil - CurrentRecoilOffset;
+
+		//apply recoil:
+		CurrentOwner->AddControllerPitchInput(DeltaRecoil.X);
+		CurrentOwner->AddControllerYawInput(DeltaRecoil.Y);
+
+		//save the state
+		CurrentRecoilOffset = NextRecoil;
+
+		//if recoil fully recovered then stop recovery:
+		if(bIsRecoveringRecoil && CurrentRecoilOffset.IsNearlyZero(0.01f))
+		{
+			CurrentRecoilOffset = FVector2D::ZeroVector;
+			bIsRecoveringRecoil = false;
+		}
+	}
+
 }
 
 
@@ -117,6 +143,17 @@ void AHordeShooterWeapon::StopFire()
 {
 	GetWorldTimerManager().ClearTimer(FireTimerHandle);
 
+	//start recoil recovery delay timer, once it finishes the rcoil recovers
+	if(!TargetRecoilOffset.IsNearlyZero())
+	{
+		GetWorldTimerManager().SetTimer(RecoilRecoveryTimerHandle, this, &AHordeShooterWeapon::StartRecoilRecovery, RecoilRecoveryDelay, false);
+	}
+}
+
+
+void AHordeShooterWeapon::StartRecoilRecovery()
+{
+	bIsRecoveringRecoil = true;
 }
 
 
@@ -172,11 +209,21 @@ void AHordeShooterWeapon::PerformFire()
 	//apply recoil:
 	if(RecoilCurve && CurrentOwner && CurrentOwner->Controller)
 	{
+		//cancel recovery if shot again
+		bIsRecoveringRecoil = false;
+		GetWorldTimerManager().ClearTimer(RecoilRecoveryTimerHandle); 
+
 		//retrieve recoil vector for specific bullet no. in consecutive fire.
 		FVector RecoilData = RecoilCurve->GetVectorValue(static_cast<float>(BulletsFiredConsecutively));
 
-		CurrentOwner->AddControllerPitchInput(-RecoilData.X * RecoilMultiplier); // negative pitch pushes camera up.
-		CurrentOwner->AddControllerYawInput(RecoilData.Y * RecoilMultiplier);
+		float JitterX = FMath::RandRange(-RecoilJitter.X, RecoilJitter.X);
+		float JitterY = FMath::RandRange(-RecoilJitter.Y, RecoilJitter.Y);
+
+		float PitchKick = -(RecoilData.X + JitterX) * RecoilMultiplier; //negative pitch pushes camera up.
+		float YawKick = (RecoilData.Y + JitterY) * RecoilMultiplier;
+
+		TargetRecoilOffset.X += PitchKick;
+		TargetRecoilOffset.Y += YawKick;
 	}	
 
 	//restart the 0.5s countdown. If we don't shoot again in 0.5s, it triggers EvaluateAndPlaySmoke().
@@ -440,6 +487,11 @@ void AHordeShooterWeapon::Reload()
 void AHordeShooterWeapon::OnHolstered()
 {
 	StopFire();
+
+	bIsRecoveringRecoil = false;
+	GetWorldTimerManager().ClearTimer(RecoilRecoveryTimerHandle);
+	TargetRecoilOffset = FVector2D::ZeroVector;
+	CurrentRecoilOffset = FVector2D::ZeroVector;
 
 	bIsReloading = false;
 	GetWorldTimerManager().ClearTimer(ReloadTimerHandle);

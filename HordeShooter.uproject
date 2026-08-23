@@ -38,6 +38,10 @@
 		{
 			"Name": "RuntimeTelemetry",
 			"Enabled": false
+		},
+		{
+			"Name": "ISRecoilPattern",
+			"Enabled": true
 		}
 	]
 }
