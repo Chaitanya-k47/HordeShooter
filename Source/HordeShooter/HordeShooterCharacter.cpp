@@ -573,7 +573,7 @@ void AHordeShooterCharacter::Landed(const FHitResult& Hit)
 							DamagedActors.Add(HitActor); //mark hit.
 							FVector PushDirection = (HitActor->GetActorLocation() - GetActorLocation()).GetSafeNormal();
 							PushDirection.Z += 0.8f;
-							DamageableActor->ReactToHit(Damage, PushDirection * Impulse, NAME_None);
+							DamageableActor->ReactToHit(Damage, PushDirection * Impulse, FName("Slam"));
 						}
 					}
 				}
@@ -1012,9 +1012,11 @@ bool AHordeShooterCharacter::ReactToHit(float DamageAmount, const FVector& HitIm
 	//Atan2(Y, X) converts the X and Y components into an angle in radians
 	float HitAngle = FMath::RadiansToDegrees(FMath::Atan2(RightDot, ForwardDot));
 
-	//update UI
+	//update UI and reset spree
 	if(AHordeShooterPlayerController* PC = Cast<AHordeShooterPlayerController>(GetController()))
 	{
+		PC->ResetSpree();
+		
 		if(PC->PlayerHUDWidget)
 		{
 			PC->PlayerHUDWidget->UpdateHealth(CurrentHealth, MaxHealth);

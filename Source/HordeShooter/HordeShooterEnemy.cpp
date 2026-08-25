@@ -11,6 +11,7 @@
 #include "Kismet/GameplayStatics.h"
 #include "EnemyAIController.h"
 #include "Components/AudioComponent.h"
+#include "HordeShooterPlayerController.h"
 
 // Sets default values
 AHordeShooterEnemy::AHordeShooterEnemy()
@@ -297,6 +298,18 @@ bool AHordeShooterEnemy::ReactToHit(float DamageAmount, const FVector& HitImpuls
 void AHordeShooterEnemy::Die()
 {
 	if(bIsDead) return;
+
+	//report the kill to announcer:
+	if(APlayerController* BasePC = UGameplayStatics::GetPlayerController(GetWorld(), 0))
+	{
+		if(AHordeShooterPlayerController* PC = Cast<AHordeShooterPlayerController>(BasePC))
+		{
+			bool bWasHeadshot = (LastHitBoneName == FName("Head"));
+			bool bWasSlam = (LastHitBoneName == FName("Slam"));
+			PC->AddKill(bWasHeadshot, bWasSlam); 
+		}
+	}
+
 	bIsDead = true;
 
 	if(SprintAudioComp)
@@ -339,6 +352,12 @@ void AHordeShooterEnemy::OnDeath_Implementation()
 	GetMesh()->SetCollisionResponseToChannel(ECC_Visibility, ECR_Block);
 
 	//add impulse (Force mode.)
-	GetMesh()->AddImpulse(LastHitImpulse, LastHitBoneName, false);
+	FName PhysicsBone = LastHitBoneName;
+	if (PhysicsBone == FName("Slam"))
+	{
+		// "Slam" isn't a real bone, reset it to NAME_None 
+		PhysicsBone = NAME_None; 
+	}
+	GetMesh()->AddImpulse(LastHitImpulse, PhysicsBone, false);
 }
 
