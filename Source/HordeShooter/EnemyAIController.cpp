@@ -57,18 +57,66 @@ void AEnemyAIController::UpdateAILogic()
 
     //OPTIMIZATION: Using Distance Squared intead of Dist.
     float DistSquared = FVector::DistSquared(ControlledEnemy->GetActorLocation(), PlayerTarget->GetActorLocation());
-    float AttackRangeSquared = FMath::Square(ControlledEnemy->AttackRange); //sq the attack range for comparison.
+    float AttackRangeSq = FMath::Square(ControlledEnemy->AttackRange); //sq the attack range for comparison.
+    float FleeRangeSq = FMath::Square(ControlledEnemy->FleeRange);
 
     // GEngine->AddOnScreenDebugMessage(-1, 0.2f, FColor::Green, FString::Printf(TEXT("Distance to Player: %f"), DistanceToPlayer));
     // GEngine->AddOnScreenDebugMessage(-1, 0.2f, FColor::Green, FString::Printf(TEXT("AI State: %s"), *UEnum::GetValueAsString(CurrentState)));
     
-   //STATE: Chasing
-   //MoveToActor() if on nav mesh, if not then dont call MoveToActor() as it conflicts with MoveToLocation() and the enemy slides slowly. 
-    if(CurrentState == EAIState::Chasing)
+    //Rotation Handling:
+    //if its a strafer(4-way movement anims), stay locked on to the player.
+    //if its a rusher(1-way movement anim), rotation is oriented to movement.
+    if(ControlledEnemy->bAlwaysFacePlayer)
+    {
+        ControlledEnemy->GetCharacterMovement()->bOrientRotationToMovement = false;
+        ControlledEnemy->GetCharacterMovement()->bUseControllerDesiredRotation = true;
+        SetFocus(PlayerTarget);
+    }
+    else
     {
         ControlledEnemy->GetCharacterMovement()->bOrientRotationToMovement = true;
-        ControlledEnemy->GetCharacterMovement()->bUseControllerDesiredRotation = false;
-        ClearFocus(EAIFocusPriority::Gameplay); //stop looking at the player while chasing.
+		ControlledEnemy->GetCharacterMovement()->bUseControllerDesiredRotation = false;
+		ClearFocus(EAIFocusPriority::Gameplay);
+    }
+
+    //STATE: Fleeing
+    if(ControlledEnemy->FleeRange > 0.f && DistSquared < FleeRangeSq)
+    {
+        CurrentState = EAIState::Fleeing;
+
+        //move away from player
+        FVector RunDirection = (ControlledEnemy->GetActorLocation() - PlayerTarget->GetActorLocation()).GetSafeNormal2D();
+        FVector FleeLocation =  ControlledEnemy->GetActorLocation() + (RunDirection * 1000.f);
+
+        MoveToLocation(FleeLocation, 50.0f);
+    }
+    
+    //STATE: Attacking
+    else if(DistSquared <= AttackRangeSq && CheckLineOfSight())
+    {
+        CurrentState = EAIState::Attacking;
+
+        if(ControlledEnemy->bStopToAttack)
+		{
+			StopMovement(); //halt to play attack anim
+		}
+		else
+		{
+			MoveToPlayer(); //play attack anim while moving
+		}
+
+        //this must be true for every enemy type while attacking
+        ControlledEnemy->GetCharacterMovement()->bOrientRotationToMovement = false;
+        ControlledEnemy->GetCharacterMovement()->bUseControllerDesiredRotation = true;
+        SetFocus(PlayerTarget); 
+
+        ControlledEnemy->PerformMeleeAttack(); //overridable in child class.
+    }
+
+    //STATE: Chasing
+    else
+    {
+        CurrentState = EAIState::Chasing;
 
         //optimization:
         float PlayerDistMovedSq = FVector::DistSquared(PlayerTarget->GetActorLocation(), LastKnownPlayerLocation);
@@ -77,30 +125,8 @@ void AEnemyAIController::UpdateAILogic()
             MoveToPlayer();
             LastKnownPlayerLocation = PlayerTarget->GetActorLocation(); //cache the new location
         }
-
-        //check LOS if in range:
-        if(DistSquared <= AttackRangeSquared && CheckLineOfSight())
-        {
-            //transition to attack
-            CurrentState = EAIState::Attacking;
-        }
-    }
-
-    //STATE: Attacking
-    else if(CurrentState == EAIState::Attacking)
-    {
-        ControlledEnemy->GetCharacterMovement()->bOrientRotationToMovement = false;
-        ControlledEnemy->GetCharacterMovement()->bUseControllerDesiredRotation = true;
-        SetFocus(PlayerTarget); 
-
-        ControlledEnemy->PerformMeleeAttack();
-
-        MoveToPlayer();
-        LastKnownPlayerLocation = PlayerTarget->GetActorLocation();
-    }
-    
+    } 
 }
-
 
 bool AEnemyAIController::CheckLineOfSight()
 {
@@ -128,6 +154,8 @@ void AEnemyAIController::OnEnemyAttackFinished()
 	ClearFocus(EAIFocusPriority::Gameplay); //unlock the neck so NavMesh can steer again
 }
 
+//MoveToActor() if on nav mesh, if not then dont call MoveToActor() as it conflicts with MoveToLocation() and the enemy slides slowly.
+//MoveToPlayer() fn uses this distinction.
 void AEnemyAIController::MoveToPlayer()
 {
     UNavigationSystemV1* NavSys = UNavigationSystemV1::GetCurrent(GetWorld());

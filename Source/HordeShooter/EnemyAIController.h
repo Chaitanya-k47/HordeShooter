@@ -18,7 +18,8 @@ enum class EAIState : uint8
 {
 	Idle,
 	Chasing,
-	Attacking
+	Attacking,
+	Fleeing
 };
 
 UCLASS()

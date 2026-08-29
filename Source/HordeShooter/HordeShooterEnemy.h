@@ -36,7 +36,17 @@ public:
 	float AttackRange = 300.f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat|AI")
+	float FleeRange = 0.f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat|AI")
 	float AttackDamage = 10.f;
+
+	//AI behaviour flags:
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Combat|AI")
+	bool bAlwaysFacePlayer = false; // True = uses 4-way strafing animations. False = uses 1-way forward animation
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Combat|AI")
+	bool bStopToAttack = false; // True = halts to play attack anim. False = plays attack anim while moving
 
 	//Maps specific bone name to damage multipliers.
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Combat|Stats")
@@ -66,7 +76,7 @@ public:
 
 
 	//COMBAT ACTIONS:
-	void PerformMeleeAttack();
+	virtual void PerformMeleeAttack();
 	void PlayHitReaction();
 
 	UFUNCTION(BlueprintCallable)

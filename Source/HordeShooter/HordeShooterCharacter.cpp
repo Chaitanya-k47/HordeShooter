@@ -1057,6 +1057,8 @@ void AHordeShooterCharacter::PlayerDie()
 	//tell the Controller to show the Game Over screen
 	if(AHordeShooterPlayerController* PC = Cast<AHordeShooterPlayerController>(GetController()))
 	{
+		PC->ResetSpree();
+		PC->ResetMultiKill();
 		PC->ShowGameOverScreen();
 	}
 }

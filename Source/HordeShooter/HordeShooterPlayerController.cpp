@@ -96,6 +96,7 @@ void AHordeShooterPlayerController::AddKill(bool bWasHeadshot, bool bWasSlam)
 void AHordeShooterPlayerController::ResetMultiKill()
 {
 	MultiKillCount = 0;
+    GetWorldTimerManager().ClearTimer(MultiKillTimerHandle);
 }
 
 void AHordeShooterPlayerController::ResetSpree()

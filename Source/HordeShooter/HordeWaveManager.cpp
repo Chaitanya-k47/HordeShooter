@@ -76,8 +76,8 @@ void AHordeWaveManager::StartNextWave()
 
 	//start spawn timer:
 	GetWorldTimerManager().SetTimer(SpawnTimerHandle, this, &AHordeWaveManager::SpawnSingleEnemy, CurrentWave.SpawnDelay, true);
-	if (CachedArenaManager) CachedArenaManager->SetCombatActive(true);
-	CachedArenaManager->StartLightningWave(25);
+	
+	if(CachedArenaManager) CachedArenaManager->SetCombatActive(true);
 }
 
 void AHordeWaveManager::SpawnSingleEnemy()

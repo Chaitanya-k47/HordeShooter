@@ -26,6 +26,8 @@ public:
 	//called when player takes damage, to ruin their spree
 	void ResetSpree();
 
+	//called when combo window expires
+	void ResetMultiKill();
 
 protected:
 	// Called when the game starts or when spawned
@@ -63,7 +65,6 @@ private:
 	int32 SpreeCount = 0;
 
 	FTimerHandle MultiKillTimerHandle;
-	void ResetMultiKill();
 	void PlayAnnouncerSound(USoundBase* Sound);
 
 };
