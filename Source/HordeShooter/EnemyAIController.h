@@ -66,5 +66,14 @@ private:
 
 	FVector LastKnownPlayerLocation = FVector::ZeroVector;
 	float PathUpdateThresholdSquared = 40000.f; //squared distance threshold for updating path to player (200 units)
+
+	//Combat cooldown and strafe trackers:
+	bool bIsOnCooldown = false;
+	FTimerHandle AttackCooldownTimerHandle;
+	void ResetAttackCooldown();
+
+	FVector CurrentStrafeTarget = FVector::ZeroVector;
+	float CurrentStrafeDir = 1.0f; //1=right, -1=left
+	void PickNewStrafeTarget();
 	
 };

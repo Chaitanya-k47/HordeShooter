@@ -41,12 +41,31 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat|AI")
 	float AttackDamage = 10.f;
 
+	
+	//MOVEMENT SPEEDS:
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Combat|Movement")
+	float WalkSpeed = 500.0f;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Combat|Movement")
+	float SprintSpeed = 500.0f;
+
+
 	//AI behaviour flags:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Combat|AI")
 	bool bAlwaysFacePlayer = false; // True = uses 4-way strafing animations. False = uses 1-way forward animation
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Combat|AI")
 	bool bStopToAttack = false; // True = halts to play attack anim. False = plays attack anim while moving
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Combat|AI")
+	bool bStrafeDuringCooldown = false;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Combat|AI")
+	float AttackCooldown = 0.f;
+
+	//Instanty aborts any ongoing attack:
+	void CancelAttack();
+
 
 	//Maps specific bone name to damage multipliers.
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Combat|Stats")

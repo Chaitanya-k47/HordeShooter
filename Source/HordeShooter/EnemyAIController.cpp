@@ -62,61 +62,96 @@ void AEnemyAIController::UpdateAILogic()
 
     // GEngine->AddOnScreenDebugMessage(-1, 0.2f, FColor::Green, FString::Printf(TEXT("Distance to Player: %f"), DistanceToPlayer));
     // GEngine->AddOnScreenDebugMessage(-1, 0.2f, FColor::Green, FString::Printf(TEXT("AI State: %s"), *UEnum::GetValueAsString(CurrentState)));
-    
-    //Rotation Handling:
-    //if its a strafer(4-way movement anims), stay locked on to the player.
-    //if its a rusher(1-way movement anim), rotation is oriented to movement.
-    if(ControlledEnemy->bAlwaysFacePlayer)
-    {
-        ControlledEnemy->GetCharacterMovement()->bOrientRotationToMovement = false;
-        ControlledEnemy->GetCharacterMovement()->bUseControllerDesiredRotation = true;
-        SetFocus(PlayerTarget);
-    }
-    else
-    {
-        ControlledEnemy->GetCharacterMovement()->bOrientRotationToMovement = true;
-		ControlledEnemy->GetCharacterMovement()->bUseControllerDesiredRotation = false;
-		ClearFocus(EAIFocusPriority::Gameplay);
-    }
 
     //STATE: Fleeing
     if(ControlledEnemy->FleeRange > 0.f && DistSquared < FleeRangeSq)
     {
+        if(ControlledEnemy->bIsAttacking)
+        {
+            ControlledEnemy->CancelAttack();
+        }
+
         CurrentState = EAIState::Fleeing;
+        ControlledEnemy->GetCharacterMovement()->MaxWalkSpeed = ControlledEnemy->SprintSpeed;
 
-        //move away from player
-        FVector RunDirection = (ControlledEnemy->GetActorLocation() - PlayerTarget->GetActorLocation()).GetSafeNormal2D();
-        FVector FleeLocation =  ControlledEnemy->GetActorLocation() + (RunDirection * 1000.f);
+        UNavigationSystemV1* NavSys = UNavigationSystemV1::GetCurrent(GetWorld());
+        if(NavSys)
+        {
+            //ideal dir is straight away from player
+            FVector IdealRunDir = (ControlledEnemy->GetActorLocation() - PlayerTarget->GetActorLocation()).GetSafeNormal2D();
+            FVector BestFleeLoc = ControlledEnemy->GetActorLocation(); //default to stying still if cornered.
 
-        MoveToLocation(FleeLocation, 50.0f);
+            //angles to test
+            float AnglesToTry[5] = { 0.0f, 45.0f, -45.0f, 90.0f, -90.0f };
+
+            for(float Angle : AnglesToTry)
+            {
+                //rotate the run direction:
+                FVector TestDir = IdealRunDir.RotateAngleAxis(Angle, FVector::UpVector);
+                FVector TestLoc = ControlledEnemy->GetActorLocation() + (TestDir * 1000.0f);
+
+                //check if the spot is on nav mesh:
+                FNavLocation NavHit;
+				if(NavSys->ProjectPointToNavigation(TestLoc, NavHit, FVector(200.f, 200.f, 200.f)))
+				{
+					BestFleeLoc = NavHit.Location;
+					break;
+				}
+            }
+
+            MoveToLocation(BestFleeLoc, 50.0f);
+        }
     }
     
     //STATE: Attacking
     else if(DistSquared <= AttackRangeSq && CheckLineOfSight())
     {
-        CurrentState = EAIState::Attacking;
+        if(!bIsOnCooldown && !ControlledEnemy->bIsAttacking) //not attacking and no on cooldown so attack.
+        {
+            ControlledEnemy->PerformMeleeAttack(); //overridable in child class.
+            
+            if(ControlledEnemy->AttackCooldown > 0.0f)
+			{
+				bIsOnCooldown = true;
+				GetWorldTimerManager().SetTimer(AttackCooldownTimerHandle, this, &AEnemyAIController::ResetAttackCooldown, ControlledEnemy->AttackCooldown, false);
+			}
+        }
 
-        if(ControlledEnemy->bStopToAttack)
+        if(ControlledEnemy->bIsAttacking)
 		{
-			StopMovement(); //halt to play attack anim
-		}
-		else
-		{
-			MoveToPlayer(); //play attack anim while moving
-		}
+			CurrentState = EAIState::Attacking;
 
-        //this must be true for every enemy type while attacking
-        ControlledEnemy->GetCharacterMovement()->bOrientRotationToMovement = false;
-        ControlledEnemy->GetCharacterMovement()->bUseControllerDesiredRotation = true;
-        SetFocus(PlayerTarget); 
+			if(ControlledEnemy->bStopToAttack) StopMovement();
+			else MoveToPlayer(); 
+		}
+        else if(bIsOnCooldown) //waiting
+        {
+            if(ControlledEnemy->bStrafeDuringCooldown) //do we strafe?
+			{
+				CurrentState = EAIState::Idle; 
+				ControlledEnemy->GetCharacterMovement()->MaxWalkSpeed = ControlledEnemy->WalkSpeed;
 
-        ControlledEnemy->PerformMeleeAttack(); //overridable in child class.
+				if(CurrentStrafeTarget.IsNearlyZero() || FVector::DistSquared(ControlledEnemy->GetActorLocation(), CurrentStrafeTarget) < 25000.0f)
+				{
+					PickNewStrafeTarget();
+				}
+				MoveToLocation(CurrentStrafeTarget, 50.0f);
+			}
+			else
+			{
+				//no strafing allowed
+				CurrentState = EAIState::Chasing;
+				ControlledEnemy->GetCharacterMovement()->MaxWalkSpeed = ControlledEnemy->SprintSpeed;
+				MoveToPlayer();
+			}
+        }
     }
 
     //STATE: Chasing
     else
     {
         CurrentState = EAIState::Chasing;
+        ControlledEnemy->GetCharacterMovement()->MaxWalkSpeed = ControlledEnemy->SprintSpeed;
 
         //optimization:
         float PlayerDistMovedSq = FVector::DistSquared(PlayerTarget->GetActorLocation(), LastKnownPlayerLocation);
@@ -125,7 +160,24 @@ void AEnemyAIController::UpdateAILogic()
             MoveToPlayer();
             LastKnownPlayerLocation = PlayerTarget->GetActorLocation(); //cache the new location
         }
-    } 
+    }
+
+    //Rotation Handling:
+    //if its a strafer(4-way movement anims), stay locked on to the player.
+    //if its a rusher(1-way movement anim), rotation is oriented to movement.
+    if(ControlledEnemy->bAlwaysFacePlayer || CurrentState == EAIState::Attacking)
+	{
+		ControlledEnemy->GetCharacterMovement()->bOrientRotationToMovement = false;
+		ControlledEnemy->GetCharacterMovement()->bUseControllerDesiredRotation = true;
+		SetFocus(PlayerTarget);
+	}
+	else
+	{
+		ControlledEnemy->GetCharacterMovement()->bOrientRotationToMovement = true;
+		ControlledEnemy->GetCharacterMovement()->bUseControllerDesiredRotation = false;
+		ClearFocus(EAIFocusPriority::Gameplay);
+	}
+
 }
 
 bool AEnemyAIController::CheckLineOfSight()
@@ -185,6 +237,56 @@ void AEnemyAIController::MoveToPlayer()
                     MoveToLocation(LastEdgeLocation, 100.f);
                 }
             }
+        }
+    }
+}
+
+void AEnemyAIController::ResetAttackCooldown()
+{
+    bIsOnCooldown = false;
+}
+
+void AEnemyAIController::PickNewStrafeTarget()
+{
+    if(!ControlledEnemy || !PlayerTarget) return;
+
+    UNavigationSystemV1* NavSys = UNavigationSystemV1::GetCurrent(GetWorld());
+    if(NavSys)
+    {
+        //get dir from player to enemy:
+        FVector DirFromPlayer = (ControlledEnemy->GetActorLocation() - PlayerTarget->GetActorLocation()).GetSafeNormal2D();
+
+        //calculate exact right vector using cross prodcut:
+        FVector RightVector = FVector::CrossProduct(FVector::UpVector, DirFromPlayer).GetSafeNormal2D();
+
+        //15% chance to randomly change direction just to be unpredictable to the player
+		if (FMath::FRand() < 0.15f) CurrentStrafeDir *= -1.0f;
+
+        //calculate strafe offset 600 to 1000 units to the side:
+        FVector StrafeOffset = RightVector * CurrentStrafeDir  * 1500.f;
+        FVector IdealTargetLoc = ControlledEnemy->GetActorLocation() + StrafeOffset;
+
+        //check if this spot is on the navmesh:
+        FNavLocation NavHit;
+		if(NavSys->ProjectPointToNavigation(IdealTargetLoc, NavHit, FVector(200.f, 200.f, 200.f)))
+		{
+			CurrentStrafeTarget = NavHit.Location;
+		}
+        else //hit the edge of the arena swap directions and go opposit way
+        {
+            CurrentStrafeDir *= -1.0f;
+			StrafeOffset = RightVector * CurrentStrafeDir * 1500.f;
+			IdealTargetLoc = ControlledEnemy->GetActorLocation() + StrafeOffset;
+
+            if(NavSys->ProjectPointToNavigation(IdealTargetLoc, NavHit, FVector(200.f, 200.f, 200.f)))
+			{
+				CurrentStrafeTarget = NavHit.Location;
+			}
+			else
+			{
+				//if BOTH left and right are blocked (cornered), back up slightly
+				CurrentStrafeTarget = ControlledEnemy->GetActorLocation() + (DirFromPlayer * 400.0f); 
+			}
         }
     }
 }

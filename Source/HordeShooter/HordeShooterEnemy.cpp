@@ -142,7 +142,21 @@ void AHordeShooterEnemy::DeactivateEnemy()
 	SetActorLocation(FVector(0.0f, 0.0f, -10000.0f), false, nullptr, ETeleportType::TeleportPhysics);
 }
 
-//COMBAT ACTIONS:
+
+void AHordeShooterEnemy::CancelAttack()
+{
+	if(!bIsAttacking) return;
+
+	bIsAttacking = false;
+
+	if(GetMesh() && GetMesh()->GetAnimInstance())
+	{
+		GetMesh()->GetAnimInstance()->Montage_Stop(0.2f, nullptr);
+	}
+}
+
+
+// COMBAT ACTIONS:
 void AHordeShooterEnemy::PerformMeleeAttack()
 {
 	if(bIsAttacking || bIsStunned || bIsDead || AttackMontages.Num() == 0) return;
