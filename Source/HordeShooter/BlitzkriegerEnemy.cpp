@@ -6,6 +6,7 @@
 #include "Kismet/GameplayStatics.h"
 #include "GameFramework/Character.h"
 #include "GameFramework/CharacterMovementComponent.h"
+#include "NiagaraComponent.h"
 
 ABlitzkriegerEnemy::ABlitzkriegerEnemy()
 {
@@ -24,6 +25,26 @@ ABlitzkriegerEnemy::ABlitzkriegerEnemy()
 	SprintSpeed = 1200.0f;
 
 	GetCharacterMovement()->RotationRate = FRotator(0.0f, 200.0f, 0.0f);
+
+	LeftEyeGlow = CreateDefaultSubobject<UNiagaraComponent>(TEXT("LeftEyeGlow"));
+	LeftEyeGlow->SetupAttachment(GetMesh(), FName("LeftEye")); 
+
+	RightEyeGlow = CreateDefaultSubobject<UNiagaraComponent>(TEXT("RightEyeGlow"));
+	RightEyeGlow->SetupAttachment(GetMesh(), FName("RightEye"));
+}
+
+void ABlitzkriegerEnemy::BeginPlay()
+{
+	Super::BeginPlay();
+
+	SetEyeIntensity(NormalEyeIntensity);
+	OnAttackFinished.AddDynamic(this, &ABlitzkriegerEnemy::OnSpellCastFinished);
+}
+
+void ABlitzkriegerEnemy::SetEyeIntensity(float Intensity)
+{
+	if (LeftEyeGlow) LeftEyeGlow->SetFloatParameter(FName("EyeIntensity"), Intensity);
+	if (RightEyeGlow) RightEyeGlow->SetFloatParameter(FName("EyeIntensity"), Intensity);
 }
 
 void ABlitzkriegerEnemy::PerformMeleeAttack()
@@ -42,4 +63,9 @@ void ABlitzkriegerEnemy::CastLightningOnPlayer()
 		AArenaManager* Arena = Cast<AArenaManager>(ArenaActor);
 		Arena->StartLightningWave(NumberOfLightningsInAWave);
 	}
+}
+
+void ABlitzkriegerEnemy::OnSpellCastFinished()
+{
+	SetEyeIntensity(NormalEyeIntensity);
 }

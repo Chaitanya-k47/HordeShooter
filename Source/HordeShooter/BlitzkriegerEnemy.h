@@ -6,6 +6,8 @@
 #include "HordeShooterEnemy.h"
 #include "BlitzkriegerEnemy.generated.h"
 
+class UNiagaraComponent;
+
 /**
  * 
  */
@@ -28,4 +30,27 @@ public:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat|Stats")
 	int32 NumberOfLightningsInAWave = 2;
+
+protected:
+	virtual void BeginPlay() override;
+
+	//glowing eyes:
+	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Components")
+	UNiagaraComponent* LeftEyeGlow;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Components")
+	UNiagaraComponent* RightEyeGlow;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Combat|VFX")
+	float NormalEyeIntensity = 1.0f;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Combat|VFX")
+	float AttackEyeIntensity = 25.0f;
+
+private:
+	void SetEyeIntensity(float Intensity);
+
+	UFUNCTION()
+	void OnSpellCastFinished();
+
 };
