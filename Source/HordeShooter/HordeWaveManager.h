@@ -9,13 +9,24 @@
 class AHordeShooterEnemy;
 class AArenaManager;
 
+USTRUCT()
+struct FEnemyPoolArray
+{
+	GENERATED_BODY()
+
+	UPROPERTY()
+	TArray<AHordeShooterEnemy*> Pool;
+};
+
 USTRUCT(BlueprintType)
 struct FWaveConfig
 {
 	GENERATED_BODY()
 
+	//TMap<EnemyClass, Count>
+	//ex. BP_Zombie: 10, BP_BlitzKrieger: 2
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	int32 EnemiesToSpawn = 10;
+	TMap<TSubclassOf<AHordeShooterEnemy>, int32> EnemyCounts;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	float SpawnDelay = 1.f; //time in between spawing a single enemy. 
@@ -36,11 +47,8 @@ protected:
 	virtual void BeginPlay() override;
 
 	//HORDE SETTINGS:
-	UPROPERTY(EditAnywhere, Category = "Horde Setup")
-	TSubclassOf<AHordeShooterEnemy> EnemyClassToSpawn;
-
-	UPROPERTY(EditAnywhere, Category = "Horde Setup")
-	int32 PoolSize = 30; //total instances in the pool.
+	UPROPERTY(EditAnywhere, Category = "Horde Setup|Pool")
+	TMap<TSubclassOf<AHordeShooterEnemy>, int32> PoolConfiguration;
 
 	UPROPERTY(EditAnywhere, Category = "Horde Setup")
 	int32 MaxEnemiesOnScreen = 15; //performance cap.
@@ -53,29 +61,30 @@ protected:
 
 
 private:
-	//POOLING AND TRACKING:
-	UPROPERTY()
-	TArray<AHordeShooterEnemy*> EnemyPool;
-	
+	//POOLING AND TRACKING
 	UPROPERTY()
 	AArenaManager* CachedArenaManager;
 
+	//TMap<EnemyClass, Pool> i.e. an enemy class mapped to its individual pool. hence we have multiple pools for multiple enemy classes.
+	UPROPERTY()
+	TMap<TSubclassOf<AHordeShooterEnemy>, FEnemyPoolArray> EnemyPools;
+
+	//shuffle bag stack for current wave spawning
+	TArray<TSubclassOf<AHordeShooterEnemy>> ShuffledSpawnStack;
+
 	int32 CurrentWaveIndex = 0;
-	int32 EnemiesLeftToSpawnThisWave = 0;
 	int32 ActiveLivingEnemies = 0;
 
 	//TIMERS AND LOGIC:
 	FTimerHandle SpawnTimerHandle;
 	FTimerHandle WaveTransitionTimerHandle;
 
-	void InitializePool();
+	void InitializePools();
+	void StartNextWave();
+	void SpawnSingleEnemy();
 
 	UFUNCTION()
 	void OnArenaReady();
-
-	void StartNextWave();
-	
-	void SpawnSingleEnemy();
 
 	//callback for enemy death. to be bound to a delegate in enemy class.
 	UFUNCTION()

@@ -24,37 +24,46 @@ void AHordeWaveManager::BeginPlay()
 	AActor* ArenaActor = UGameplayStatics::GetActorOfClass(GetWorld(), AArenaManager::StaticClass());
 	CachedArenaManager = Cast<AArenaManager>(ArenaActor);
 	
-	if (!CachedArenaManager || !EnemyClassToSpawn)
-	{
-		return;
-	}
+	if(!CachedArenaManager || PoolConfiguration.Num() == 0) return;
 
-	//debug:
-	GetWorldTimerManager().SetTimer(DebugTelemetryTimer, this, &AHordeWaveManager::PrintPoolStats, 0.2f, true);
-
-	//create the enemy pool.
-	InitializePool();
+	//create the enemy pools.
+	InitializePools();
 
 	//Bind to Arena layout delegate:
 	CachedArenaManager->OnArenaLayoutFinished.AddDynamic(this, &AHordeWaveManager::OnArenaReady);
 
+	//debug:
+	GetWorldTimerManager().SetTimer(DebugTelemetryTimer, this, &AHordeWaveManager::PrintPoolStats, 0.2f, true);
 }
 
-void AHordeWaveManager::InitializePool()
+void AHordeWaveManager::InitializePools()
 {
 	FActorSpawnParameters SpawnParams;
 	SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn;
 
-	//create the pool:
-	for(int32 i = 0; i < PoolSize; i++)
+	//loop through enemy class to initialize their pools
+	for(const auto& PoolKVP : PoolConfiguration)
 	{
-		AHordeShooterEnemy* NewEnemy = GetWorld()->SpawnActor<AHordeShooterEnemy>(EnemyClassToSpawn, FVector::ZeroVector, FRotator::ZeroRotator, SpawnParams);
-		if(NewEnemy)
+		TSubclassOf<AHordeShooterEnemy> EnemyClass = PoolKVP.Key;
+		int32 AmountToSpawn = PoolKVP.Value;
+
+		if(!EnemyClass) return;
+
+		FEnemyPoolArray NewPool;
+		for(int32 i = 0; i < AmountToSpawn; i++)
 		{
-			NewEnemy->OnEnemyKilled.AddDynamic(this, &AHordeWaveManager::OnEnemyDied); //bind to enemy death event
-			EnemyPool.Add(NewEnemy);
+			AHordeShooterEnemy* NewEnemy = GetWorld()->SpawnActor<AHordeShooterEnemy>(EnemyClass, FVector(0,0,-10000), FRotator::ZeroRotator, SpawnParams);
+			if(NewEnemy)
+			{
+				NewEnemy->OnEnemyKilled.AddDynamic(this, &AHordeWaveManager::OnEnemyDied); //bind to enemy death event
+				NewPool.Pool.Add(NewEnemy);
+			}
 		}
+
+		//add this pool to "pool dictionary"
+		EnemyPools.Add(EnemyClass, NewPool);
 	}
+
 }
 
 void AHordeWaveManager::OnArenaReady()
@@ -64,15 +73,33 @@ void AHordeWaveManager::OnArenaReady()
 
 void AHordeWaveManager::StartNextWave()
 {
-	if (CurrentWaveIndex >= Waves.Num())
+	if(CurrentWaveIndex >= Waves.Num())
 	{
-
 		return;
 	}
 
 	//read wave data
 	FWaveConfig CurrentWave = Waves[CurrentWaveIndex];
-	EnemiesLeftToSpawnThisWave = CurrentWave.EnemiesToSpawn;
+	ShuffledSpawnStack.Empty();
+
+	//add all the requested enemies to spawn queue
+	for(const auto& EnemyKVP : CurrentWave.EnemyCounts)
+	{
+		TSubclassOf<AHordeShooterEnemy> EnemyClass = EnemyKVP.Key;
+		int32 Count = EnemyKVP.Value;
+
+		for(int32 i = 0; i < Count; i++)
+		{
+			ShuffledSpawnStack.Add(EnemyClass);
+		}
+	}
+
+	//shuffle the spawn queue
+	for(int32 i = ShuffledSpawnStack.Num() - 1; i > 0; i--)
+	{
+		int32 RandomIndex = FMath::RandRange(0, i);
+		ShuffledSpawnStack.Swap(i, RandomIndex);
+	}
 
 	//start spawn timer:
 	GetWorldTimerManager().SetTimer(SpawnTimerHandle, this, &AHordeWaveManager::SpawnSingleEnemy, CurrentWave.SpawnDelay, true);
@@ -83,7 +110,7 @@ void AHordeWaveManager::StartNextWave()
 void AHordeWaveManager::SpawnSingleEnemy()
 {
 	//if done spawning all the enemies in a wave:
-	if (EnemiesLeftToSpawnThisWave <= 0)
+	if(ShuffledSpawnStack.Num() <= 0)
 	{
 		GetWorldTimerManager().ClearTimer(SpawnTimerHandle);
 		return;
@@ -95,18 +122,24 @@ void AHordeWaveManager::SpawnSingleEnemy()
 		return; 
 	}
 
-	//find an inactive enemy in the pool:
-	for(AHordeShooterEnemy* Enemy : EnemyPool)
-	{
-		if(Enemy && !Enemy->bIsActive)
-		{
-			//Ask arena manager for random spawn point.
-			FTransform SpawnTransform = CachedArenaManager->GetRandomSpawnPoint();
+	//peek at the next class needed to spawn
+	TSubclassOf<AHordeShooterEnemy> ClassToSpawn = ShuffledSpawnStack.Last();
 
-			Enemy->ActivateEnemy(SpawnTransform);
-			ActiveLivingEnemies++;
-			EnemiesLeftToSpawnThisWave--;
-			return;
+	//find an inactive enemy in the pool of this class:
+	if(EnemyPools.Contains(ClassToSpawn))
+	{
+		for(AHordeShooterEnemy* Enemy : EnemyPools[ClassToSpawn].Pool)
+		{
+			if(Enemy && !Enemy->bIsActive && CachedArenaManager)
+			{
+				ShuffledSpawnStack.Pop();
+
+				//Ask arena manager for random spawn point.
+				FTransform SpawnTransform = CachedArenaManager->GetRandomSpawnPoint();
+				Enemy->ActivateEnemy(SpawnTransform);
+				ActiveLivingEnemies++;
+				return;
+			}
 		}
 	}
 }
@@ -116,7 +149,7 @@ void AHordeWaveManager::OnEnemyDied()
 	ActiveLivingEnemies--;
 
 	//if all the enemies in the wave have been spawned and all active nemies are dead i.e. wave is cleared.
-	if (ActiveLivingEnemies <= 0 && EnemiesLeftToSpawnThisWave <= 0)
+	if (ActiveLivingEnemies <= 0 && ShuffledSpawnStack.Num() <= 0)
 	{
 		CurrentWaveIndex++;
 
@@ -127,7 +160,7 @@ void AHordeWaveManager::OnEnemyDied()
 	}
 
 	//Wave replenishment
-	else if(EnemiesLeftToSpawnThisWave > 0 && ActiveLivingEnemies < MaxEnemiesOnScreen)
+	else if(ShuffledSpawnStack.Num() > 0 && ActiveLivingEnemies < MaxEnemiesOnScreen)
 	{
 		float RandomReplenishDelay = FMath::RandRange(0.2f, 0.8f);
 		FTimerHandle ReplenishTimer;
@@ -144,31 +177,36 @@ void AHordeWaveManager::PrintPoolStats()
 	int32 DeadRagdollCount = 0;
 	int32 InactivePoolCount = 0;
 
-	for (AHordeShooterEnemy* Enemy : EnemyPool)
+	// 1. Loop through every class pool in our dictionary
+	for (const auto& PoolKVP : EnemyPools)
 	{
-		if (!Enemy) continue;
+		// 2. Loop through the actual zombies inside that specific pool
+		for (AHordeShooterEnemy* Enemy : PoolKVP.Value.Pool)
+		{
+			if (!Enemy) continue;
 
-		if (Enemy->bIsActive && !Enemy->bIsDead)
-		{
-			AliveCount++;
-		}
-		else if (Enemy->bIsActive && Enemy->bIsDead)
-		{
-			DeadRagdollCount++;
-		}
-		else if (!Enemy->bIsActive)
-		{
-			InactivePoolCount++;
+			if (Enemy->bIsActive && !Enemy->bIsDead)
+			{
+				AliveCount++;
+			}
+			else if (Enemy->bIsActive && Enemy->bIsDead)
+			{
+				DeadRagdollCount++;
+			}
+			else if (!Enemy->bIsActive)
+			{
+				InactivePoolCount++;
+			}
 		}
 	}
 
-	// Use Keys 1-5 so the messages overwrite themselves cleanly instead of spamming down the screen
 	GEngine->AddOnScreenDebugMessage(1, 0.3f, FColor::Green,  FString::Printf(TEXT("[POOL] Alive & Active: %d"), AliveCount));
 	GEngine->AddOnScreenDebugMessage(2, 0.3f, FColor::Red,    FString::Printf(TEXT("[POOL] Dead & Ragdolling: %d"), DeadRagdollCount));
 	GEngine->AddOnScreenDebugMessage(3, 0.3f, FColor::Cyan,   FString::Printf(TEXT("[POOL] Inactive (Ready): %d"), InactivePoolCount));
-	GEngine->AddOnScreenDebugMessage(4, 0.3f, FColor::Yellow, FString::Printf(TEXT("[WAVE] Left to Spawn: %d"), EnemiesLeftToSpawnThisWave));
+	
+	// Print the remaining elements in our Stack!
+	GEngine->AddOnScreenDebugMessage(4, 0.3f, FColor::Yellow, FString::Printf(TEXT("[WAVE] Left to Spawn: %d"), ShuffledSpawnStack.Num()));
 	GEngine->AddOnScreenDebugMessage(5, 0.3f, FColor::Orange, FString::Printf(TEXT("[WAVE] Max Screen Budget: %d"), MaxEnemiesOnScreen));
 }
-
 
 
