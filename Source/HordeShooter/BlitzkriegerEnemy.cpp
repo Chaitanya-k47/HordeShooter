@@ -37,19 +37,29 @@ void ABlitzkriegerEnemy::BeginPlay()
 {
 	Super::BeginPlay();
 
-	SetEyeIntensity(NormalEyeIntensity);
+	SetEyeIntensityAndSize(NormalEyeIntensity, NormalEyeSize);
 	OnAttackFinished.AddDynamic(this, &ABlitzkriegerEnemy::OnSpellCastFinished);
 }
 
-void ABlitzkriegerEnemy::SetEyeIntensity(float Intensity)
+void ABlitzkriegerEnemy::SetEyeIntensityAndSize(float Intensity, float Size)
 {
-	if (LeftEyeGlow) LeftEyeGlow->SetFloatParameter(FName("EyeIntensity"), Intensity);
-	if (RightEyeGlow) RightEyeGlow->SetFloatParameter(FName("EyeIntensity"), Intensity);
+	if(LeftEyeGlow)
+	{
+		LeftEyeGlow->SetFloatParameter(FName("EyeIntensity"), Intensity);
+		LeftEyeGlow->SetFloatParameter(FName("EyeSize"), Size);
+	}
+	
+	if(RightEyeGlow) 
+	{
+		RightEyeGlow->SetFloatParameter(FName("EyeIntensity"), Intensity);
+		RightEyeGlow->SetFloatParameter(FName("EyeSize"), Size);
+	}
 }
 
 void ABlitzkriegerEnemy::PerformMeleeAttack()
 {
     Super::PerformMeleeAttack();
+	SetEyeIntensityAndSize(AttackEyeIntensity, AttackEyeSize);
 }
 
 void ABlitzkriegerEnemy::CastLightningOnPlayer()
@@ -67,5 +77,5 @@ void ABlitzkriegerEnemy::CastLightningOnPlayer()
 
 void ABlitzkriegerEnemy::OnSpellCastFinished()
 {
-	SetEyeIntensity(NormalEyeIntensity);
+	SetEyeIntensityAndSize(NormalEyeIntensity, NormalEyeSize);
 }

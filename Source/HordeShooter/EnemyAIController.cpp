@@ -66,10 +66,7 @@ void AEnemyAIController::UpdateAILogic()
     //STATE: Fleeing
     if(ControlledEnemy->FleeRange > 0.f && DistSquared < FleeRangeSq)
     {
-        if(ControlledEnemy->bIsAttacking)
-        {
-            ControlledEnemy->CancelAttack();
-        }
+        if(ControlledEnemy->bCancelsAttackInFleeRange && ControlledEnemy->bIsAttacking) ControlledEnemy->CancelAttack();
 
         CurrentState = EAIState::Fleeing;
         ControlledEnemy->GetCharacterMovement()->MaxWalkSpeed = ControlledEnemy->SprintSpeed;

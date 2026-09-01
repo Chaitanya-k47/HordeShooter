@@ -61,6 +61,9 @@ public:
 	bool bStrafeDuringCooldown = false;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Combat|AI")
+	bool bCancelsAttackInFleeRange = false;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Combat|AI")
 	float AttackCooldown = 0.f;
 
 	//Instanty aborts any ongoing attack:

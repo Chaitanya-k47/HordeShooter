@@ -47,8 +47,14 @@ protected:
 	UPROPERTY(EditDefaultsOnly, Category = "Combat|VFX")
 	float AttackEyeIntensity = 25.0f;
 
+	UPROPERTY(EditDefaultsOnly, Category = "Combat|VFX")
+	float NormalEyeSize = 1.0f;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Combat|VFX")
+	float AttackEyeSize = 3.0f;
+
 private:
-	void SetEyeIntensity(float Intensity);
+	void SetEyeIntensityAndSize(float Intensity, float Size);
 
 	UFUNCTION()
 	void OnSpellCastFinished();
