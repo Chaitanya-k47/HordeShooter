@@ -777,7 +777,7 @@ void AHordeShooterCharacter::EquipWeapon(AHordeShooterWeapon* NewWeapon)
 		if(PC->PlayerHUDWidget)
 		{
 			//update the hud for new weapon
-			PC->PlayerHUDWidget->UpdateAmmo(CurrentEquippedWeapon->CurrentAmmo, CurrentEquippedWeapon->MagSize);
+			PC->PlayerHUDWidget->UpdateAmmo(CurrentEquippedWeapon->CurrentAmmo, CurrentEquippedWeapon->TotalAmmoReserve);
 
 			//bind delegate to update HUD when ammo changes:
 			CurrentEquippedWeapon->OnAmmoChanged.AddDynamic(PC->PlayerHUDWidget, &UHordeShooterHUDWidget::UpdateAmmo);

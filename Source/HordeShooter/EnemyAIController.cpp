@@ -119,7 +119,7 @@ void AEnemyAIController::UpdateAILogic()
 			CurrentState = EAIState::Attacking;
 
 			if(ControlledEnemy->bStopToAttack) StopMovement();
-			else MoveToPlayer(); 
+			else if(ControlledEnemy->bChargeOnPlayerWhileAttacking) MoveToPlayer();
 		}
         else if(bIsOnCooldown) //waiting
         {

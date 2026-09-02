@@ -57,7 +57,7 @@ protected:
 public:
 
 	UFUNCTION()
-	void UpdateAmmo(int32 CurrentAmmo, int32 MagSize);
+	void UpdateAmmo(int32 CurrentAmmo, int32 TotalAmmoReserve);
 
 	UFUNCTION()
 	void UpdateHealth(float CurrentHealth, float MaxHealth);

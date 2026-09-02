@@ -7,7 +7,7 @@
 #include "HordeShooterWeapon.generated.h"
 
 //DELEGATE declaration:
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnAmmoChangedSignature, int32, CurrentAmmo, int32, MagSize);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnAmmoChangedSignature, int32, CurrentAmmo, int32, TotalAmmoReserve);
 
 class USceneComponent;
 class USkeletalMeshComponent;
@@ -121,7 +121,10 @@ public:
 	int32 MagSize = 45;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Weapon Stats|Ammo")
-	int32 CurrentAmmo;
+	int32 CurrentAmmo; //current ammo in the magazine
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Weapon Stats|Ammo")
+	int32 TotalAmmoReserve = 90; //total ammo in reserve, not including the magazine
 
 
 	//ANIMATIONS:
@@ -161,6 +164,9 @@ public:
 	//SFX
 	UPROPERTY(EditDefaultsOnly, Category = "Sound")
 	USoundBase* ShootSound;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Sound")
+	USoundBase* ClipEmptySound;
 	
 
 	//Impact effects:

@@ -181,7 +181,21 @@ void ARayGun::Tick(float DeltaTime)
 
 void ARayGun::StartFire()
 {
-    if (CurrentAmmo < BeamAmmoCostPerBeamTick || bIsReloading || bIsFiringBeam || bIsCharging || !bCanFire || bIsLowered) return;
+    if (bIsReloading || bIsFiringBeam || bIsCharging || !bCanFire || bIsLowered) return;
+
+    if(CurrentAmmo < BeamAmmoCostPerBeamTick)
+    {
+        if(TotalAmmoReserve > 0) Reload();
+        else
+        {
+            //play empty click sound
+            if(ClipEmptySound)
+			{
+				UGameplayStatics::PlaySoundAtLocation(GetWorld(), ClipEmptySound, GetActorLocation());
+			}
+        }
+        return;
+    }
    
     bIsFiringBeam = true;
 
@@ -237,15 +251,16 @@ void ARayGun::PerformBeamTick()
         return;
     }
 
-    if (CurrentAmmo < BeamAmmoCostPerBeamTick)
+    if(CurrentAmmo < BeamAmmoCostPerBeamTick)
 	{
 		StopFire();
-		Reload();
+
+		if(TotalAmmoReserve > 0) Reload();
 		return;
 	}
 
     CurrentAmmo -= BeamAmmoCostPerBeamTick;
-	OnAmmoChanged.Broadcast(CurrentAmmo, MagSize);
+	OnAmmoChanged.Broadcast(CurrentAmmo, TotalAmmoReserve);
 
     if (CurrentBeamTarget && CurrentOwner && CurrentOwner->FirstPersonCamera)
 	{
@@ -264,7 +279,21 @@ void ARayGun::PerformBeamTick()
 
 void ARayGun::StartAltFire()
 {
-    if(CurrentAmmo < AltFireAmmoCost || bIsReloading || bIsCharging || bIsFiringBeam || !bCanFire || !bCanAltFire) return;
+    if(bIsReloading || bIsCharging || bIsFiringBeam || !bCanFire || !bCanAltFire) return;
+
+    if(CurrentAmmo < AltFireAmmoCost)
+    {
+        if(TotalAmmoReserve > 0) Reload();
+		else
+        { 
+            if(ClipEmptySound)
+			{
+				UGameplayStatics::PlaySoundAtLocation(GetWorld(), ClipEmptySound, GetActorLocation());
+			}
+        }
+		
+        return;
+    }
 
     bIsCharging = true;
     CurrentChargeTime = 0.0f;
@@ -362,7 +391,7 @@ void ARayGun::PerformAltFire()
     if(CurrentAmmo < 0) CurrentAmmo = 0;
 
     //broadcast
-    OnAmmoChanged.Broadcast(CurrentAmmo, MagSize);
+    OnAmmoChanged.Broadcast(CurrentAmmo, TotalAmmoReserve);
 
     //alt fire cooldown:
     float CooldownDuration = 0.0f;

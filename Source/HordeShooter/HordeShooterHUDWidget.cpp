@@ -33,12 +33,12 @@ void UHordeShooterHUDWidget::NativeConstruct()
 }
 
 
-void UHordeShooterHUDWidget::UpdateAmmo(int32 CurrentAmmo, int32 MagSize)
+void UHordeShooterHUDWidget::UpdateAmmo(int32 CurrentAmmo, int32 TotalAmmoReserve)
 {
     if(AmmoInMagazine && TotalAmmo)
     {
         AmmoInMagazine->SetText(FText::AsNumber(CurrentAmmo));
-        TotalAmmo->SetText(FText::AsNumber(MagSize));
+        TotalAmmo->SetText(FText::AsNumber(TotalAmmoReserve));
     }
 }
 

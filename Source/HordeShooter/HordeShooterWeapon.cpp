@@ -123,7 +123,15 @@ void AHordeShooterWeapon::StartFire()
 
 	if(CurrentAmmo<=0)
 	{
-		Reload();
+		if(TotalAmmoReserve > 0) Reload();
+		else
+		{
+			//play empty click sound
+			if(ClipEmptySound)
+			{
+				UGameplayStatics::PlaySoundAtLocation(GetWorld(), ClipEmptySound, GetActorLocation());
+			}
+		}
 		return;
 	}
 
@@ -182,7 +190,8 @@ void AHordeShooterWeapon::PerformFire()
 	if(CurrentAmmo <= 0)
 	{
 		StopFire();
-		Reload();
+
+		if(TotalAmmoReserve > 0) Reload();
 		return;
 	}
 
@@ -198,7 +207,7 @@ void AHordeShooterWeapon::PerformFire()
 	CurrentAmmo--;
 
 	//broadcast
-	OnAmmoChanged.Broadcast(CurrentAmmo, MagSize);
+	OnAmmoChanged.Broadcast(CurrentAmmo, TotalAmmoReserve);
 
 	//dynamic smoke heat tracking:
 	BarrelSmokeComp->Deactivate();
@@ -453,7 +462,7 @@ void AHordeShooterWeapon::ResetFireCooldown()
 
 void AHordeShooterWeapon::Reload()
 {
-	if(CurrentAmmo == MagSize || bIsReloading) return;
+	if(TotalAmmoReserve <= 0 || CurrentAmmo == MagSize || bIsReloading) return;
 	
 	bIsReloading = true;
 	StopFire(); //cannot fire while reloading
@@ -507,8 +516,13 @@ void AHordeShooterWeapon::OnHolstered()
 void AHordeShooterWeapon::RefillMagazine()
 {
 	//called by anim notif the exact moment when mag is inserted
-	CurrentAmmo = MagSize;
-	OnAmmoChanged.Broadcast(CurrentAmmo, MagSize);
+	int32 AmmoNeeded = MagSize - CurrentAmmo; //how mush needed to fill the mag
+	int32 AmmoToReload = FMath::Min(AmmoNeeded, TotalAmmoReserve); //how much we can actually reload based on reserve
+
+	CurrentAmmo += AmmoToReload;
+	TotalAmmoReserve -= AmmoToReload;
+	
+	OnAmmoChanged.Broadcast(CurrentAmmo, TotalAmmoReserve);
 }
 
 void AHordeShooterWeapon::FinishReload()
