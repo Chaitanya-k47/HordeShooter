@@ -268,11 +268,6 @@ void AArenaManager::Tick(float DeltaTime)
 						{
 							//drop lightning, and and reset the timer.
 							PlayerCampTimer = 0.f;
-						
-							//find the exact floor location and execute strike:
-							float BaseZ = TargetHeights[CurrentBlockIndex];
-							float CubeScaleZ = ((MaxStairSteps * BlockSize) + BlockSize) / MeshSizeZ;
-							float RoofZ = BaseZ + (CachedCubeMaxZ * CubeScaleZ) + ArenaLoc.Z;
 
 							//calculate lightning position just in front of player:
 							FVector CamForward = PlayerChar->GetViewRotation().Vector().GetSafeNormal2D();
@@ -280,12 +275,20 @@ void AArenaManager::Tick(float DeltaTime)
 
 							float ForwardDist = FMath::RandRange(200.0f, 400.0f);
 							float RightDist = FMath::RandRange(-150.0f, 150.0f);
-
 							FVector StrikeOffset = (CamForward*ForwardDist) + (CamRight*RightDist);
-							FVector StrikeLoc = PlayerChar->GetActorLocation() + StrikeOffset;
-							StrikeLoc.Z = RoofZ;
-						
-							ExecuteLightningStrike(StrikeLoc);
+							FVector TargetXY = PlayerChar->GetActorLocation() + StrikeOffset;
+
+							//do a line trace from above the player to the ground to find the floor Z.
+							FHitResult Hit;
+							FVector TraceStart = FVector(TargetXY.X, TargetXY.Y, PlayerLoc.Z + 2000.f);
+							FVector TraceEnd = FVector(TraceStart.X, TraceStart.Y, TraceStart.Z - 10000.f);
+							FCollisionQueryParams Params;
+							Params.AddIgnoredActor(PlayerChar);
+
+							if(GetWorld()->LineTraceSingleByChannel(Hit, TraceStart, TraceEnd, ECC_Visibility, Params))
+							{
+								ExecuteLightningStrike(Hit.ImpactPoint);
+							}
 						}
 					}
 					else

@@ -12,6 +12,7 @@
 #include "Components/AudioComponent.h"
 #include "Components/DecalComponent.h"
 #include "DamageableInterface.h"
+#include "ArenaManager.h"
 
 /*
     Decoupled logic for RayGun's primary fire(Beam):
@@ -53,6 +54,10 @@ ARayGun::ARayGun()
 	ChargeAudioComp = CreateDefaultSubobject<UAudioComponent>(TEXT("ChargeAudioComp"));
 	ChargeAudioComp->SetupAttachment(Mesh, FName("SOC_MuzzleFlash"));
 	ChargeAudioComp->bAutoActivate = false;
+
+    ChargeLoopAudioComp = CreateDefaultSubobject<UAudioComponent>(TEXT("ChargeLoopAudioComp"));
+	ChargeLoopAudioComp->SetupAttachment(Mesh, FName("SOC_MuzzleFlash"));
+	ChargeLoopAudioComp->bAutoActivate = false;
 }
 
 void ARayGun::BeginPlay()
@@ -63,6 +68,9 @@ void ARayGun::BeginPlay()
     {
         DynamicWeaponMat = Mesh->CreateAndSetMaterialInstanceDynamic(0);
     }
+
+    AActor* ArenaActor = UGameplayStatics::GetActorOfClass(GetWorld(), AArenaManager::StaticClass());
+	if (ArenaActor) CachedArenaManager = Cast<AArenaManager>(ArenaActor);
 }
 
 void ARayGun::Tick(float DeltaTime)
@@ -155,6 +163,39 @@ void ARayGun::Tick(float DeltaTime)
             ChargeOrbComp->SetFloatParameter(FName("OrbSize"), ChargeRatio*15.0f);
             ChargeOrbComp->SetFloatParameter(FName("EmberSphereRadius"), ChargeRatio*10.5f); 
         }
+
+        //OVERCHARGE PENALTY: If the player holds the charge too long, they have a chance to be struck by lightning
+        if(CachedArenaManager->bIsCombatActive && CurrentChargeTime >= ChargeTimeRequired + MaxOverchargeTime && !bHasRolledOvercharge)
+        {
+            bHasRolledOvercharge = true; //only roll once per charge cycle
+
+            if(FMath::FRand() <= OverchargeStrikeProbability)
+            {
+                if(CachedArenaManager && CurrentOwner)
+				{
+                    FVector PlayerLoc = CurrentOwner->GetActorLocation();
+                    FVector CamForward = CurrentOwner->GetViewRotation().Vector().GetSafeNormal2D();
+                    FVector CamRight = FVector::CrossProduct(FVector::UpVector, CamForward);
+
+                    float ForwardDist = FMath::RandRange(200.0f, 400.0f);
+                    float RightDist = FMath::RandRange(-150.0f, 150.0f);
+                    FVector StrikeOffset = (CamForward*ForwardDist) + (CamRight*RightDist);
+                    FVector TargetXY = PlayerLoc + StrikeOffset;
+
+                    //do a line trace from above the player to the ground to find the floor Z.
+                    FHitResult Hit;
+                    FVector TraceStart = FVector(TargetXY.X, TargetXY.Y, PlayerLoc.Z + 2000.f);
+                    FVector TraceEnd = FVector(TraceStart.X, TraceStart.Y, TraceStart.Z - 10000.f);
+                    FCollisionQueryParams Params;
+                    Params.AddIgnoredActor(CurrentOwner);
+
+                    if(GetWorld()->LineTraceSingleByChannel(Hit, TraceStart, TraceEnd, ECC_Visibility, Params))
+                    {
+                        CachedArenaManager->ExecuteLightningStrike(Hit.ImpactPoint);
+                    }
+                }
+            }
+        }
     }
     else if(bIsCharging && (!bCanFire || bIsLowered))
     {
@@ -225,6 +266,7 @@ void ARayGun::StopFire()
 {
     if (!bIsFiringBeam) return;
 
+    bHasRolledOvercharge = false; //reset overcharge roll for next time
     bIsFiringBeam = false;
 
     BeamComponent->Deactivate();
@@ -299,7 +341,14 @@ void ARayGun::StartAltFire()
     CurrentChargeTime = 0.0f;
 
     ChargeOrbComp->Activate(true);
-	if (ChargeAudioComp->Sound) ChargeAudioComp->Play();
+    float PitchMultiplier = BaseChargeSoundDuration / ChargeTimeRequired;
+
+	if(ChargeAudioComp->Sound)
+    {
+        ChargeAudioComp->SetFloatParameter(FName("ChargePitch"), PitchMultiplier);
+        ChargeAudioComp->Play();
+    }
+    GetWorldTimerManager().SetTimer(ChargeLoopAudioTimerHandle, this, &ARayGun::StartChargeLoopAudio, ChargeTimeRequired, false);
 
     //start charge animation:
     if(CurrentOwner && CurrentOwner->CharacterArms && ArmsChargeLoopMontage)
@@ -312,6 +361,14 @@ void ARayGun::StartAltFire()
     }
 }
 
+void ARayGun::StartChargeLoopAudio()
+{
+    if(bIsCharging && ChargeLoopAudioComp->Sound)
+	{
+		ChargeLoopAudioComp->Play();
+	}
+}
+
 void ARayGun::StopAltFire()
 {
     if(!bIsCharging) return;
@@ -320,6 +377,7 @@ void ARayGun::StopAltFire()
 
     ChargeOrbComp->Deactivate();
 	ChargeAudioComp->FadeOut(0.1f, 0.0f);
+    ChargeLoopAudioComp->FadeOut(0.1f, 0.0f);
 
     //stop charge animation:
     if(CurrentOwner && CurrentOwner->CharacterArms && ArmsChargeLoopMontage)
@@ -342,11 +400,13 @@ void ARayGun::OnHolstered()
 {
     Super::OnHolstered();
 
+    bHasRolledOvercharge = false; //reset overcharge roll for next time
 	bIsCharging = false;
 	CurrentChargeTime = 0.0f; //reset to 0 so StopAltFire doesnt trigger the blast
 	
 	ChargeOrbComp->Deactivate();
 	ChargeAudioComp->FadeOut(0.1f, 0.0f);
+    ChargeLoopAudioComp->FadeOut(0.1f, 0.0f);
 
 	//shut down the continuous beam if it was running
 	bIsFiringBeam = false;

@@ -60,6 +60,8 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Arena|Hazards")
 	void StartLightningWave(int32 NumStrikes = 10);
 
+	void ExecuteLightningStrike(FVector StrikeLocation);
+
 	UFUNCTION(BlueprintCallable, Category = "Arena|Hazards")
 	void SetCombatActive(bool bIsActive);
 
@@ -224,8 +226,6 @@ private:
 	//track player's position.
 	int32 LastPlayerBlockIndex = -1;
 	float PlayerCampTimer = 0.f;
-
-	void ExecuteLightningStrike(FVector StrikeLocation);
 
 	//lightning tracker:
 	int32 RemainingLightningStrikes = 0;

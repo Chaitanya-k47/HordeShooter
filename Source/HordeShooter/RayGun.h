@@ -82,6 +82,13 @@ protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Components")
 	UAudioComponent* ChargeAudioComp;
 
+	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Components")
+	UAudioComponent* ChargeLoopAudioComp;
+
+	//the length of original charge sound "in.wav" at pitch 1.0x, used for calculating pitch multiplier
+	UPROPERTY(EditDefaultsOnly, Category = "Effects|Alt Fire")
+	float BaseChargeSoundDuration = 2.0f;
+
 	UPROPERTY(EditDefaultsOnly, Category = "Effects|Alt Fire")
 	USoundBase* AltFireDischargeSound;
 
@@ -102,7 +109,7 @@ protected:
 
 	//alt fire (charged AOE blast):
 	UPROPERTY(EditDefaultsOnly, Category = "Weapon Stats|Alt Fire")
-	float ChargeTimeRequired = 1.5f; //hold 1.5 sec before shooting AltFire.
+	float ChargeTimeRequired = 2.f; //hold 2 sec before shooting AltFire.
 	
 	UPROPERTY(EditDefaultsOnly, Category = "Weapon Stats|Alt Fire")
 	float AltFireDamage = 150.f;
@@ -115,6 +122,13 @@ protected:
 
 	UPROPERTY(EditDefaultsOnly, Category = "Weapon Stats|Alt Fire")
 	float AltFireImpulse = 20000.0f;
+
+	//seconds you can hold alt fire charge before you are striked with a lightning bolt as overcharging penalty:
+	UPROPERTY(EditDefaultsOnly, Category = "Weapon Stats|Alt Fire")
+	float MaxOverchargeTime = 3.0f;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Weapon Stats|Alt Fire")
+	float OverchargeStrikeProbability = 0.6f; //60% chance of being struck by lightning if you hold the charge too long
 
 
 	//RAYGUN ANIMATIONS:
@@ -156,4 +170,12 @@ private:
 	bool bCanAltFire = true;
 	FTimerHandle AltFireCooldownTimerHandle;
 	void ResetAltFireCooldown();
+
+	FTimerHandle ChargeLoopAudioTimerHandle;
+	void StartChargeLoopAudio();
+
+	bool bHasRolledOvercharge = false;
+
+	UPROPERTY()
+	class AArenaManager* CachedArenaManager;
 };
