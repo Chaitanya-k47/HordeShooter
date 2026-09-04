@@ -12,6 +12,7 @@
 #include "EnemyAIController.h"
 #include "Components/AudioComponent.h"
 #include "HordeShooterPlayerController.h"
+#include "HordeWaveManager.h"
 
 // Sets default values
 AHordeShooterEnemy::AHordeShooterEnemy()
@@ -67,6 +68,9 @@ void AHordeShooterEnemy::BeginPlay()
 	{
 		GetMesh()->GetAnimInstance()->OnMontageEnded.AddDynamic(this, &AHordeShooterEnemy::OnMontageEnded);
 	}
+
+	AActor* WaveManagerActor = UGameplayStatics::GetActorOfClass(GetWorld(), AHordeWaveManager::StaticClass());
+	if(AHordeWaveManager* WaveManager = Cast<AHordeWaveManager>(WaveManagerActor)) CachedWaveManager = WaveManager;
 	
 	DeactivateEnemy(); //start inactive.
 }
@@ -326,6 +330,39 @@ void AHordeShooterEnemy::Die()
 
 	bIsDead = true;
 
+	//ammo drop:
+	if(AmmoDrops.Num() > 0)
+	{
+		EPickupSize SizeToDrop = EPickupSize::Small;
+		bool bShouldDrop = false;
+		bool bWasHeadshot = (LastHitBoneName == FName("Head"));
+
+		if(bWasHeadshot)
+		{
+			//guaranteed drop on headshot, default to the first configured drop
+			bShouldDrop = true;
+			SizeToDrop = AmmoDrops[0].Size; 
+		}
+		else
+		{
+			float Roll = FMath::FRand();
+			float CumulativeChance = 0.0f;
+			
+			for(const FAmmoDropConfig& Drop : AmmoDrops)
+			{
+				CumulativeChance += Drop.DropChance;
+				if (Roll <= CumulativeChance)
+				{
+					bShouldDrop = true;
+					SizeToDrop = Drop.Size;
+					break;
+				}
+			}
+		}
+
+		if(bShouldDrop && CachedWaveManager) CachedWaveManager->SpawnAmmoDrop(GetActorLocation(), SizeToDrop);
+	}
+
 	if(SprintAudioComp)
 	{
 		SprintAudioComp->Stop();
@@ -337,7 +374,7 @@ void AHordeShooterEnemy::Die()
 
 	//Put Enemy AI to sleep and set timer for it to Deactivate/Despawn.
 	if(AEnemyAIController* AICon = Cast<AEnemyAIController>(GetController())) AICon->SleepAI();
-	GetWorldTimerManager().SetTimer(DespawnTimerHandle, this, &AHordeShooterEnemy::DeactivateEnemy, 5.0f, false);
+	GetWorldTimerManager().SetTimer(DespawnTimerHandle, this, &AHordeShooterEnemy::DeactivateEnemy, 5.0f, false);	
 }
 
 void AHordeShooterEnemy::OnHit_Implementation(float DamageAmount)

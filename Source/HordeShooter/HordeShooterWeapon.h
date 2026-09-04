@@ -123,8 +123,13 @@ public:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Weapon Stats|Ammo")
 	int32 CurrentAmmo; //current ammo in the magazine
 
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Weapon Stats|Ammo")
+	int32 TotalAmmoReserve; //total ammo in reserve, not including the magazine
+
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Weapon Stats|Ammo")
-	int32 TotalAmmoReserve = 90; //total ammo in reserve, not including the magazine
+	int32 MaxAmmoReserve = 90; //maximum ammo that can be in the reserve
+
+	void AddAmmo(float Percentage); //call this to grant ammo via pickups
 
 
 	//ANIMATIONS:

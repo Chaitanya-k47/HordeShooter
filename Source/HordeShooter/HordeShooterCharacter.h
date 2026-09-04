@@ -260,13 +260,13 @@ protected:
 	TArray<AHordeShooterWeapon*> Inventory;
 
 	UPROPERTY(VisibleInstanceOnly, BlueprintReadWrite, Category = "Weapon")
-	AHordeShooterWeapon* CurrentEquippedWeapon;
-
-	UPROPERTY(VisibleInstanceOnly, BlueprintReadWrite, Category = "Weapon")
 	int32 CurrentWeaponIndex = 0; //start with primary weapon equipped
 
-
 public:
+
+	UPROPERTY(VisibleInstanceOnly, BlueprintReadWrite, Category = "Weapon")
+	AHordeShooterWeapon* CurrentEquippedWeapon;
+
 	UPROPERTY(BlueprintReadOnly)
 	bool bIsAiming = false;
 

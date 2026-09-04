@@ -56,6 +56,7 @@ void AHordeShooterWeapon::BeginPlay()
 	Super::BeginPlay();
 
 	CurrentAmmo = MagSize;
+	TotalAmmoReserve = MaxAmmoReserve;
 
 	//Casings pool initialization:
 	if(CasingClass)
@@ -531,6 +532,15 @@ void AHordeShooterWeapon::FinishReload()
 	if(CurrentOwner) CurrentOwner->FinishReloading();
 }
 
+void AHordeShooterWeapon::AddAmmo(float Percentage)
+{
+	int32 AmmoToAdd = FMath::RoundToInt(MaxAmmoReserve * Percentage);
+
+	TotalAmmoReserve += AmmoToAdd;
+	TotalAmmoReserve = FMath::Clamp(TotalAmmoReserve, 0, MaxAmmoReserve);
+
+	OnAmmoChanged.Broadcast(CurrentAmmo, TotalAmmoReserve);
+}
 
 void AHordeShooterWeapon::StartAltFire()
 {

@@ -5,6 +5,7 @@
 #include "CoreMinimal.h"
 #include "GameFramework/Character.h"
 #include "DamageableInterface.h"
+#include "HordeShooterPickup.h"
 
 #include "HordeShooterEnemy.generated.h"
 
@@ -14,6 +15,18 @@ class USoundBase;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnAttackFinishedSignature);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnEnemyKilledSignature);
+
+USTRUCT(BlueprintType)
+struct FAmmoDropConfig
+{
+	GENERATED_BODY()
+
+	UPROPERTY(EditDefaultsOnly)
+	EPickupSize Size = EPickupSize::Small;
+
+	UPROPERTY(EditDefaultsOnly, meta = (ClampMin = "0.0", ClampMax = "1.0"))
+	float DropChance = 0.2f; //20% chance to drop this pickup size
+};
 
 UCLASS()
 class HORDESHOOTER_API AHordeShooterEnemy : public ACharacter, public IDamageableInterface
@@ -71,6 +84,12 @@ public:
 
 	//Instanty aborts any ongoing attack:
 	void CancelAttack();
+
+
+	//DROPPED PICKUPS:
+	//list of possible ammo drops for this enemy
+	UPROPERTY(EditDefaultsOnly, Category = "Combat|Drops")
+	TArray<FAmmoDropConfig> AmmoDrops;
 
 
 	//Maps specific bone name to damage multipliers.
@@ -151,5 +170,7 @@ private:
 	FVector LastHitImpulse;
 	FName LastHitBoneName; 
 	FTimerHandle DespawnTimerHandle;
+
+	class AHordeWaveManager* CachedWaveManager = nullptr; //cached reference to the wave manager for spawning ammo drops
 
 };

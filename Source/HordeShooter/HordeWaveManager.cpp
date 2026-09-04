@@ -29,6 +29,20 @@ void AHordeWaveManager::BeginPlay()
 	//create the enemy pools.
 	InitializePools();
 
+	//create the ammo pickup pool:
+	if(AmmoPickupClass)
+	{
+		FActorSpawnParameters SpawnParams;
+		for(int32 i = 0; i < PickupPoolSize; i++)
+		{
+			AHordeShooterPickup* NewPickup = GetWorld()->SpawnActor<AHordeShooterPickup>(AmmoPickupClass, FVector(0,0,-10000), FRotator::ZeroRotator, SpawnParams);
+			if (NewPickup)
+			{
+				AmmoPickupPool.Add(NewPickup);
+			}
+		}
+	}
+
 	//Bind to Arena layout delegate:
 	CachedArenaManager->OnArenaLayoutFinished.AddDynamic(this, &AHordeWaveManager::OnArenaReady);
 
@@ -168,6 +182,21 @@ void AHordeWaveManager::OnEnemyDied()
 	}	
 }
 
+void AHordeWaveManager::SpawnAmmoDrop(const FVector& Location, EPickupSize Size)
+{
+	//find first inactive pickup
+	for (AHordeShooterPickup* Pickup : AmmoPickupPool)
+	{
+		if (Pickup && !Pickup->bIsActive)
+		{
+			Pickup->ActivatePickup(Location, Size);
+			return;
+		}
+	}
+	
+	// (Optional) If pool is exhausted, steal the oldest active one, or just ignore. 
+	// 50 pool size should be enough for an arena.
+}
 
 void AHordeWaveManager::PrintPoolStats()
 {
