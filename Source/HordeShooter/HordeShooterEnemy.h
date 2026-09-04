@@ -171,6 +171,7 @@ private:
 	FName LastHitBoneName; 
 	FTimerHandle DespawnTimerHandle;
 
-	class AHordeWaveManager* CachedWaveManager = nullptr; //cached reference to the wave manager for spawning ammo drops
+	class 
+	AHordeWaveManager* CachedWaveManager = nullptr; //cached reference to the wave manager for spawning ammo drops
 
 };

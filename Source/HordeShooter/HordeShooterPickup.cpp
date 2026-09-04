@@ -6,6 +6,8 @@
 #include "NiagaraComponent.h"
 #include "HordeShooterCharacter.h"
 #include "HordeShooterWeapon.h"
+#include "Sound/SoundBase.h"
+#include "Kismet/GameplayStatics.h"
 
 // Sets default values
 AHordeShooterPickup::AHordeShooterPickup()
@@ -16,7 +18,7 @@ AHordeShooterPickup::AHordeShooterPickup()
 
 	VacuumSphere = CreateDefaultSubobject<USphereComponent>(TEXT("VacuumSphere"));
 	RootComponent = VacuumSphere;
-	VacuumSphere->SetSphereRadius(600.f);
+	VacuumSphere->SetSphereRadius(VacuumSphereRadius);
 
 	VacuumSphere->SetCollisionObjectType(ECC_WorldDynamic);
 	VacuumSphere->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
@@ -79,8 +81,8 @@ void AHordeShooterPickup::Tick(float DeltaTime)
 
 				TargetPlayer->CurrentEquippedWeapon->AddAmmo(PickupPercentage);
 
-				// Play an audio cue directly on the player
-				// UGameplayStatics::PlaySoundAtLocation(GetWorld(), PickupSound, TargetLoc);
+				//play an audio cue directly on the player
+				if(PickupSound) UGameplayStatics::PlaySound2D(GetWorld(), PickupSound);
 			}
 
 			DeactivatePickup();
@@ -103,25 +105,25 @@ void AHordeShooterPickup::ActivatePickup(const FVector& SpawnLocation, EPickupSi
 	SetActorHiddenInGame(false);
 
 	//scale the pickup based on size:
-	// float SizeMultiplier = 1.0f;
-	// switch(CurrentSize)
-	// {
-	// 	case EPickupSize::Small:
-	// 		SizeMultiplier = 1.f;
-	// 		break;
+	float SizeMultiplier = 1.0f;
+	switch(CurrentSize)
+	{
+		case EPickupSize::Small:
+			SizeMultiplier = 1.f;
+			break;
 
-	// 	case EPickupSize::Medium:
-	// 		SizeMultiplier = 2.f;
-	// 		break;
+		case EPickupSize::Medium:
+			SizeMultiplier = 2.f;
+			break;
 
-	// 	case EPickupSize::Large:
-	// 		SizeMultiplier = 3.f;
-	// 		break;
+		case EPickupSize::Large:
+			SizeMultiplier = 3.f;
+			break;
 
-	// 	default:
-	// 		break;
-	// }
-	// PickupVFX->SetFloatParameter(FName("Size"), SizeMultiplier);
+		default:
+			break;
+	}
+	PickupVFX->SetFloatParameter(FName("SizeMultiplier"), SizeMultiplier);
 
 	GetWorldTimerManager().SetTimer(FailsafeDeactivateTimer, this, &AHordeShooterPickup::DeactivatePickup, 10.f, false);
 }

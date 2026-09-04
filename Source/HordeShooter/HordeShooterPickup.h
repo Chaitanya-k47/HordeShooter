@@ -9,6 +9,7 @@
 class AHordeShooterCharacter;
 class USphereComponent;
 class UNiagaraComponent;
+class USoundBase;
 
 UENUM(BlueprintType)
 enum class EPickupSize : uint8
@@ -46,7 +47,13 @@ protected:
 	UNiagaraComponent* PickupVFX;
 
 	UPROPERTY(EditDefaultsOnly, Category = "Pickup Config")
+	USoundBase* PickupSound;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Pickup Config")
 	float VacuumSpeed = 4000.f;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Pickup Config")
+	float VacuumSphereRadius = 400.f;
 
 	UFUNCTION()
 	void OnVacuumOverlap(UPrimitiveComponent* OverlappedComp, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult);

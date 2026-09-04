@@ -184,12 +184,24 @@ void AHordeWaveManager::OnEnemyDied()
 
 void AHordeWaveManager::SpawnAmmoDrop(const FVector& Location, EPickupSize Size)
 {
+	FVector SpawnLoc = Location;
+	FHitResult Hit;
+	FCollisionQueryParams Params;
+
+	FCollisionObjectQueryParams ObjectParams;
+	ObjectParams.AddObjectTypesToQuery(ECC_WorldStatic);
+
+	if(GetWorld()->LineTraceSingleByObjectType(Hit, Location, Location - FVector(0, 0, 3000.f), ObjectParams, Params))
+	{
+		SpawnLoc = Hit.ImpactPoint + FVector(0, 0, 25.f);
+	}
+
 	//find first inactive pickup
 	for (AHordeShooterPickup* Pickup : AmmoPickupPool)
 	{
 		if (Pickup && !Pickup->bIsActive)
 		{
-			Pickup->ActivatePickup(Location, Size);
+			Pickup->ActivatePickup(SpawnLoc, Size);
 			return;
 		}
 	}
