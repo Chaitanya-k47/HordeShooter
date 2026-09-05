@@ -267,6 +267,9 @@ public:
 	UPROPERTY(VisibleInstanceOnly, BlueprintReadWrite, Category = "Weapon")
 	AHordeShooterWeapon* CurrentEquippedWeapon;
 
+	UFUNCTION(BlueprintCallable, Category = "Weapon")
+	const TArray<AHordeShooterWeapon*>& GetInventory() const { return Inventory; }
+
 	UPROPERTY(BlueprintReadOnly)
 	bool bIsAiming = false;
 

@@ -532,14 +532,18 @@ void AHordeShooterWeapon::FinishReload()
 	if(CurrentOwner) CurrentOwner->FinishReloading();
 }
 
-void AHordeShooterWeapon::AddAmmo(float Percentage)
+bool AHordeShooterWeapon::AddAmmo(float Percentage)
 {
+	if(TotalAmmoReserve >= MaxAmmoReserve) return false;
+
 	int32 AmmoToAdd = FMath::RoundToInt(MaxAmmoReserve * Percentage);
 
 	TotalAmmoReserve += AmmoToAdd;
 	TotalAmmoReserve = FMath::Clamp(TotalAmmoReserve, 0, MaxAmmoReserve);
 
-	OnAmmoChanged.Broadcast(CurrentAmmo, TotalAmmoReserve);
+	if(bIsEquipped) OnAmmoChanged.Broadcast(CurrentAmmo, TotalAmmoReserve);
+
+	return true;
 }
 
 void AHordeShooterWeapon::StartAltFire()

@@ -58,7 +58,7 @@ void AHordeShooterPickup::Tick(float DeltaTime)
 		if(FVector::DistSquared(NewLoc, TargetLoc) < 50.f * 50.f)
 		{
 			//grant Ammo
-			if(TargetPlayer->CurrentEquippedWeapon)
+			if(TargetPlayer->GetInventory().Num() > 0)
 			{
 				float PickupPercentage = 0.25f;
 				switch(CurrentSize)
@@ -79,16 +79,28 @@ void AHordeShooterPickup::Tick(float DeltaTime)
 						break;
 				}
 
-				TargetPlayer->CurrentEquippedWeapon->AddAmmo(PickupPercentage);
+				bool bWasConsumed = false;
+				for(const auto& Weapon : TargetPlayer->GetInventory())
+				{
+					if(Weapon && Weapon->AddAmmo(PickupPercentage)) bWasConsumed = true;
+				}
 
-				//play an audio cue directly on the player
-				if(PickupSound) UGameplayStatics::PlaySound2D(GetWorld(), PickupSound);
+				if(bWasConsumed)
+				{
+					//play an audio cue directly on the player
+					if(PickupSound) UGameplayStatics::PlaySound2D(GetWorld(), PickupSound);
+					DeactivatePickup();
+				}
+				else
+				{
+					bIsHoming = false;
+					TargetPlayer = nullptr;
+					VacuumSphere->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
+					SetActorTickEnabled(false);
+				}	
 			}
-
-			DeactivatePickup();
 		}
 	}
-
 }
 
 void AHordeShooterPickup::ActivatePickup(const FVector& SpawnLocation, EPickupSize InSize)
@@ -146,10 +158,26 @@ void AHordeShooterPickup::OnVacuumOverlap(UPrimitiveComponent* OverlappedComp, A
 {
 	if(!bIsHoming && OtherActor && OtherActor->IsA(AHordeShooterCharacter::StaticClass()))
 	{
-		TargetPlayer = Cast<AHordeShooterCharacter>(OtherActor);
-		bIsHoming = true;
-		VacuumSphere->SetCollisionEnabled(ECollisionEnabled::NoCollision);
-		SetActorTickEnabled(true); //enable tick
+		AHordeShooterCharacter* Player = Cast<AHordeShooterCharacter>(OtherActor);
+
+		//find atleast one weapon that needs ammo in the players inventory:
+		bool bNeedsAmmo = false;
+		for(const auto& Weapon : Player->GetInventory())
+		{
+			if(Weapon && Weapon->TotalAmmoReserve < Weapon->MaxAmmoReserve)
+			{
+				bNeedsAmmo = true;
+				break;
+			}
+		}
+
+		if(bNeedsAmmo)
+		{
+			TargetPlayer = Player;
+			bIsHoming = true;
+			VacuumSphere->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+			SetActorTickEnabled(true); //enable tick
+		}
 	}
 }
 
