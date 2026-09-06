@@ -18,6 +18,7 @@ class HordeShooterWeapon;
 class USoundBase;
 class UAudioComponent;
 class UNiagaraSystem;
+class UPlayerProgressionComponent;
 
 UCLASS()
 class HORDESHOOTER_API AHordeShooterCharacter : public ACharacter, public IDamageableInterface
@@ -38,6 +39,9 @@ public:
 
 	// Called to bind functionality to input
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
+
+	void UpgradeMaxHealth(float BonusHealth);
+	void UpgradeAmmoCapacity(float NewAmmoMultiplier);
 
 
 protected:
@@ -98,6 +102,9 @@ public:
 	//for casting player shadow:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Mesh")
 	UStaticMeshComponent* ShadowProxyMesh;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Upgrades")
+	UPlayerProgressionComponent* ProgressionComponent;
 
 
 protected:

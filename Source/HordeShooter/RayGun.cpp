@@ -13,6 +13,7 @@
 #include "Components/DecalComponent.h"
 #include "DamageableInterface.h"
 #include "ArenaManager.h"
+#include "PlayerProgressionComponent.h"
 
 /*
     Decoupled logic for RayGun's primary fire(Beam):
@@ -311,9 +312,15 @@ void ARayGun::PerformBeamTick()
 			IDamageableInterface* DamageableActor = Cast<IDamageableInterface>(CurrentBeamTarget);
 			if (DamageableActor)
 			{
+                float DamageMultiplier = 1.0f;
+				if(CurrentOwner && CurrentOwner->ProgressionComponent)
+				{
+					DamageMultiplier = CurrentOwner->ProgressionComponent->GetDamageMultiplier();
+				}
+
 				FVector PushDirection = CurrentOwner->FirstPersonCamera->GetForwardVector();
                 FVector FinalImpulse = PushDirection * (ShotImpulse * 0.2f);
-				DamageableActor->ReactToHit(BeamDamagePerBeamTick, FinalImpulse, CurrentBeamHitBone);
+				DamageableActor->ReactToHit(BeamDamagePerBeamTick * DamageMultiplier, FinalImpulse, CurrentBeamHitBone);
 			}
 		}
 	}
@@ -521,10 +528,16 @@ void ARayGun::PerformAltFire()
                     {   
                         DamagedActors.Add(HitActor);
 
+                        float DamageMultiplier = 1.0f;
+                        if(CurrentOwner && CurrentOwner->ProgressionComponent)
+                        {
+                            DamageMultiplier = CurrentOwner->ProgressionComponent->GetDamageMultiplier();
+                        }
+
                         //push the ememies out from the centre of the blast
                         FVector PushDirection = (HitActor->GetActorLocation() - ImpactPoint).GetSafeNormal();
                         FVector FinalImpulse = PushDirection * AltFireImpulse;
-                        DamageableActor->ReactToHit(AltFireDamage, FinalImpulse, NAME_None);
+                        DamageableActor->ReactToHit(AltFireDamage * DamageMultiplier, FinalImpulse, NAME_None);
                     }
                 }
             }

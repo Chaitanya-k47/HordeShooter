@@ -18,6 +18,7 @@
 #include "GameFramework/CharacterMovementComponent.h"
 #include "DamageableInterface.h"
 #include "Curves/CurveVector.h"
+#include "PlayerProgressionComponent.h"
 
 
 // Sets default values
@@ -57,6 +58,7 @@ void AHordeShooterWeapon::BeginPlay()
 
 	CurrentAmmo = MagSize;
 	TotalAmmoReserve = MaxAmmoReserve;
+	BaseMaxAmmoReserve = MaxAmmoReserve; 
 
 	//Casings pool initialization:
 	if(CasingClass)
@@ -416,7 +418,13 @@ void AHordeShooterWeapon::PerformFire()
 				if(DamageableActor)
 				{
 					FVector FinalImpulse = ForwardVector * ShotImpulse;
-					bool bIsHeadshot = DamageableActor->ReactToHit(BaseDamage, FinalImpulse, HitResult.BoneName);
+					float DamageMultiplier = 1.0f;
+					if(CurrentOwner && CurrentOwner->ProgressionComponent)
+					{
+						DamageMultiplier = CurrentOwner->ProgressionComponent->GetDamageMultiplier();
+					}
+
+					bool bIsHeadshot = DamageableActor->ReactToHit(BaseDamage * DamageMultiplier, FinalImpulse, HitResult.BoneName);
 
 					if(bIsHeadshot && EffectsToPlay->HeadshotSound)
 					{
@@ -524,6 +532,19 @@ void AHordeShooterWeapon::RefillMagazine()
 	TotalAmmoReserve -= AmmoToReload;
 	
 	OnAmmoChanged.Broadcast(CurrentAmmo, TotalAmmoReserve);
+}
+
+void AHordeShooterWeapon::RecalculateAmmoCapacity(float AmmoMultiplier)
+{
+	int32 OldMax = MaxAmmoReserve;
+
+	MaxAmmoReserve = FMath::RoundToInt(BaseMaxAmmoReserve * AmmoMultiplier);
+
+	//instantly fill the player's reserve with new ammo:
+	int32 CapacityDifference = MaxAmmoReserve - OldMax;
+	if(CapacityDifference > 0) TotalAmmoReserve += CapacityDifference;
+
+	if(bIsEquipped) OnAmmoChanged.Broadcast(CurrentAmmo, TotalAmmoReserve);
 }
 
 void AHordeShooterWeapon::FinishReload()

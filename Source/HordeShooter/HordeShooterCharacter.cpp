@@ -24,6 +24,7 @@
 #include "HordeShooterHUDWidget.h"
 #include "Components/AudioComponent.h"
 #include "ArenaManager.h"
+#include "PlayerProgressionComponent.h"
 
 // Sets default values
 AHordeShooterCharacter::AHordeShooterCharacter()
@@ -67,6 +68,8 @@ AHordeShooterCharacter::AHordeShooterCharacter()
 	FallAudioComp = CreateDefaultSubobject<UAudioComponent>(TEXT("FallAudioComp"));
 	FallAudioComp->SetupAttachment(GetRootComponent());
 	FallAudioComp->bAutoActivate = false;
+
+	ProgressionComponent = CreateDefaultSubobject<UPlayerProgressionComponent>(TEXT("ProgressionComponent"));
 
 	//Movement config:
 	GetCharacterMovement()->MaxWalkSpeed = 1500.f; // Base run speed (up from 600)
@@ -385,6 +388,24 @@ void AHordeShooterCharacter::SetupPlayerInputComponent(UInputComponent* PlayerIn
 	}
 }
 
+void AHordeShooterCharacter::UpgradeMaxHealth(float BonusHealth)
+{
+	MaxHealth += BonusHealth;
+	CurrentHealth += BonusHealth; //heal the player instantly when they upgrade max health
+
+	if(AHordeShooterPlayerController* PC = Cast<AHordeShooterPlayerController>(GetController()))
+	{
+		if (PC->PlayerHUDWidget) PC->PlayerHUDWidget->UpdateHealth(CurrentHealth, MaxHealth);
+	}
+}
+
+void AHordeShooterCharacter::UpgradeAmmoCapacity(float NewAmmoMultiplier)
+{
+	for(AHordeShooterWeapon* Weapon : Inventory)
+	{
+		if(Weapon) Weapon->RecalculateAmmoCapacity(NewAmmoMultiplier);
+	}
+}
 
 void AHordeShooterCharacter::Move(const FInputActionValue& Value)
 {
@@ -573,7 +594,7 @@ void AHordeShooterCharacter::Landed(const FHitResult& Hit)
 							DamagedActors.Add(HitActor); //mark hit.
 							FVector PushDirection = (HitActor->GetActorLocation() - GetActorLocation()).GetSafeNormal();
 							PushDirection.Z += 0.8f;
-							DamageableActor->ReactToHit(Damage, PushDirection * Impulse, FName("Slam"));
+							DamageableActor->ReactToHit(Damage * ProgressionComponent->GetDamageMultiplier(), PushDirection * Impulse, FName("Slam"));
 						}
 					}
 				}

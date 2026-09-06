@@ -219,6 +219,8 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Weapon")
 	virtual void RefillMagazine();
 
+	void RecalculateAmmoCapacity(float AmmoMultiplier);
+
 protected:
 	//this fn performs raycast.
 	virtual void PerformFire();
@@ -233,6 +235,8 @@ protected:
 	//CASING POOL config:
 	UPROPERTY(EditDefaultsOnly, Category = "Effects|Casings")
 	int32 CasingPoolSize = 45;
+
+	int32 BaseMaxAmmoReserve; //cached base amount for upgrade calculations
 
 private:
 

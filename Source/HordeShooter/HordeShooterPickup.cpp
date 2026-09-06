@@ -113,8 +113,6 @@ void AHordeShooterPickup::ActivatePickup(const FVector& SpawnLocation, EPickupSi
 	SetActorLocation(SpawnLocation + FVector(0, 0, 50.f));
 
 	VacuumSphere->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
-	PickupVFX->Activate(true);
-	SetActorHiddenInGame(false);
 
 	//scale the pickup based on size:
 	float SizeMultiplier = 1.0f;
@@ -135,7 +133,10 @@ void AHordeShooterPickup::ActivatePickup(const FVector& SpawnLocation, EPickupSi
 		default:
 			break;
 	}
+	
 	PickupVFX->SetFloatParameter(FName("SizeMultiplier"), SizeMultiplier);
+	PickupVFX->Activate(true);
+	SetActorHiddenInGame(false);
 
 	GetWorldTimerManager().SetTimer(FailsafeDeactivateTimer, this, &AHordeShooterPickup::DeactivatePickup, 10.f, false);
 }
@@ -144,10 +145,13 @@ void AHordeShooterPickup::DeactivatePickup()
 {
 	bIsActive = false;
 	bIsHoming = false;
+	TargetPlayer = nullptr;
 	SetActorTickEnabled(false);
 
 	VacuumSphere->SetCollisionEnabled(ECollisionEnabled::NoCollision);
-	PickupVFX->Deactivate();
+	PickupVFX->SetFloatParameter(FName("SizeMultiplier"), 1.f);
+	//PickupVFX->Deactivate();
+	PickupVFX->DeactivateImmediate(); 
 	SetActorHiddenInGame(true);
 
 	GetWorldTimerManager().ClearTimer(FailsafeDeactivateTimer);
