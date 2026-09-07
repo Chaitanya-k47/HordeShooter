@@ -18,6 +18,7 @@ public:
 	UHordeShooterHUDWidget* PlayerHUDWidget; //actual pointer to store the created widget instance
 
 	void ShowGameOverScreen();
+	void ShowUpgradeScreen();
 
 	//ANNOUNCER SYSTEM:
 	//called when an enemy dies

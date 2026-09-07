@@ -64,6 +64,9 @@ void AHordeShooterEnemy::BeginPlay()
 {
 	Super::BeginPlay();
 
+	BaseMaxHealth = MaxHealth;
+	BaseAttackDamage = AttackDamage;
+
 	if(GetMesh() && GetMesh()->GetAnimInstance())
 	{
 		GetMesh()->GetAnimInstance()->OnMontageEnded.AddDynamic(this, &AHordeShooterEnemy::OnMontageEnded);
@@ -75,8 +78,13 @@ void AHordeShooterEnemy::BeginPlay()
 	DeactivateEnemy(); //start inactive.
 }
 
-void AHordeShooterEnemy::ActivateEnemy(const FTransform& SpawnTransform)
+//for Difficulty multipliers index 0 is Attack multplier, index 1 is Health multiplier.
+void AHordeShooterEnemy::ActivateEnemy(const FTransform& SpawnTransform, const TArray<float>& DifficultyMultipliers)
 {
+	//apply difficulty scaling:
+	AttackDamage = BaseAttackDamage * DifficultyMultipliers[0];
+	MaxHealth = BaseMaxHealth * DifficultyMultipliers[1];
+
 	bIsActive = true;
 	bIsDead = false;
 	bIsAttacking = false;

@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
+#include "Curves/CurveFloat.h"
 #include "HordeWaveManager.generated.h"
 
 class AHordeShooterEnemy;
@@ -60,6 +61,12 @@ protected:
 	UPROPERTY(EditAnywhere, Category = "Horde Setup")
 	TArray<FWaveConfig> Waves; //array of waves/wave configs.
 
+	UPROPERTY(EditDefaultsOnly, Category = "Horde Setup|Progression")
+	UCurveFloat* EnemyHealthScalingCurve;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Horde Setup|Progression")
+	UCurveFloat* EnemyAttackScalingCurve;
+
 	UPROPERTY(EditAnywhere, Category = "Horde Setup")
 	float IntermissionTime = 5.f;
 
@@ -68,6 +75,9 @@ protected:
 
 	UPROPERTY(EditDefaultsOnly, Category = "Horde Setup|Pool")
 	int32 PickupPoolSize = 50;
+
+	UPROPERTY(EditAnywhere, Category = "Horde Setup|Progression")
+	int32 UpgradeWaveInterval = 1;
 
 
 private:

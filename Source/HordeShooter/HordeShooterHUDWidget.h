@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "Blueprint/UserWidget.h"
+#include "PlayerProgressionComponent.h"
 #include "HordeShooterHUDWidget.generated.h"
 
 class UTextBlock;
@@ -52,6 +53,18 @@ protected:
 	UPROPERTY(EditDefaultsOnly, Category = "UI")
 	TSubclassOf<UUserWidget> DamageIndicatorClass;
 
+	UPROPERTY(meta = (BindWidget))
+	UWidget* UpgradePanel;
+
+	UPROPERTY(meta = (BindWidget))
+	UButton* Btn_UpgradeDamage;
+
+	UPROPERTY(meta = (BindWidget))
+	UButton* Btn_UpgradeHealth;
+
+	UPROPERTY(meta = (BindWidget))
+	UButton* Btn_UpgradeAmmo;
+
 	virtual void NativeConstruct() override;
 
 public:
@@ -70,9 +83,22 @@ public:
 
 	void ShowDamageIndicator(float Angle);
 
+	void ShowUpgradeScreen();
+
 private:
 
 	UFUNCTION()
 	void OnRestartClicked();
+
+	UFUNCTION()
+	void OnDamageUpgradeClicked();
+
+	UFUNCTION()
+	void OnHealthUpgradeClicked();
+
+	UFUNCTION()
+	void OnAmmoUpgradeClicked();
+
+	void ExecuteUpgrade(EPlayerUpgradeType UpgradeType);
 
 };

@@ -6,6 +6,8 @@
 #include "HordeSpawnPoint.h"
 #include "Kismet/GameplayStatics.h"
 #include "ArenaManager.h"
+#include "HordeShooterPlayerController.h"
+#include "HordeShooterCharacter.h"
 
 // Sets default values
 AHordeWaveManager::AHordeWaveManager()
@@ -136,6 +138,19 @@ void AHordeWaveManager::SpawnSingleEnemy()
 		return; 
 	}
 
+	//index 0 : Attack multplier 
+	//index 1 : Health multiplier
+	TArray<float> DifficultyMultipliers = {1.f, 1.f};
+	if(EnemyAttackScalingCurve)
+	{
+		//we add +1 so the wave index evaluates at X=1.f for wave index 0
+		DifficultyMultipliers[0] = EnemyAttackScalingCurve->GetFloatValue(static_cast<float>(CurrentWaveIndex + 1));
+	}
+	if(EnemyHealthScalingCurve)
+	{
+		DifficultyMultipliers[1] = EnemyHealthScalingCurve->GetFloatValue(static_cast<float>(CurrentWaveIndex + 1));
+	}
+
 	//peek at the next class needed to spawn
 	TSubclassOf<AHordeShooterEnemy> ClassToSpawn = ShuffledSpawnStack.Last();
 
@@ -150,7 +165,7 @@ void AHordeWaveManager::SpawnSingleEnemy()
 
 				//Ask arena manager for random spawn point.
 				FTransform SpawnTransform = CachedArenaManager->GetRandomSpawnPoint();
-				Enemy->ActivateEnemy(SpawnTransform);
+				Enemy->ActivateEnemy(SpawnTransform, DifficultyMultipliers);
 				ActiveLivingEnemies++;
 				return;
 			}
@@ -168,6 +183,17 @@ void AHordeWaveManager::OnEnemyDied()
 		CurrentWaveIndex++;
 
 		if(CachedArenaManager) CachedArenaManager->SetCombatActive(false);
+
+		//check and trigger upgrade screen:
+		//if current wave index is a multiple of UpgradeWaveInterval:
+		if(CurrentWaveIndex % UpgradeWaveInterval  == 0)
+		{
+			if(AHordeShooterPlayerController* PC = Cast<AHordeShooterPlayerController>(UGameplayStatics::GetPlayerController(GetWorld(), 0)))
+			{
+				FTimerHandle WaitABit;
+				GetWorldTimerManager().SetTimer(WaitABit, PC, &AHordeShooterPlayerController::ShowUpgradeScreen, 4.0f, false);
+			}
+		}
 
 		FTimerHandle ArenaShiftTimer;
 		GetWorldTimerManager().SetTimer(ArenaShiftTimer, CachedArenaManager, &AArenaManager::BeginNewLayoutGeneration, 2.0f, false);

@@ -41,6 +41,17 @@ void AHordeShooterPlayerController::ShowGameOverScreen()
     SetInputMode(InputMode);
 }
 
+void AHordeShooterPlayerController::ShowUpgradeScreen()
+{
+    UGameplayStatics::SetGamePaused(GetWorld(), true);
+
+	bShowMouseCursor = true;
+	FInputModeUIOnly InputMode;
+	SetInputMode(InputMode);
+
+    if(PlayerHUDWidget) PlayerHUDWidget->ShowUpgradeScreen();
+}
+
 void AHordeShooterPlayerController::PlayAnnouncerSound(USoundBase* Sound)
 {
     if(Sound)

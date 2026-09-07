@@ -9,6 +9,8 @@
 #include "Components/CanvasPanel.h"
 #include "Components/CanvasPanelSlot.h"
 #include "Kismet/GameplayStatics.h"
+#include "HordeShooterCharacter.h"
+#include "HordeShooterPlayerController.h"
 
 void UHordeShooterHUDWidget::NativeConstruct()
 {
@@ -17,19 +19,15 @@ void UHordeShooterHUDWidget::NativeConstruct()
     if(HealthBar) HealthBar->SetVisibility(ESlateVisibility::Visible);
 	if(AmmoInMagazine) AmmoInMagazine->SetVisibility(ESlateVisibility::Visible);
 	if(TotalAmmo) TotalAmmo->SetVisibility(ESlateVisibility::Visible);
+	if(GameOverPanel) GameOverPanel->SetVisibility(ESlateVisibility::Hidden);
+	if(UpgradePanel) UpgradePanel->SetVisibility(ESlateVisibility::Hidden);
+
+	if(RestartButton) RestartButton->OnClicked.AddDynamic(this, &UHordeShooterHUDWidget::OnRestartClicked);
+	if(Btn_UpgradeDamage) Btn_UpgradeDamage->OnClicked.AddDynamic(this, &UHordeShooterHUDWidget::OnDamageUpgradeClicked);
+	if(Btn_UpgradeHealth) Btn_UpgradeHealth->OnClicked.AddDynamic(this, &UHordeShooterHUDWidget::OnHealthUpgradeClicked);
+	if(Btn_UpgradeAmmo) Btn_UpgradeAmmo->OnClicked.AddDynamic(this, &UHordeShooterHUDWidget::OnAmmoUpgradeClicked);
+
 	ToggleCrosshair(true);
-
-	//hide "GameOver" panel on start
-	if(GameOverPanel)
-	{
-		GameOverPanel->SetVisibility(ESlateVisibility::Hidden);
-	}
-
-	//bind teh restart button to OnRestartClicked event
-	if(RestartButton)
-	{
-		RestartButton->OnClicked.AddDynamic(this, &UHordeShooterHUDWidget::OnRestartClicked);
-	}
 }
 
 
@@ -162,4 +160,49 @@ void UHordeShooterHUDWidget::ShowDamageIndicator(float Angle)
 			IndicatorWidget->SetRenderTransformAngle(Angle);
 		}
 	}
+}
+
+void UHordeShooterHUDWidget::ShowUpgradeScreen()
+{
+	if(UpgradePanel)
+	{
+		ToggleCrosshair(false);
+		UpgradePanel->SetVisibility(ESlateVisibility::Visible);
+	}
+}
+
+void UHordeShooterHUDWidget::OnDamageUpgradeClicked()
+{
+	ExecuteUpgrade(EPlayerUpgradeType::WeaponDamage);
+}
+
+void UHordeShooterHUDWidget::OnHealthUpgradeClicked()
+{
+	ExecuteUpgrade(EPlayerUpgradeType::MaxHealth);
+}
+
+void UHordeShooterHUDWidget::OnAmmoUpgradeClicked()
+{
+	ExecuteUpgrade(EPlayerUpgradeType::AmmoCapacity);
+}
+
+void UHordeShooterHUDWidget::ExecuteUpgrade(EPlayerUpgradeType UpgradeType)
+{
+	if(AHordeShooterCharacter* PlayerChar = Cast<AHordeShooterCharacter>(GetOwningPlayerPawn()))
+	{
+		if(PlayerChar->ProgressionComponent) PlayerChar->ProgressionComponent->ApplyUpgrade(UpgradeType);
+	}
+
+	//restore combat HUD
+	if(UpgradePanel) UpgradePanel->SetVisibility(ESlateVisibility::Hidden);
+	ToggleCrosshair(true);
+
+	//unpause game and restore input:
+	if(AHordeShooterPlayerController* PC = Cast<AHordeShooterPlayerController>(GetOwningPlayer()))
+	{
+		PC->bShowMouseCursor = false;
+		PC->SetInputMode(FInputModeGameOnly());
+	}
+	
+	UGameplayStatics::SetGamePaused(GetWorld(), false);
 }

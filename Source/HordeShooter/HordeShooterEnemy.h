@@ -137,7 +137,7 @@ public:
 	//POOLING SYSTEM:
 	bool bIsActive = false; //used by the horde wave manager to track if the enemy is currently active
 
-	void ActivateEnemy(const FTransform& SpawnTransform);
+	void ActivateEnemy(const FTransform& SpawnTransform, const TArray<float>& DifficultyMultipliers); //for Difficulty multipliers index 0 is Attack multplier, index 1 is Health multiplier.
 	void DeactivateEnemy();
 
 
@@ -165,6 +165,10 @@ protected:
 	void OnDeath(); 
 	virtual void OnDeath_Implementation(); //default c++ implementation.
 
+
+	//cache these so pooling doesn't cause infinite compound scaling
+	float BaseMaxHealth;
+	float BaseAttackDamage;
 
 private:
 	FVector LastHitImpulse;
