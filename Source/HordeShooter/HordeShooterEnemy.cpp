@@ -333,24 +333,26 @@ void AHordeShooterEnemy::Die()
 		{
 			bool bWasHeadshot = (LastHitBoneName == FName("Head") && LastDamageSource != FName("Melee"));
 			bool bWasSlam = (LastHitBoneName == FName("Slam") || LastDamageSource == FName("Slam"));
+
 			PC->AddKill(bWasHeadshot, bWasSlam); 
 		}
 	}
 
 	bIsDead = true;
 
-	//ammo drop:
-	if(AmmoDrops.Num() > 0)
+	//Drop logic:
+	if(CachedWaveManager && AmmoDrops.Num() > 0)
 	{
-		EPickupSize SizeToDrop = EPickupSize::Small;
-		bool bShouldDrop = false;
+		//ammo drop (RNG or HEADSHOT):
+		EPickupSize AmmoSizeToDrop = EPickupSize::Small;
+		bool bShouldDropAmmo = false;
 		bool bWasHeadshot = (LastHitBoneName == FName("Head"));
 
 		if(bWasHeadshot)
-		{
+		{	
 			//guaranteed drop on headshot, default to the first configured drop
-			bShouldDrop = true;
-			SizeToDrop = AmmoDrops[0].Size; 
+			bShouldDropAmmo = true;
+			AmmoSizeToDrop = AmmoDrops[0].Size; 
 		}
 		else
 		{
@@ -360,16 +362,49 @@ void AHordeShooterEnemy::Die()
 			for(const FAmmoDropConfig& Drop : AmmoDrops)
 			{
 				CumulativeChance += Drop.DropChance;
-				if (Roll <= CumulativeChance)
+				if(Roll <= CumulativeChance)
 				{
-					bShouldDrop = true;
-					SizeToDrop = Drop.Size;
+					bShouldDropAmmo = true;
+					AmmoSizeToDrop = Drop.Size;
 					break;
 				}
 			}
 		}
 
-		if(bShouldDrop && CachedWaveManager) CachedWaveManager->SpawnAmmoDrop(GetActorLocation(), SizeToDrop);
+		if(bShouldDropAmmo) CachedWaveManager->SpawnPickup(GetActorLocation(), EPickupType::Ammo, AmmoSizeToDrop);
+
+		//Health drop (MELEE or PROXIMITY):
+		EPickupSize HealthSizeToDrop = EPickupSize::Small;
+		bool bShouldDropHealth = false;
+
+		if(LastDamageSource == FName("Melee"))
+		{
+			bShouldDropHealth = true;
+			HealthSizeToDrop = HealthDropSettings.MeleeDropSize;
+		}
+		else
+		{
+			//check proximity:
+			APlayerController* PC = UGameplayStatics::GetPlayerController(GetWorld(), 0);
+			if(PC && PC->GetPawn())
+			{
+				float DistSq = FVector::DistSquared(GetActorLocation(), PC->GetPawn()->GetActorLocation());
+				float RadiusSq = FMath::Square(HealthDropSettings.ProximityRadius);
+
+				if(DistSq <= RadiusSq)
+				{
+					bShouldDropHealth = true;
+					HealthSizeToDrop = HealthDropSettings.ProximityDropSize;
+				}
+			}
+		}
+
+		if(bShouldDropHealth) CachedWaveManager->SpawnPickup(GetActorLocation(), EPickupType::Health, HealthSizeToDrop);
+
+		//Surge drop:
+		/*
+			implementation
+		*/
 	}
 
 	if(SprintAudioComp)

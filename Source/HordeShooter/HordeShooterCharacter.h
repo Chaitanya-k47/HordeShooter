@@ -43,6 +43,9 @@ public:
 	void UpgradeMaxHealth(float BonusHealth);
 	void UpgradeAmmoCapacity(float NewAmmoMultiplier);
 
+	//returns true if healed, otherwise returns false;
+	bool Heal(float HealAmount);
+
 
 protected:
 	//Input actions:

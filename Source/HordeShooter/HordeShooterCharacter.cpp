@@ -1248,3 +1248,18 @@ void AHordeShooterCharacter::ExecuteMeleeHit()
 		}
 	}
 }
+
+bool AHordeShooterCharacter::Heal(float HealAmount)
+{
+	if(CurrentHealth >= MaxHealth || CurrentHealth <= 0.0f) return false;
+
+	CurrentHealth += HealAmount;
+	CurrentHealth = FMath::Clamp(CurrentHealth, 0.f, MaxHealth);
+
+	if(AHordeShooterPlayerController* PC = Cast<AHordeShooterPlayerController>(GetController()))
+	{
+		if(PC->PlayerHUDWidget) PC->PlayerHUDWidget->UpdateHealth(CurrentHealth, MaxHealth);
+	}
+
+	return true;
+}

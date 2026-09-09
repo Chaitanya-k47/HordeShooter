@@ -11,6 +11,7 @@ class AHordeShooterEnemy;
 class AArenaManager;
 class AHordeShooterPickup;
 enum class EPickupSize : uint8;
+enum class EPickupType : uint8;
 
 USTRUCT()
 struct FEnemyPoolArray
@@ -45,7 +46,7 @@ public:
 	// Sets default values for this actor's properties
 	AHordeWaveManager();
 
-	void SpawnAmmoDrop(const FVector& Location, EPickupSize Size);
+	void SpawnPickup(const FVector& Location, EPickupType Type, EPickupSize Size);
 
 protected:
 	// Called when the game starts or when spawned
@@ -71,7 +72,7 @@ protected:
 	float IntermissionTime = 5.f;
 
 	UPROPERTY(EditDefaultsOnly, Category = "Horde Setup|Pool")
-	TSubclassOf<AHordeShooterPickup> AmmoPickupClass;
+	TSubclassOf<AHordeShooterPickup> PickupClass;
 
 	UPROPERTY(EditDefaultsOnly, Category = "Horde Setup|Pool")
 	int32 PickupPoolSize = 50;
@@ -111,7 +112,7 @@ private:
 	void OnEnemyDied();
 
 	UPROPERTY()
-	TArray<AHordeShooterPickup*> AmmoPickupPool;
+	TArray<AHordeShooterPickup*> PickupPool;
 
 	// --- POOL DEBUGGER ---
 	FTimerHandle DebugTelemetryTimer;

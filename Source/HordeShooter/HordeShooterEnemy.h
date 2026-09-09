@@ -28,6 +28,24 @@ struct FAmmoDropConfig
 	float DropChance = 0.2f; //20% chance to drop this pickup size
 };
 
+USTRUCT(BlueprintType)
+struct FHealthDropConfig
+{
+	GENERATED_BODY()
+
+	//drop size when melee attack
+	UPROPERTY(EditDefaultsOnly, Category = "Health Drops")
+	EPickupSize MeleeDropSize = EPickupSize::Small;
+
+	//dropsize when proximity attacjk with gun
+	UPROPERTY(EditDefaultsOnly, Category = "Health Drops")
+	EPickupSize ProximityDropSize = EPickupSize::Medium;
+
+	// How close does the player need to be to trigger the Proximity Drop?
+	UPROPERTY(EditDefaultsOnly, Category = "Health Drops")
+	float ProximityRadius = 400.0f;
+};
+
 UCLASS()
 class HORDESHOOTER_API AHordeShooterEnemy : public ACharacter, public IDamageableInterface
 {
@@ -87,10 +105,13 @@ public:
 
 
 	//DROPPED PICKUPS:
-	//list of possible ammo drops for this enemy
+	//list of possible drops for this enemy
 	UPROPERTY(EditDefaultsOnly, Category = "Combat|Drops")
 	TArray<FAmmoDropConfig> AmmoDrops;
 
+	UPROPERTY(EditDefaultsOnly, Category = "Combat|Drops")
+	FHealthDropConfig HealthDropSettings;
+	
 
 	//Maps specific bone name to damage multipliers.
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Combat|Stats")
@@ -166,7 +187,7 @@ protected:
 	virtual void OnDeath_Implementation(); //default c++ implementation.
 
 
-	//cache these so pooling doesn't cause infinite compound scaling
+	//cache these so pooling doesnt cause infinite compound scaling
 	float BaseMaxHealth;
 	float BaseAttackDamage;
 

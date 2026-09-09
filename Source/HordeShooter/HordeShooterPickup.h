@@ -12,6 +12,14 @@ class UNiagaraComponent;
 class USoundBase;
 
 UENUM(BlueprintType)
+enum class EPickupType : uint8
+{
+	Ammo, //Red
+	Health, //Green
+	Surge //Blue
+};
+
+UENUM(BlueprintType)
 enum class EPickupSize : uint8
 {
 	Small, //25%
@@ -31,7 +39,7 @@ public:
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;
 
-	void ActivatePickup(const FVector& SpawnLocation, EPickupSize InSize);
+	void ActivatePickup(const FVector& SpawnLocation, EPickupType InType, EPickupSize InSize);
 	void DeactivatePickup();
 
 	bool bIsActive = false;
@@ -47,6 +55,15 @@ protected:
 	UNiagaraComponent* PickupVFX;
 
 	UPROPERTY(EditDefaultsOnly, Category = "Pickup Config")
+	FLinearColor RedEnergyColour = FLinearColor(1.0f, 0.0f, 0.0f, 1.0f);
+
+	UPROPERTY(EditDefaultsOnly, Category = "Pickup Config")
+	FLinearColor GreenEnergyColour = FLinearColor(0.0f, 1.0f, 0.0f, 1.0f);
+
+	UPROPERTY(EditDefaultsOnly, Category = "Pickup Config")
+	FLinearColor BlueEnergyColour = FLinearColor(0.0f, 0.0f, 1.0f, 1.0f);
+
+	UPROPERTY(EditDefaultsOnly, Category = "Pickup Config")
 	USoundBase* PickupSound;
 
 	UPROPERTY(EditDefaultsOnly, Category = "Pickup Config")
@@ -58,8 +75,16 @@ protected:
 	UFUNCTION()
 	void OnVacuumOverlap(UPrimitiveComponent* OverlappedComp, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult);
 
+	//bp handles colour according to type	
+	void OnPickupActivated(EPickupType Type, EPickupSize Size);
+
 private:
+	EPickupType CurrentType;
 	EPickupSize CurrentSize;
+
+	//reward logic:
+	void GrantReward();
+
 	bool bIsHoming = false;
 
 	UPROPERTY()

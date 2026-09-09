@@ -55,68 +55,55 @@ void AHordeShooterPickup::Tick(float DeltaTime)
 		SetActorLocation(NewLoc);
 
 		//check if reached the player:
-		if(FVector::DistSquared(NewLoc, TargetLoc) < 50.f * 50.f)
-		{
-			//grant Ammo
-			if(TargetPlayer->GetInventory().Num() > 0)
-			{
-				float PickupPercentage = 0.25f;
-				switch(CurrentSize)
-				{
-					case EPickupSize::Small:
-						PickupPercentage = 0.25f;
-						break;
-
-					case EPickupSize::Medium:
-						PickupPercentage = 0.5f;
-						break;
-
-					case EPickupSize::Large:
-						PickupPercentage = 0.75f;
-						break;
-
-					default:
-						break;
-				}
-
-				bool bWasConsumed = false;
-				for(const auto& Weapon : TargetPlayer->GetInventory())
-				{
-					if(Weapon && Weapon->AddAmmo(PickupPercentage)) bWasConsumed = true;
-				}
-
-				if(bWasConsumed)
-				{
-					//play an audio cue directly on the player
-					if(PickupSound) UGameplayStatics::PlaySound2D(GetWorld(), PickupSound);
-					DeactivatePickup();
-				}
-				else
-				{
-					bIsHoming = false;
-					TargetPlayer = nullptr;
-					VacuumSphere->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
-					SetActorTickEnabled(false);
-				}	
-			}
-		}
+		if(FVector::DistSquared(NewLoc, TargetLoc) < 50.f * 50.f) GrantReward();
 	}
 }
 
-void AHordeShooterPickup::ActivatePickup(const FVector& SpawnLocation, EPickupSize InSize)
+void AHordeShooterPickup::ActivatePickup(const FVector& SpawnLocation, EPickupType InType, EPickupSize InSize)
 {
 	bIsActive = true;
 	bIsHoming = false;
 	CurrentSize = InSize;
+	CurrentType = InType;
 	TargetPlayer = nullptr;
 
 	SetActorLocation(SpawnLocation + FVector(0, 0, 50.f));
 
 	VacuumSphere->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
+	
+	PickupVFX->Activate(true);
+	SetActorHiddenInGame(false);
+
+	OnPickupActivated(CurrentType, CurrentSize);
+
+	GetWorldTimerManager().SetTimer(FailsafeDeactivateTimer, this, &AHordeShooterPickup::DeactivatePickup, 10.f, false);
+}
+
+void AHordeShooterPickup::OnPickupActivated(EPickupType Type, EPickupSize Size)
+{
+	FLinearColor EnergyColour = FLinearColor(1.0f, 1.0f, 1.0f, 1.0f);
+	switch(Type)
+	{
+		case EPickupType::Ammo:
+			EnergyColour = RedEnergyColour;
+			break;
+
+		case EPickupType::Health:
+			EnergyColour = GreenEnergyColour;
+			break;
+
+		case EPickupType::Surge:
+			EnergyColour = BlueEnergyColour;
+			break;
+
+		default:
+			break;
+	}
+	PickupVFX->SetNiagaraVariableLinearColor(TEXT("EnergyColour"), EnergyColour);
 
 	//scale the pickup based on size:
 	float SizeMultiplier = 1.0f;
-	switch(CurrentSize)
+	switch(Size)
 	{
 		case EPickupSize::Small:
 			SizeMultiplier = 1.f;
@@ -133,12 +120,7 @@ void AHordeShooterPickup::ActivatePickup(const FVector& SpawnLocation, EPickupSi
 		default:
 			break;
 	}
-	
 	PickupVFX->SetFloatParameter(FName("SizeMultiplier"), SizeMultiplier);
-	PickupVFX->Activate(true);
-	SetActorHiddenInGame(false);
-
-	GetWorldTimerManager().SetTimer(FailsafeDeactivateTimer, this, &AHordeShooterPickup::DeactivatePickup, 10.f, false);
 }
 
 void AHordeShooterPickup::DeactivatePickup()
@@ -150,7 +132,7 @@ void AHordeShooterPickup::DeactivatePickup()
 
 	VacuumSphere->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 	PickupVFX->SetFloatParameter(FName("SizeMultiplier"), 1.f);
-	//PickupVFX->Deactivate();
+	PickupVFX->SetNiagaraVariableLinearColor(TEXT("EnergyColour"), FLinearColor::White);
 	PickupVFX->DeactivateImmediate(); 
 	SetActorHiddenInGame(true);
 
@@ -164,18 +146,32 @@ void AHordeShooterPickup::OnVacuumOverlap(UPrimitiveComponent* OverlappedComp, A
 	{
 		AHordeShooterCharacter* Player = Cast<AHordeShooterCharacter>(OtherActor);
 
-		//find atleast one weapon that needs ammo in the players inventory:
-		bool bNeedsAmmo = false;
-		for(const auto& Weapon : Player->GetInventory())
+		bool bNeedsPickup = false;
+
+		if(CurrentType == EPickupType::Ammo)
 		{
-			if(Weapon && Weapon->TotalAmmoReserve < Weapon->MaxAmmoReserve)
+			for(const auto& Weapon : Player->GetInventory())
 			{
-				bNeedsAmmo = true;
-				break;
+				if(Weapon && Weapon->TotalAmmoReserve < Weapon->MaxAmmoReserve)
+				{
+					bNeedsPickup = true;
+					break;
+				}
 			}
 		}
 
-		if(bNeedsAmmo)
+		else if(CurrentType == EPickupType::Health)
+		{
+			if(Player->CurrentHealth < Player->MaxHealth) bNeedsPickup = true;
+		}
+
+		else if(CurrentType == EPickupType::Surge)
+		{
+			// bNeedsPickup = (Player->CurrentSurge < Player->MaxSurge); // Future implementation
+			bNeedsPickup = true; 
+		}
+
+		if(bNeedsPickup)
 		{
 			TargetPlayer = Player;
 			bIsHoming = true;
@@ -185,3 +181,81 @@ void AHordeShooterPickup::OnVacuumOverlap(UPrimitiveComponent* OverlappedComp, A
 	}
 }
 
+void AHordeShooterPickup::GrantReward()
+{
+	bool bWasConsumed = false;
+
+	if(CurrentType == EPickupType::Ammo)
+	{
+		//grant Ammo
+		if(TargetPlayer->GetInventory().Num() > 0)
+		{
+			float PickupPercentage = 0.25f;
+			switch(CurrentSize)
+			{
+				case EPickupSize::Small:
+					PickupPercentage = 0.25f;
+					break;
+
+				case EPickupSize::Medium:
+					PickupPercentage = 0.5f;
+					break;
+
+				case EPickupSize::Large:
+					PickupPercentage = 0.75f;
+					break;
+
+				default:
+					break;
+			}
+
+			for(const auto& Weapon : TargetPlayer->GetInventory())
+			{
+				if(Weapon && Weapon->AddAmmo(PickupPercentage)) bWasConsumed = true;
+			}
+		}	
+	}
+
+	else if(CurrentType == EPickupType::Health)
+	{
+		float HealAmount = 25.f;
+		switch(CurrentSize)
+		{
+			case EPickupSize::Small:
+				HealAmount = 25.f;
+				break;
+
+			case EPickupSize::Medium:
+				HealAmount = 50.f;
+				break;
+
+			case EPickupSize::Large:
+				HealAmount = 75.f;
+				break;
+
+			default:
+				break;
+		}
+
+		bWasConsumed = TargetPlayer->Heal(HealAmount);
+	}
+
+	else if(CurrentType == EPickupType::Surge)
+	{
+		//implementation
+		bWasConsumed = true;
+	}
+
+	if(bWasConsumed)
+	{
+		if(PickupSound) UGameplayStatics::PlaySound2D(GetWorld(), PickupSound);
+		DeactivatePickup();
+	}
+	else
+	{
+		bIsHoming = false;
+		TargetPlayer = nullptr;
+		VacuumSphere->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
+		SetActorTickEnabled(false);
+	}
+}

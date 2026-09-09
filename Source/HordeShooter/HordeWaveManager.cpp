@@ -32,15 +32,15 @@ void AHordeWaveManager::BeginPlay()
 	InitializePools();
 
 	//create the ammo pickup pool:
-	if(AmmoPickupClass)
+	if(PickupClass)
 	{
 		FActorSpawnParameters SpawnParams;
 		for(int32 i = 0; i < PickupPoolSize; i++)
 		{
-			AHordeShooterPickup* NewPickup = GetWorld()->SpawnActor<AHordeShooterPickup>(AmmoPickupClass, FVector(0,0,-10000), FRotator::ZeroRotator, SpawnParams);
+			AHordeShooterPickup* NewPickup = GetWorld()->SpawnActor<AHordeShooterPickup>(PickupClass, FVector(0,0,-10000), FRotator::ZeroRotator, SpawnParams);
 			if (NewPickup)
 			{
-				AmmoPickupPool.Add(NewPickup);
+				PickupPool.Add(NewPickup);
 			}
 		}
 	}
@@ -208,26 +208,30 @@ void AHordeWaveManager::OnEnemyDied()
 	}	
 }
 
-void AHordeWaveManager::SpawnAmmoDrop(const FVector& Location, EPickupSize Size)
+void AHordeWaveManager::SpawnPickup(const FVector& Location, EPickupType Type, EPickupSize Size)
 {
 	FVector SpawnLoc = Location;
+	float ScatterX = FMath::RandRange(-60.0f, 60.0f);
+	float ScatterY = FMath::RandRange(-60.0f, 60.0f);
+	
+	FVector TraceStart = Location + FVector(ScatterX, ScatterY, 0.0f);
+
 	FHitResult Hit;
 	FCollisionQueryParams Params;
-
 	FCollisionObjectQueryParams ObjectParams;
 	ObjectParams.AddObjectTypesToQuery(ECC_WorldStatic);
 
-	if(GetWorld()->LineTraceSingleByObjectType(Hit, Location, Location - FVector(0, 0, 3000.f), ObjectParams, Params))
+	if(GetWorld()->LineTraceSingleByObjectType(Hit, TraceStart, TraceStart - FVector(0, 0, 3000.f), ObjectParams, Params))
 	{
 		SpawnLoc = Hit.ImpactPoint + FVector(0, 0, 25.f);
 	}
 
 	//find first inactive pickup
-	for (AHordeShooterPickup* Pickup : AmmoPickupPool)
+	for(AHordeShooterPickup* Pickup : PickupPool)
 	{
-		if (Pickup && !Pickup->bIsActive)
+		if(Pickup && !Pickup->bIsActive)
 		{
-			Pickup->ActivatePickup(SpawnLoc, Size);
+			Pickup->ActivatePickup(SpawnLoc, Type, Size);
 			return;
 		}
 	}
