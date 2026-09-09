@@ -385,6 +385,8 @@ void AHordeShooterCharacter::SetupPlayerInputComponent(UInputComponent* PlayerIn
 		EnhancedInputComponent->BindAction(PauseAction, ETriggerEvent::Started, this, &AHordeShooterCharacter::TogglePause);
 	
 		EnhancedInputComponent->BindAction(GenerateArenaAction, ETriggerEvent::Started, this, &AHordeShooterCharacter::GenerateArena);
+
+		EnhancedInputComponent->BindAction(MeleeAction, ETriggerEvent::Started, this, &AHordeShooterCharacter::Melee);
 	}
 }
 
@@ -436,7 +438,7 @@ void AHordeShooterCharacter::Look(const FInputActionValue& Value)
 
 void AHordeShooterCharacter::Dash()
 {
-	if(AvailableDashes <= 0 || bIsDashing || bIsSliding || bIsAiming || bIsSlamming) return;
+	if(AvailableDashes <= 0 || bIsDashing || bIsSliding || bIsAiming || bIsSlamming || bIsMeleeing) return;
 
 	if(GetCharacterMovement()->IsFalling() && AirDashesUsed >= MaxDashes) return;
 
@@ -619,7 +621,7 @@ void AHordeShooterCharacter::Landed(const FHitResult& Hit)
 
 void AHordeShooterCharacter::StartSlide()
 {
-	if(bIsSliding || bIsDashing || bIsAiming || bIsSlamming) return;
+	if(bIsSliding || bIsDashing || bIsAiming || bIsSlamming || bIsMeleeing) return;
 
 	if(GetCharacterMovement()->IsMovingOnGround())
 	{
@@ -840,7 +842,7 @@ void AHordeShooterCharacter::FireWeapon()
 	//cache input:
 	bIsFireButtonDown = true;
 
-	if(bIsSwitchingWeapons) return;
+	if(bIsSwitchingWeapons || bIsMeleeing) return;
 
 	if(CurrentEquippedWeapon)
 	{
@@ -907,7 +909,7 @@ void AHordeShooterCharacter::StartAiming()
 	//cache input:
 	bIsAimButtonDown = true;
 
-	if(!CurrentEquippedWeapon || bIsSwitchingWeapons) return;
+	if(!CurrentEquippedWeapon || bIsSwitchingWeapons || bIsMeleeing) return;
 	
 	if(CurrentEquippedWeapon->bCanAim)
 	{
@@ -1011,7 +1013,7 @@ bool AHordeShooterCharacter::IsCloseToWall()
 }
 
 
-bool AHordeShooterCharacter::ReactToHit(float DamageAmount, const FVector& HitImpulse, FName HitBoneName)
+bool AHordeShooterCharacter::ReactToHit(float DamageAmount, const FVector& HitImpulse, FName HitBoneName, FName DamageSource)
 {
 	if(CurrentHealth <= 0.f) return false; //already dead
 
@@ -1117,5 +1119,132 @@ void AHordeShooterCharacter::GenerateArena()
 	if (AArenaManager* ArenaManager = Cast<AArenaManager>(ArenaActor))
 	{
 		ArenaManager->BeginNewLayoutGeneration();
+	}
+}
+
+void AHordeShooterCharacter::Melee()
+{
+	//prevent meleeing if already meleeing, switching weapons, slamming, or dead
+	if(bIsMeleeing || bIsSwitchingWeapons || bIsSlamming || CurrentHealth <= 0.f) return;
+
+	bIsMeleeing = true;
+
+	//interrupt current actions
+	if(CurrentEquippedWeapon)
+	{
+		StopFiringWeapon();
+		if(bIsAiming) StopAiming();
+		
+		// If the weapon was reloading, cancel the reload timer, and stop animations:
+		if(CurrentEquippedWeapon->bIsReloading)
+		{
+			CurrentEquippedWeapon->bIsReloading = false;
+
+			if(CurrentEquippedWeapon->ArmsReloadMontage)
+			{
+				UAnimInstance* ArmsAnimInstance = CharacterArms->GetAnimInstance();
+				if(ArmsAnimInstance) ArmsAnimInstance->Montage_Stop(0.1f, nullptr);
+			}
+			if(CurrentEquippedWeapon->Mesh && CurrentEquippedWeapon->Mesh->GetAnimInstance())
+			{
+				UAnimInstance* GunMeshAnimInstance = CurrentEquippedWeapon->Mesh->GetAnimInstance();
+				if(GunMeshAnimInstance) GunMeshAnimInstance->Montage_Stop(0.1f, nullptr);
+			}
+		}
+	}
+
+	float MeleeDuration = 0.5f; //fallbacxk
+	if(ArmsMeleeMontage && CharacterArms && CharacterArms->GetAnimInstance())
+	{
+		CharacterArms->GetAnimInstance()->Montage_Play(ArmsMeleeMontage);
+		MeleeDuration = ArmsMeleeMontage->GetPlayLength();
+	}
+
+	if(MeleeSwingSound)
+	{
+		UGameplayStatics::PlaySoundAtLocation(GetWorld(), MeleeSwingSound, GetActorLocation());
+	}
+
+	GetWorldTimerManager().SetTimer(MeleeTimerHandle, this, &AHordeShooterCharacter::FinishMelee, MeleeDuration, false);
+}
+
+void AHordeShooterCharacter::FinishMelee()
+{
+	bIsMeleeing = false;
+
+	//Input Buffering
+	if(bIsFireButtonDown) FireWeapon();
+	if(bIsAimButtonDown) StartAiming();
+}
+
+void AHordeShooterCharacter::ExecuteMeleeHit()
+{
+	if(!FirstPersonCamera) return;
+
+	FVector Start = FirstPersonCamera->GetComponentLocation();
+	FVector Forward = FirstPersonCamera->GetForwardVector();
+	FVector End = Start + (Forward * MeleeRange);
+
+	//using a Sphere Sweep instead of a line Trace so the attack feels "thick" and connects easily
+	FCollisionShape Sphere = FCollisionShape::MakeSphere(MeleeRadius);
+	FHitResult HitResult;
+	FCollisionQueryParams QueryParams;
+	QueryParams.AddIgnoredActor(this);
+	if(CurrentEquippedWeapon) QueryParams.AddIgnoredActor(CurrentEquippedWeapon);
+
+	QueryParams.bReturnPhysicalMaterial = true;
+
+	bool bHit = GetWorld()->SweepSingleByChannel(
+		HitResult, 
+		Start, 
+		End, 
+		FQuat::Identity, 
+		ECC_Visibility, 
+		Sphere, 
+		QueryParams
+	);
+
+	if(bHit)
+	{
+		//get surface type
+		EPhysicalSurface SurfaceType = SurfaceType_Default;
+		if(HitResult.PhysMaterial.IsValid())
+		{
+			SurfaceType = HitResult.PhysMaterial->SurfaceType;
+		}
+
+		//play effects
+		if(CurrentEquippedWeapon)
+		{
+			FImpactEffects Effects = CurrentEquippedWeapon->GetImpactEffects(SurfaceType);
+
+			if(Effects.MeleeHitSound)
+			{
+				UGameplayStatics::PlaySoundAtLocation(GetWorld(), Effects.MeleeHitSound, HitResult.ImpactPoint);
+			}
+
+			if(Effects.MeleeHitImpactVFX)
+			{
+				UNiagaraFunctionLibrary::SpawnSystemAtLocation(GetWorld(), Effects.MeleeHitImpactVFX, HitResult.ImpactPoint, HitResult.ImpactNormal.Rotation());
+			}
+		}
+
+		if(HitResult.GetActor() && HitResult.GetActor()->GetClass()->ImplementsInterface(UDamageableInterface::StaticClass()))
+		{
+			IDamageableInterface* DamageableActor = Cast<IDamageableInterface>(HitResult.GetActor());
+			if(DamageableActor)
+			{
+				float FinalDamage = MeleeDamage;
+				if(ProgressionComponent)
+				{
+					FinalDamage *= ProgressionComponent->GetDamageMultiplier();
+				}
+
+				FVector PushDirection = Forward;
+				PushDirection.Z += 0.2f;
+
+				DamageableActor->ReactToHit(FinalDamage, PushDirection.GetSafeNormal() * MeleeImpulse, HitResult.BoneName, FName("Melee"));
+			}
+		}
 	}
 }

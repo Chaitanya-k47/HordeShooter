@@ -82,6 +82,9 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Input")
 	UInputAction* GenerateArenaAction;
 
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Input")
+	UInputAction* MeleeAction;
+
 
 public:
 	//player health:
@@ -253,6 +256,31 @@ protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Movement|Slam")
 	class UAudioComponent* FallAudioComp;
 
+	//MELEE CONFIG:
+	UPROPERTY(EditDefaultsOnly, Category = "Combat|Melee")
+	class UAnimMontage* ArmsMeleeMontage;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Combat|Melee")
+	float MeleeDamage = 100.0f;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Combat|Melee")
+	float MeleeRange = 175.0f; //how far the buttstroke reaches
+
+	UPROPERTY(EditDefaultsOnly, Category = "Combat|Melee")
+	float MeleeRadius = 35.0f; //thickness of the strike (makes it forgiving to aim)
+
+	UPROPERTY(EditDefaultsOnly, Category = "Combat|Melee")
+	float MeleeImpulse = 35000.0f;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Sound|Combat")
+	USoundBase* MeleeSwingSound;
+
+	FTimerHandle MeleeTimerHandle;
+
+	// --- MELEE FUNCTIONS ---
+	void Melee();
+	void FinishMelee();
+
 
 	//spped lines:
 	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Movement")
@@ -279,6 +307,13 @@ public:
 
 	UPROPERTY(BlueprintReadOnly)
 	bool bIsAiming = false;
+
+	UPROPERTY(BlueprintReadOnly)
+	bool bIsMeleeing = false;
+
+	//called by the (Anim Notify) at the exact apex of the swing
+	UFUNCTION(BlueprintCallable, Category = "Combat")
+	void ExecuteMeleeHit();
 
 protected:
 	UFUNCTION(BlueprintCallable, Category = "Weapon")
@@ -330,7 +365,7 @@ protected:
 	virtual void OnJumped_Implementation() override;
 
 	//Damageable interface:
-	virtual bool ReactToHit(float DamageAmount, const FVector& HitImpulse, FName HitBoneName) override;
+	virtual bool ReactToHit(float DamageAmount, const FVector& HitImpulse, FName HitBoneName, FName DamageSource = NAME_None) override;
 	void PlayerDie();
 
 	//Generate new arena layout callback:

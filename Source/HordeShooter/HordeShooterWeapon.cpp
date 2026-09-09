@@ -50,6 +50,14 @@ AHordeShooterWeapon::AHordeShooterWeapon()
 	MuzzleFlashComp->bAutoActivate = false;
 }
 
+FImpactEffects AHordeShooterWeapon::GetImpactEffects(EPhysicalSurface SurfaceType)
+{
+	if(SurfaceImpactEffects.Contains(SurfaceType))
+	{
+		return SurfaceImpactEffects[SurfaceType];
+	}
+    return DefaultImpact;
+}
 
 // Called when the game starts or when spawned
 void AHordeShooterWeapon::BeginPlay()

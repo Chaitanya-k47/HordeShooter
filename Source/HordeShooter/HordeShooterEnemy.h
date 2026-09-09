@@ -147,7 +147,7 @@ protected:
 
 
 	//DAMAGE INTERFACE:
-	virtual bool ReactToHit(float DamageAmount, const FVector& HitImpulse, FName HitBoneName) override;
+	virtual bool ReactToHit(float DamageAmount, const FVector& HitImpulse, FName HitBoneName, FName DamageSource = NAME_None) override;
 	virtual void Die();
 
 
@@ -172,7 +172,8 @@ protected:
 
 private:
 	FVector LastHitImpulse;
-	FName LastHitBoneName; 
+	FName LastHitBoneName;
+	FName LastDamageSource;
 	FTimerHandle DespawnTimerHandle;
 
 	class 

@@ -265,7 +265,7 @@ void AHordeShooterEnemy::OnMontageEnded(UAnimMontage* Montage, bool bInterrupted
 }
 
 
-bool AHordeShooterEnemy::ReactToHit(float DamageAmount, const FVector& HitImpulse, FName HitBoneName)
+bool AHordeShooterEnemy::ReactToHit(float DamageAmount, const FVector& HitImpulse, FName HitBoneName, FName DamageSource)
 {
 	if(bIsDead)
 	{
@@ -300,6 +300,7 @@ bool AHordeShooterEnemy::ReactToHit(float DamageAmount, const FVector& HitImpuls
 	CurrentHealth -= FinalDamage;
 	LastHitImpulse = NewHitImpulse;
 	LastHitBoneName = HitBoneName;
+	LastDamageSource = DamageSource;
 	
 	OnHit(FinalDamage); //triggers Blueprint logic, then C++ default
 
@@ -330,8 +331,8 @@ void AHordeShooterEnemy::Die()
 	{
 		if(AHordeShooterPlayerController* PC = Cast<AHordeShooterPlayerController>(BasePC))
 		{
-			bool bWasHeadshot = (LastHitBoneName == FName("Head"));
-			bool bWasSlam = (LastHitBoneName == FName("Slam"));
+			bool bWasHeadshot = (LastHitBoneName == FName("Head") && LastDamageSource != FName("Melee"));
+			bool bWasSlam = (LastHitBoneName == FName("Slam") || LastDamageSource == FName("Slam"));
 			PC->AddKill(bWasHeadshot, bWasSlam); 
 		}
 	}

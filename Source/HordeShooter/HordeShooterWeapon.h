@@ -33,6 +33,12 @@ struct FImpactEffects
 	UPROPERTY(EditDefaultsOnly, Category = "Sound")
 	USoundBase* HeadshotSound;
 
+	UPROPERTY(EditDefaultsOnly, Category = "Sound")
+	USoundBase* MeleeHitSound;
+
+	UPROPERTY(EditDefaultsOnly)
+	UNiagaraSystem* MeleeHitImpactVFX;
+
 	UPROPERTY(EditDefaultsOnly)
 	UMaterialInterface* ImpactDecal;
 };
@@ -45,6 +51,8 @@ class HORDESHOOTER_API AHordeShooterWeapon : public AActor
 public:	
 	// Sets default values for this actor's properties
 	AHordeShooterWeapon();
+
+	FImpactEffects GetImpactEffects(EPhysicalSurface SurfaceType);
 
 protected:
 	// Called when the game starts or when spawned
