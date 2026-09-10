@@ -63,6 +63,10 @@ public:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Combat|Stats")
 	float CurrentHealth;
 
+	//True: this enemy gets obliterated by one shot melee, False otherwise.
+	UPROPERTY(EditDefaultsOnly, Category = "Combat|Stats")
+	bool bIsFodder = false;
+
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat|AI")
 	float AttackRange = 300.f;
 

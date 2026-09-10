@@ -175,6 +175,7 @@ void AHordeShooterPickup::OnVacuumOverlap(UPrimitiveComponent* OverlappedComp, A
 		{
 			TargetPlayer = Player;
 			bIsHoming = true;
+			GetWorldTimerManager().PauseTimer(FailsafeDeactivateTimer);
 			VacuumSphere->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 			SetActorTickEnabled(true); //enable tick
 		}
@@ -184,6 +185,7 @@ void AHordeShooterPickup::OnVacuumOverlap(UPrimitiveComponent* OverlappedComp, A
 void AHordeShooterPickup::GrantReward()
 {
 	bool bWasConsumed = false;
+	USoundBase* PickupSound = nullptr;
 
 	if(CurrentType == EPickupType::Ammo)
 	{
@@ -213,7 +215,9 @@ void AHordeShooterPickup::GrantReward()
 			{
 				if(Weapon && Weapon->AddAmmo(PickupPercentage)) bWasConsumed = true;
 			}
-		}	
+		}
+		
+		PickupSound = AmmoPickupSound;
 	}
 
 	else if(CurrentType == EPickupType::Health)
@@ -238,12 +242,14 @@ void AHordeShooterPickup::GrantReward()
 		}
 
 		bWasConsumed = TargetPlayer->Heal(HealAmount);
+		PickupSound = HealthPickupSound;
 	}
 
 	else if(CurrentType == EPickupType::Surge)
 	{
 		//implementation
 		bWasConsumed = true;
+		PickupSound = SurgePickupSound;
 	}
 
 	if(bWasConsumed)
@@ -254,6 +260,7 @@ void AHordeShooterPickup::GrantReward()
 	else
 	{
 		bIsHoming = false;
+		if(GetWorldTimerManager().IsTimerPaused(FailsafeDeactivateTimer)) GetWorldTimerManager().UnPauseTimer(FailsafeDeactivateTimer);
 		TargetPlayer = nullptr;
 		VacuumSphere->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
 		SetActorTickEnabled(false);

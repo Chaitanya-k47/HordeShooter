@@ -279,6 +279,12 @@ bool AHordeShooterEnemy::ReactToHit(float DamageAmount, const FVector& HitImpuls
 	}
 
 	float FinalDamage = DamageAmount;
+
+	if(bIsFodder && DamageSource == FName("Melee"))
+	{
+		FinalDamage = CurrentHealth + 999.0f;
+	}
+
 	bool bIsHeadshot = false;
 	FVector NewHitImpulse = HitImpulse;
 
