@@ -56,11 +56,11 @@ void AHordeShooterPlayerController::PlayAnnouncerSound(USoundBase* Sound)
 {
     if(Sound)
     {
-        UGameplayStatics::PlaySound2D(GetWorld(), Sound);
+        UGameplayStatics::PlaySound2D(GetWorld(), Sound, 1.0f, 1.0f, 0.0f, AnnouncerConcurrency);
     }
 }
 
-void AHordeShooterPlayerController::AddKill(bool bWasHeadshot, bool bWasSlam)
+void AHordeShooterPlayerController::AddKill(FName DamageSource, bool bWasHeadshot, bool bIsAirborne, bool bIsLowHealth)
 {
     SpreeCount++; //ruin spree count when player takes damage
     MultiKillCount++; //ruin multikill count when combo window is missed
@@ -68,8 +68,13 @@ void AHordeShooterPlayerController::AddKill(bool bWasHeadshot, bool bWasSlam)
     USoundBase* SoundToPlay = nullptr;
 
     //CONTEXT KILLS (lowest priority)
-    if(bWasSlam) SoundToPlay = Sound_Pancake;
+    if(bIsAirborne) SoundToPlay = Sound_TopGun;
+    else if(bIsLowHealth) SoundToPlay = Sound_Retribution;
     else if(bWasHeadshot) SoundToPlay = Sound_HeadShot;
+    else if(DamageSource == FName("Slam")) SoundToPlay = Sound_Pancake;
+    else if(DamageSource == FName("Melee")) SoundToPlay = Sound_JackHammer;
+    else if(DamageSource == FName("AltFire")) SoundToPlay = Sound_Eradication;
+   
 
     //MULTIKILL (overrides context kills)
     if(MultiKillCount == 2) SoundToPlay = Sound_DoubleKill;
@@ -77,17 +82,18 @@ void AHordeShooterPlayerController::AddKill(bool bWasHeadshot, bool bWasSlam)
 	else if(MultiKillCount == 4) SoundToPlay = Sound_MegaKill;
 	else if(MultiKillCount == 5) SoundToPlay = Sound_UltraKill;
 	else if(MultiKillCount == 6) SoundToPlay = Sound_MonsterKill;
-	else if(MultiKillCount == 7) SoundToPlay = Sound_Massacre;
-	else if(MultiKillCount >= 8) SoundToPlay = Sound_Unreal;
-
-    if (MultiKillCount >= 15) SoundToPlay = Sound_ComboKing;
+	else if(MultiKillCount == 7) SoundToPlay = Sound_Outstanding;
+	else if(MultiKillCount == 8) SoundToPlay = Sound_Unreal;
+    else if(MultiKillCount == 9) SoundToPlay = Sound_BloodBath;
+    else if(MultiKillCount >= 10) SoundToPlay = Sound_ComboKing;
 
     //SURVIVAL SPREE (overrides multikills)
-    if(SpreeCount == 10) SoundToPlay = Sound_KillingSpree;
-	else if(SpreeCount == 20) SoundToPlay = Sound_Rampage;
-	else if(SpreeCount == 30) SoundToPlay = Sound_Dominating;
-	else if(SpreeCount == 40) SoundToPlay = Sound_Unstoppable;
-    else if(SpreeCount >= 50 && (SpreeCount % 10 == 0)) SoundToPlay = Sound_GodLike; //for every 10 kills after 50 and on 50.
+    if(SpreeCount == 5) SoundToPlay = Sound_KillingSpree;  
+	else if(SpreeCount == 10) SoundToPlay = Sound_Rampage;
+	else if(SpreeCount == 15) SoundToPlay = Sound_Dominating;
+	else if(SpreeCount == 20) SoundToPlay = Sound_Unstoppable;
+    else if(SpreeCount == 25) SoundToPlay = Sound_GodLike;
+    else if(SpreeCount >= 30 && (SpreeCount % 5 == 0)) SoundToPlay = Sound_Massacre; //for every 5 kills after 30 and on 30.
 
     //FIRST BLOOD (absolute highest priority)
     if(!bHasFirstBlood)

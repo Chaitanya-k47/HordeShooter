@@ -204,4 +204,7 @@ private:
 	class 
 	AHordeWaveManager* CachedWaveManager = nullptr; //cached reference to the wave manager for spawning ammo drops
 
+	UPROPERTY()
+	TObjectPtr<UAudioComponent> AttackSoundRef = nullptr;
+
 };

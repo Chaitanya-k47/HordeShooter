@@ -178,7 +178,7 @@ void AHordeShooterEnemy::PerformMeleeAttack()
 
 	if(AttackSound)
 	{
-		UGameplayStatics::SpawnSoundAttached(AttackSound, GetMesh(), FName("Head"));
+		AttackSoundRef = UGameplayStatics::SpawnSoundAttached(AttackSound, GetMesh(), FName("Head"));
 	}
 
 	if(GetMesh()->GetAnimInstance())
@@ -338,9 +338,22 @@ void AHordeShooterEnemy::Die()
 		if(AHordeShooterPlayerController* PC = Cast<AHordeShooterPlayerController>(BasePC))
 		{
 			bool bWasHeadshot = (LastHitBoneName == FName("Head") && LastDamageSource != FName("Melee"));
-			bool bWasSlam = (LastHitBoneName == FName("Slam") || LastDamageSource == FName("Slam"));
 
-			PC->AddKill(bWasHeadshot, bWasSlam); 
+			//check if airborne
+			bool bIsAirborne = false;
+			if (AHordeShooterCharacter* PlayerChar = Cast<AHordeShooterCharacter>(PC->GetPawn()))
+			{
+				bIsAirborne = PlayerChar->GetCharacterMovement()->IsFalling();
+			}
+
+			//check if low health
+			bool bIsLowHealth = false;
+			if (AHordeShooterCharacter* PlayerChar = Cast<AHordeShooterCharacter>(PC->GetPawn()))
+			{
+				bIsLowHealth = (PlayerChar->CurrentHealth <= (PlayerChar->MaxHealth * 0.2f));
+			}
+
+			PC->AddKill(LastDamageSource, bWasHeadshot, bIsAirborne, bIsLowHealth); 
 		}
 	}
 
@@ -417,6 +430,11 @@ void AHordeShooterEnemy::Die()
 	{
 		SprintAudioComp->Stop();
 	}
+	if(IsValid(AttackSoundRef) && AttackSoundRef->IsPlaying())
+	{
+		AttackSoundRef->FadeOut(1.5f, 0.0f, EAudioFaderCurve::Linear);
+		AttackSoundRef = nullptr;
+	}
 
 	OnEnemyKilled.Broadcast(); //tell wave manager this enemy is dead
 	
@@ -454,7 +472,7 @@ void AHordeShooterEnemy::OnDeath_Implementation()
 
 	//add impulse (Force mode.)
 	FName PhysicsBone = LastHitBoneName;
-	if (PhysicsBone == FName("Slam"))
+	if(PhysicsBone == FName("Slam"))
 	{
 		// "Slam" isn't a real bone, reset it to NAME_None 
 		PhysicsBone = NAME_None; 

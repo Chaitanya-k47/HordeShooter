@@ -22,7 +22,7 @@ public:
 
 	//ANNOUNCER SYSTEM:
 	//called when an enemy dies
-	void AddKill(bool bWasHeadshot, bool bWasSlam);
+	void AddKill(FName DamageSource, bool bWasHeadshot, bool bIsAirborne, bool bIsLowHealth);
 
 	//called when player takes damage, to ruin their spree
 	void ResetSpree();
@@ -38,6 +38,9 @@ protected:
 	UPROPERTY(EditDefaultsOnly, Category = "UI")
 	TSubclassOf<UHordeShooterHUDWidget> PlayerHUDClass;
 
+	UPROPERTY(EditDefaultsOnly, Category = "Audio|Announcer")
+	class USoundConcurrency* AnnouncerConcurrency;
+
 	//ANNOUNCER SYSTEM:
 	UPROPERTY(EditDefaultsOnly, Category = "Audio|Announcer") USoundBase* Sound_FirstBlood;
 	UPROPERTY(EditDefaultsOnly, Category = "Audio|Announcer") USoundBase* Sound_HeadShot;
@@ -49,12 +52,18 @@ protected:
 	UPROPERTY(EditDefaultsOnly, Category = "Audio|Announcer") USoundBase* Sound_MonsterKill;
 	UPROPERTY(EditDefaultsOnly, Category = "Audio|Announcer") USoundBase* Sound_Massacre;
 	UPROPERTY(EditDefaultsOnly, Category = "Audio|Announcer") USoundBase* Sound_Unreal;
+	UPROPERTY(EditDefaultsOnly, Category = "Audio|Announcer") USoundBase* Sound_Outstanding;
 	UPROPERTY(EditDefaultsOnly, Category = "Audio|Announcer") USoundBase* Sound_KillingSpree;
 	UPROPERTY(EditDefaultsOnly, Category = "Audio|Announcer") USoundBase* Sound_Rampage;
 	UPROPERTY(EditDefaultsOnly, Category = "Audio|Announcer") USoundBase* Sound_Dominating;
 	UPROPERTY(EditDefaultsOnly, Category = "Audio|Announcer") USoundBase* Sound_Unstoppable;
 	UPROPERTY(EditDefaultsOnly, Category = "Audio|Announcer") USoundBase* Sound_GodLike;
 	UPROPERTY(EditDefaultsOnly, Category = "Audio|Announcer") USoundBase* Sound_ComboKing;
+	UPROPERTY(EditDefaultsOnly, Category = "Audio|Announcer") USoundBase* Sound_JackHammer; //melee kill
+	UPROPERTY(EditDefaultsOnly, Category = "Audio|Announcer") USoundBase* Sound_TopGun;   //airborne kill
+	UPROPERTY(EditDefaultsOnly, Category = "Audio|Announcer") USoundBase* Sound_Retribution;  //low health kill
+	UPROPERTY(EditDefaultsOnly, Category = "Audio|Announcer") USoundBase* Sound_Eradication; //blast kill
+	UPROPERTY(EditDefaultsOnly, Category = "Audio|Announcer") USoundBase* Sound_BloodBath;
 
 	UPROPERTY(EditDefaultsOnly, Category = "Audio|Announcer")
 	float MultiKillWindow = 3.f; //3 sec to chain a multikill

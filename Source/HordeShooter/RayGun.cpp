@@ -536,8 +536,10 @@ void ARayGun::PerformAltFire()
 
                         //push the ememies out from the centre of the blast
                         FVector PushDirection = (HitActor->GetActorLocation() - ImpactPoint).GetSafeNormal();
+                        PushDirection.Z += 0.6f;
+                        PushDirection.Normalize();
                         FVector FinalImpulse = PushDirection * AltFireImpulse;
-                        DamageableActor->ReactToHit(AltFireDamage * DamageMultiplier, FinalImpulse, NAME_None);
+                        DamageableActor->ReactToHit(AltFireDamage * DamageMultiplier, FinalImpulse, NAME_None, FName("AltFire"));
                     }
                 }
             }
