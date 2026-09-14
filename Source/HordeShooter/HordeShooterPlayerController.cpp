@@ -68,14 +68,13 @@ void AHordeShooterPlayerController::AddKill(FName DamageSource, bool bWasHeadsho
     USoundBase* SoundToPlay = nullptr;
 
     //CONTEXT KILLS (lowest priority)
-    if(bIsAirborne) SoundToPlay = Sound_TopGun;
-    else if(bIsLowHealth) SoundToPlay = Sound_Retribution;
-    else if(bWasHeadshot) SoundToPlay = Sound_HeadShot;
-    else if(DamageSource == FName("Slam")) SoundToPlay = Sound_Pancake;
-    else if(DamageSource == FName("Melee")) SoundToPlay = Sound_JackHammer;
+    if(DamageSource == FName("Slam")) SoundToPlay = Sound_Pancake;
     else if(DamageSource == FName("AltFire")) SoundToPlay = Sound_Eradication;
+    else if(DamageSource == FName("Melee")) SoundToPlay = Sound_JackHammer;
+    else if(bIsLowHealth) SoundToPlay = Sound_Retribution;
+    else if(bIsAirborne) SoundToPlay = Sound_TopGun;
+    else if (bWasHeadshot) SoundToPlay = Sound_HeadShot;
    
-
     //MULTIKILL (overrides context kills)
     if(MultiKillCount == 2) SoundToPlay = Sound_DoubleKill;
 	else if(MultiKillCount == 3) SoundToPlay = Sound_MultiKill;
