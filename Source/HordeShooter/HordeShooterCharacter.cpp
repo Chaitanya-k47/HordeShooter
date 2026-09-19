@@ -596,7 +596,7 @@ void AHordeShooterCharacter::Landed(const FHitResult& Hit)
 							DamagedActors.Add(HitActor); //mark hit.
 							FVector PushDirection = (HitActor->GetActorLocation() - GetActorLocation()).GetSafeNormal();
 							PushDirection.Z += 0.8f;
-							DamageableActor->ReactToHit(Damage * ProgressionComponent->GetDamageMultiplier(), PushDirection * Impulse, FName("Slam"));
+							DamageableActor->ReactToHit(Damage * ProgressionComponent->GetDamageMultiplier(), PushDirection * Impulse, NAME_None, FName("Slam"));
 						}
 					}
 				}

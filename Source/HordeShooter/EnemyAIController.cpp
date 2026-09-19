@@ -103,9 +103,9 @@ void AEnemyAIController::UpdateAILogic()
     //STATE: Attacking
     else if(DistSquared <= AttackRangeSq && CheckLineOfSight())
     {
-        if(!bIsOnCooldown && !ControlledEnemy->bIsAttacking) //not attacking and no on cooldown so attack.
+        if(!bIsOnCooldown && !ControlledEnemy->bIsAttacking) //not attacking and not on cooldown so attack.
         {
-            ControlledEnemy->PerformMeleeAttack(); //overridable in child class.
+            ControlledEnemy->PerformAttack(); //overridable in child class.
             
             if(ControlledEnemy->AttackCooldown > 0.0f)
 			{

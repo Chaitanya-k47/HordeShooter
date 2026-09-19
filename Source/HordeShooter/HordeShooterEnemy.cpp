@@ -169,7 +169,7 @@ void AHordeShooterEnemy::CancelAttack()
 
 
 // COMBAT ACTIONS:
-void AHordeShooterEnemy::PerformMeleeAttack()
+void AHordeShooterEnemy::PerformAttack()
 {
 	if(bIsAttacking || bIsStunned || bIsDead || AttackMontages.Num() == 0) return;
 

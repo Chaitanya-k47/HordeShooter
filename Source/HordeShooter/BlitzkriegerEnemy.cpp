@@ -56,9 +56,9 @@ void ABlitzkriegerEnemy::SetEyeIntensityAndSize(float Intensity, float Size)
 	}
 }
 
-void ABlitzkriegerEnemy::PerformMeleeAttack()
+void ABlitzkriegerEnemy::PerformAttack()
 {
-    Super::PerformMeleeAttack();
+    Super::PerformAttack();
 	SetEyeIntensityAndSize(AttackEyeIntensity, AttackEyeSize);
 }
 

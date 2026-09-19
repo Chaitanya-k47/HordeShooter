@@ -320,7 +320,7 @@ void ARayGun::PerformBeamTick()
 
 				FVector PushDirection = CurrentOwner->FirstPersonCamera->GetForwardVector();
                 FVector FinalImpulse = PushDirection * (ShotImpulse * 0.2f);
-				DamageableActor->ReactToHit(BeamDamagePerBeamTick * DamageMultiplier, FinalImpulse, CurrentBeamHitBone);
+				DamageableActor->ReactToHit(BeamDamagePerBeamTick * DamageMultiplier, FinalImpulse, CurrentBeamHitBone, FName("RayGun"));
 			}
 		}
 	}
@@ -539,7 +539,7 @@ void ARayGun::PerformAltFire()
                         PushDirection.Z += 0.6f;
                         PushDirection.Normalize();
                         FVector FinalImpulse = PushDirection * AltFireImpulse;
-                        DamageableActor->ReactToHit(AltFireDamage * DamageMultiplier, FinalImpulse, NAME_None, FName("AltFire"));
+                        DamageableActor->ReactToHit(AltFireDamage * DamageMultiplier, FinalImpulse, NAME_None, FName("RayGunAlt"));
                     }
                 }
             }

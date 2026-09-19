@@ -67,13 +67,13 @@ public:
 	UPROPERTY(EditDefaultsOnly, Category = "Combat|Stats")
 	bool bIsFodder = false;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat|AI")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat|Stats")
 	float AttackRange = 300.f;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat|AI")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat|Stats")
 	float FleeRange = 0.f;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat|AI")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat|Stats")
 	float AttackDamage = 10.f;
 
 	
@@ -145,7 +145,7 @@ public:
 
 
 	//COMBAT ACTIONS:
-	virtual void PerformMeleeAttack();
+	virtual void PerformAttack();
 	void PlayHitReaction();
 
 	UFUNCTION(BlueprintCallable)
@@ -162,7 +162,7 @@ public:
 	//POOLING SYSTEM:
 	bool bIsActive = false; //used by the horde wave manager to track if the enemy is currently active
 
-	void ActivateEnemy(const FTransform& SpawnTransform, const TArray<float>& DifficultyMultipliers); //for Difficulty multipliers index 0 is Attack multplier, index 1 is Health multiplier.
+	virtual void ActivateEnemy(const FTransform& SpawnTransform, const TArray<float>& DifficultyMultipliers); //for Difficulty multipliers index 0 is Attack multplier, index 1 is Health multiplier.
 	void DeactivateEnemy();
 
 

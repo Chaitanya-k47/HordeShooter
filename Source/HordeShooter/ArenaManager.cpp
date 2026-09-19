@@ -714,7 +714,7 @@ void AArenaManager::ExecuteLightningStrike(FVector StrikeLocation)
 				PushDirection.Z += 0.25f;
 				PushDirection.Normalize();
 
-				DamageableActor->ReactToHit(DamageToApply, PushDirection * LightningImpulse, NAME_None);
+				DamageableActor->ReactToHit(DamageToApply, PushDirection * LightningImpulse, NAME_None, FName("Lightning"));
 			}
 		}
 	}

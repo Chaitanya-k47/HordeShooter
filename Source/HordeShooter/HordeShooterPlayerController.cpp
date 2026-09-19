@@ -69,7 +69,7 @@ void AHordeShooterPlayerController::AddKill(FName DamageSource, bool bWasHeadsho
 
     //CONTEXT KILLS (lowest priority)
     if(DamageSource == FName("Slam")) SoundToPlay = Sound_Pancake;
-    else if(DamageSource == FName("AltFire")) SoundToPlay = Sound_Eradication;
+    else if(DamageSource == FName("RayGunAlt")) SoundToPlay = Sound_Eradication;
     else if(DamageSource == FName("Melee")) SoundToPlay = Sound_JackHammer;
     else if(bIsLowHealth) SoundToPlay = Sound_Retribution;
     else if(bIsAirborne) SoundToPlay = Sound_TopGun;

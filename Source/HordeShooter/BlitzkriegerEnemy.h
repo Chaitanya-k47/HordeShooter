@@ -21,8 +21,7 @@ public:
 	ABlitzkriegerEnemy();
 
 	//we ovverride the attack funtion from base class
-	//name is misleading in case of this enemy type as it CASTS a Spell rather than melee-attack
-	virtual void PerformMeleeAttack() override;
+	virtual void PerformAttack() override;
 
 	//called by anim notify inside the attack montages:
 	UFUNCTION(BlueprintCallable, Category = "Combat")
