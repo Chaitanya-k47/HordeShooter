@@ -121,9 +121,9 @@ void AEnemyAIController::UpdateAILogic()
 			if(ControlledEnemy->bStopToAttack) StopMovement();
 			else if(ControlledEnemy->bChargeOnPlayerWhileAttacking) MoveToPlayer();
 		}
-        else if(bIsOnCooldown) //waiting
+        else if(bIsOnCooldown)//waiting
         {
-            if(ControlledEnemy->bStrafeDuringCooldown) //do we strafe?
+            if(ControlledEnemy->bStrafeDuringCooldown)//do we strafe?
 			{
 				CurrentState = EAIState::Idle; 
 				ControlledEnemy->GetCharacterMovement()->MaxWalkSpeed = ControlledEnemy->WalkSpeed;

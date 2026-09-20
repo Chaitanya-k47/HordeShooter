@@ -16,7 +16,7 @@ ABlitzkriegerEnemy::ABlitzkriegerEnemy()
 	FleeRange = 1500.0f;
 
     bAlwaysFacePlayer = true; //use the 4-way strafing blendSpace
-	bStopToAttack = true;
+	bStopToAttack = false;
 	bStrafeDuringCooldown = true;
 
 	AttackCooldown = 4.0f;

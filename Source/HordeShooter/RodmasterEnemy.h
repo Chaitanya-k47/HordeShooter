@@ -61,6 +61,9 @@ protected:
 	float ExplosionDamage = 200.0f;
 
 	UPROPERTY(EditDefaultsOnly, Category = "Rodmaster|Overcharge")
+	float ExplosionImpulse = 400000.0f;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Rodmaster|Overcharge")
 	UNiagaraSystem* ExplosionVFX;
 
 	UPROPERTY(EditDefaultsOnly, Category = "Rodmaster|Overcharge")
