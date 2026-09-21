@@ -14,6 +14,13 @@
 class UNiagaraSystem;
 class USoundBase;
 
+UENUM(BlueprintType)
+enum class EExplosionType : uint8
+{
+	Slam, //rodmaster slam mechanic
+	Overcharge //overcharge blast
+};
+
 UCLASS()
 class HORDESHOOTER_API ARodmasterEnemy : public AHordeShooterEnemy
 {
@@ -31,8 +38,15 @@ public:
 	//oerride activation to reset overcharge meter when pooled
 	virtual void ActivateEnemy(const FTransform& SpawnTransform, const TArray<float>& DifficultyMultipliers) override;
 
+
 protected:
 	virtual void BeginPlay() override;
+
+	UFUNCTION(BlueprintCallable)
+	void ExecuteSlam(); //bind this in anim notify for slam montages
+
+	UFUNCTION(BlueprintCallable)
+	void ExecuteOverchargeExplosion(); //bind this in anim notify of overcharge montages
 
 	//BULLET RESISTANCE:
 	UPROPERTY(EditDefaultsOnly, Category = "Rodmaster|Stats")
@@ -55,34 +69,43 @@ protected:
 
 	//OVERCHARGE EXPLOSION:
 	UPROPERTY(EditDefaultsOnly, Category = "Rodmaster|Overcharge")
-	float ExplosionRadius = 800.0f;
+	float OverchargeExplosionRadius = 800.0f;
 
 	UPROPERTY(EditDefaultsOnly, Category = "Rodmaster|Overcharge")
-	float ExplosionDamage = 200.0f;
+	float OverchargeExplosionDamage = 200.0f;
 
 	UPROPERTY(EditDefaultsOnly, Category = "Rodmaster|Overcharge")
-	float ExplosionImpulse = 400000.0f;
+	float OverchargeExplosionImpulse = 400000.0f;
 
 	UPROPERTY(EditDefaultsOnly, Category = "Rodmaster|Overcharge")
-	UNiagaraSystem* ExplosionVFX;
+	UNiagaraSystem* OverchargeExplosionVFX;
 
 	UPROPERTY(EditDefaultsOnly, Category = "Rodmaster|Overcharge")
-	USoundBase* ExplosionSFX;
+	USoundBase* OverchargeExplosionSFX;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Rodmaster|Overcharge")
+	TArray<UAnimMontage*> OverchargeExplosionMontages;
 
 
 	//ATTACK:
 	//long range attack damage is to be set on 'AttackDamage' variable on parent class
 
+	//close quarter PowerMOve
 	UPROPERTY(EditDefaultsOnly, Category = "Rodmaster|Combat|Stats")
 	float CloseSlamRange = 600.0f;
 
-	//close quarter melee attack
-	UPROPERTY(EditDefaultsOnly, Category = "Rodmaster|Combat|Stats")
-	float CloseMeleeDamage = 10.0f; 
-
-	//close quarter PowerMOve
 	UPROPERTY(EditDefaultsOnly, Category = "Rodmaster|Combat|Stats")
 	float CloseSlamDamage = 50.0f;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Rodmaster|Combat|Stats")
+	float CloseSlamImpulse = 200000.0f;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Rodmaster|Combat|Stats")
+	UNiagaraSystem* CloseSlamVFX;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Rodmaster|Combat|Stats")
+	USoundBase* CloseSlamSFX;
+
 
 	UPROPERTY(EditDefaultsOnly, Category = "Rodmaster|Combat")
 	TArray<UAnimMontage*> RangedPlasmaMontages;
@@ -94,12 +117,11 @@ protected:
 private:
 	float BaseWalkSpeed;
 	float BaseAttackDamage; //long range
-	float BaseCloseMeleeDamage;
 	float BaseCloseSlamDamage;
 
 	bool bIsExploding = false;
 
-	void TriggerOverchargeExplosion();
+	void TriggerExplosion(EExplosionType ExplosionType);
 	void UpdateOverchargeVisuals(float OverchargeRatio);
 
 };

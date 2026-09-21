@@ -28,7 +28,6 @@ void ARodmasterEnemy::BeginPlay()
     Super::BeginPlay();
     BaseWalkSpeed = WalkSpeed;
     BaseAttackDamage = AttackDamage;
-    BaseCloseMeleeDamage = CloseMeleeDamage;
     BaseCloseSlamDamage = CloseSlamDamage;
 
     //register the custom attack montages with the AttackMontages array of base class
@@ -71,13 +70,19 @@ bool ARodmasterEnemy::ReactToHit(float DamageAmount, const FVector &HitImpulse, 
         //scale attack damage:
         float AttackMultiplier = FMath::Lerp(1.f, MaxDamageMultiplier, ChargeRatio);
         AttackDamage = BaseAttackDamage * AttackMultiplier;
-        CloseMeleeDamage = BaseCloseMeleeDamage * AttackMultiplier;
         CloseSlamDamage = BaseCloseSlamDamage * AttackMultiplier;
 
         //visuals:
         UpdateOverchargeVisuals(ChargeRatio);
 
-        if(CurrentOvercharge >= MaxOvercharge) TriggerOverchargeExplosion();
+        if(CurrentOvercharge >= MaxOvercharge && OverchargeExplosionMontages.Num() > 0)
+        {
+            UAnimMontage* MontageToPlay = OverchargeExplosionMontages[FMath::RandRange(0, OverchargeExplosionMontages.Num() - 1)];
+            if(MontageToPlay && GetMesh()->GetAnimInstance())
+            {
+                GetMesh()->GetAnimInstance()->Montage_Play(MontageToPlay, 1.f);
+            }
+        }
 
         //no health damage(physical damage hence return false)
         return false;
@@ -130,30 +135,63 @@ void ARodmasterEnemy::PerformAttack()
 	}
 }
 
-void ARodmasterEnemy::TriggerOverchargeExplosion()
+void ARodmasterEnemy::TriggerExplosion(EExplosionType ExplosionType)
 {
-    bIsExploding = true;
+    UNiagaraSystem* ExplosionVFXToPlay = nullptr;
+    USoundBase* ExplosionSFXToPlay = nullptr;
+    
     FVector ExplodeLoc = GetActorLocation();
+    TArray<FOverlapResult> OverlapResults;
+    FCollisionShape ColShape;
+	FCollisionObjectQueryParams ObjectQueryParams;
+    FCollisionQueryParams QueryParams;
+
+    float ExplosionDamage = 0.f;
+    float ExplosionImpulse = 0.f;
+    FName InDamageSource = NAME_None;
+    bool KillRodmaster = false;
+
+    switch(ExplosionType)
+    {
+    case EExplosionType::Slam:
+        ExplosionVFXToPlay = CloseSlamVFX;
+        ExplosionSFXToPlay = CloseSlamSFX;
+        ColShape = FCollisionShape::MakeSphere(CloseSlamRange);
+        QueryParams.AddIgnoredActor(this);
+        ObjectQueryParams.AddObjectTypesToQuery(ECC_Pawn);
+        ExplosionDamage = CloseSlamDamage;
+        ExplosionImpulse = CloseSlamImpulse;
+        InDamageSource = FName("RodSlam");
+        KillRodmaster = false;
+        break;
+    
+    case EExplosionType::Overcharge:
+        bIsExploding = true;
+        ExplosionVFXToPlay = OverchargeExplosionVFX;
+        ExplosionSFXToPlay = OverchargeExplosionSFX;
+        ColShape = FCollisionShape::MakeSphere(OverchargeExplosionRadius);
+        QueryParams.AddIgnoredActor(this);
+        ObjectQueryParams.AddObjectTypesToQuery(ECC_Pawn);
+        ExplosionDamage = OverchargeExplosionDamage;
+        ExplosionImpulse = OverchargeExplosionImpulse;
+        InDamageSource = FName("Overcharge");
+        KillRodmaster = true;
+        break;
+
+    default:
+        return;
+    }
 
     //FX
-    if(ExplosionVFX) UNiagaraFunctionLibrary::SpawnSystemAtLocation(GetWorld(), ExplosionVFX, ExplodeLoc);
-    if(ExplosionSFX) UGameplayStatics::PlaySoundAtLocation(GetWorld(), ExplosionSFX, ExplodeLoc);
-
-    //aoe damage:
-    TArray<FOverlapResult> OverlapResults;
-    FCollisionShape SphereCol = FCollisionShape::MakeSphere(ExplosionRadius);
-	FCollisionObjectQueryParams ObjectQueryParams;
-	ObjectQueryParams.AddObjectTypesToQuery(ECC_Pawn);
-
-    FCollisionQueryParams QueryParams;
-    QueryParams.AddIgnoredActor(this);
+    if(ExplosionVFXToPlay) UNiagaraFunctionLibrary::SpawnSystemAtLocation(GetWorld(), ExplosionVFXToPlay, ExplodeLoc);
+    if(ExplosionSFXToPlay) UGameplayStatics::PlaySoundAtLocation(GetWorld(), ExplosionSFXToPlay, ExplodeLoc);
 
     bool bHasOverlap = GetWorld()->OverlapMultiByObjectType(
         OverlapResults,
         ExplodeLoc,
         FQuat::Identity, 
         ObjectQueryParams,
-        SphereCol,
+        ColShape,
         QueryParams
     );
 
@@ -173,13 +211,25 @@ void ARodmasterEnemy::TriggerOverchargeExplosion()
 				PushDirection.Z += 0.8f;
                 PushDirection.Normalize();
 
-                Damageable->ReactToHit(ExplosionDamage, PushDirection * ExplosionImpulse, NAME_None, FName("Overcharge"));
+                Damageable->ReactToHit(ExplosionDamage, PushDirection * ExplosionImpulse, NAME_None, InDamageSource);
             }
         }
     }
 
     //instantly kill rodmaster
-    ReactToHit(MaxHealth + 500, FVector::ZeroVector, NAME_None, FName("Overcharge"));
+    if(KillRodmaster) ReactToHit(MaxHealth + 500.f, FVector::ZeroVector, NAME_None, InDamageSource);
+}
+
+void ARodmasterEnemy::ExecuteSlam()
+{
+    if(bIsDead) return;
+    TriggerExplosion(EExplosionType::Slam);
+}
+
+void ARodmasterEnemy::ExecuteOverchargeExplosion()
+{
+    if(bIsDead) return;
+    TriggerExplosion(EExplosionType::Overcharge);
 }
 
 void ARodmasterEnemy::UpdateOverchargeVisuals(float OverchargeRatio)
