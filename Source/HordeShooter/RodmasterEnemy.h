@@ -123,5 +123,6 @@ private:
 
 	void TriggerExplosion(EExplosionType ExplosionType);
 	void UpdateOverchargeVisuals(float OverchargeRatio);
+	void StartOverchargeSequence();
 
 };

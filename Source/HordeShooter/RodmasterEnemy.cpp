@@ -2,6 +2,7 @@
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Kismet/GameplayStatics.h"
 #include "NiagaraFunctionLibrary.h"
+#include "EnemyAIController.h"
 // Fill out your copyright notice in the Description page of Project Settings.
 
 
@@ -75,14 +76,7 @@ bool ARodmasterEnemy::ReactToHit(float DamageAmount, const FVector &HitImpulse, 
         //visuals:
         UpdateOverchargeVisuals(ChargeRatio);
 
-        if(CurrentOvercharge >= MaxOvercharge && OverchargeExplosionMontages.Num() > 0)
-        {
-            UAnimMontage* MontageToPlay = OverchargeExplosionMontages[FMath::RandRange(0, OverchargeExplosionMontages.Num() - 1)];
-            if(MontageToPlay && GetMesh()->GetAnimInstance())
-            {
-                GetMesh()->GetAnimInstance()->Montage_Play(MontageToPlay, 1.f);
-            }
-        }
+        if(CurrentOvercharge >= MaxOvercharge) StartOverchargeSequence();
 
         //no health damage(physical damage hence return false)
         return false;
@@ -100,7 +94,7 @@ bool ARodmasterEnemy::ReactToHit(float DamageAmount, const FVector &HitImpulse, 
 
 void ARodmasterEnemy::PerformAttack()
 {
-    if(bIsAttacking || bIsStunned || bIsDead) return;
+    if(bIsAttacking || bIsStunned || bIsDead || bIsExploding) return;
 
     APawn* PlayerTarget = UGameplayStatics::GetPlayerPawn(GetWorld(), 0);
     if(!PlayerTarget) return;
@@ -217,12 +211,12 @@ void ARodmasterEnemy::TriggerExplosion(EExplosionType ExplosionType)
     }
 
     //instantly kill rodmaster
-    if(KillRodmaster) ReactToHit(MaxHealth + 500.f, FVector::ZeroVector, NAME_None, InDamageSource);
+    if(KillRodmaster) Super::ReactToHit(MaxHealth + 500.f, FVector::ZeroVector, NAME_None, InDamageSource);
 }
 
 void ARodmasterEnemy::ExecuteSlam()
 {
-    if(bIsDead) return;
+    if(bIsDead || bIsStunned || bIsExploding) return;
     TriggerExplosion(EExplosionType::Slam);
 }
 
@@ -241,4 +235,28 @@ void ARodmasterEnemy::UpdateOverchargeVisuals(float OverchargeRatio)
 		// Example if you have a MID set up:
 		// DynamicMat->SetScalarParameterValue(FName("OverchargeGlow"), OverchargeRatio * 50.0f);
 	}
+}
+
+void ARodmasterEnemy::StartOverchargeSequence()
+{
+    if(bIsExploding) return;
+
+    bIsExploding = true;
+
+    //force AI and movement to stop:
+    GetCharacterMovement()->DisableMovement();
+    if(AEnemyAIController* AICon = Cast<AEnemyAIController>(GetController())) AICon->SleepAI();
+
+    //interrupt any anim montages and play overcharge one:
+    if(GetMesh()->GetAnimInstance())
+    {
+        GetMesh()->GetAnimInstance()->Montage_Stop(0.1f, nullptr); 
+
+        if(OverchargeExplosionMontages.Num() > 0)
+        {
+            UAnimMontage* MontageToPlay = OverchargeExplosionMontages[FMath::RandRange(0, OverchargeExplosionMontages.Num() - 1)];
+            if(MontageToPlay) GetMesh()->GetAnimInstance()->Montage_Play(MontageToPlay, 1.f);
+        }
+        else ExecuteOverchargeExplosion(); //failsafe: if no montage provided.
+    }
 }
