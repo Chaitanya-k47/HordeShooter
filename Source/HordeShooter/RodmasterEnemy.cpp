@@ -1,8 +1,11 @@
 #include "RodmasterEnemy.h"
+#include "RodmasterEnemy.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Kismet/GameplayStatics.h"
 #include "NiagaraFunctionLibrary.h"
+#include "NiagaraComponent.h"
 #include "EnemyAIController.h"
+#include "Components/CapsuleComponent.h"
 // Fill out your copyright notice in the Description page of Project Settings.
 
 
@@ -24,6 +27,7 @@ ARodmasterEnemy::ARodmasterEnemy()
     GetCharacterMovement()->RotationRate = FRotator(0.0f, 200.0f, 0.0f);
 }
 
+
 void ARodmasterEnemy::BeginPlay()
 {
     Super::BeginPlay();
@@ -38,10 +42,8 @@ void ARodmasterEnemy::BeginPlay()
 		if(Montage) AttackMontages.AddUnique(Montage);
 	}
 	
-	for(UAnimMontage* Montage : CloseSlamMontages)
-	{
-		if(Montage) AttackMontages.AddUnique(Montage);
-	}
+	if(CloseSlamMontage) AttackMontages.AddUnique(CloseSlamMontage);
+	
 }
 
 void ARodmasterEnemy::ActivateEnemy(const FTransform& SpawnTransform, const TArray<float>& DifficultyMultipliers)
@@ -107,9 +109,9 @@ void ARodmasterEnemy::PerformAttack()
     UAnimMontage* MontageToPlay = nullptr;
 
     //close range attacks
-    if(DistSq <= CloseRangeSq && CloseSlamMontages.Num() > 0)
+    if(DistSq <= CloseRangeSq && CloseSlamMontage)
     {
-        MontageToPlay = CloseSlamMontages[FMath::RandRange(0, CloseSlamMontages.Num() - 1)];
+        MontageToPlay = CloseSlamMontage;
     } 
 
     //long range attacks
@@ -131,9 +133,6 @@ void ARodmasterEnemy::PerformAttack()
 
 void ARodmasterEnemy::TriggerExplosion(EExplosionType ExplosionType)
 {
-    UNiagaraSystem* ExplosionVFXToPlay = nullptr;
-    USoundBase* ExplosionSFXToPlay = nullptr;
-    
     FVector ExplodeLoc = GetActorLocation();
     TArray<FOverlapResult> OverlapResults;
     FCollisionShape ColShape;
@@ -148,8 +147,6 @@ void ARodmasterEnemy::TriggerExplosion(EExplosionType ExplosionType)
     switch(ExplosionType)
     {
     case EExplosionType::Slam:
-        ExplosionVFXToPlay = CloseSlamVFX;
-        ExplosionSFXToPlay = CloseSlamSFX;
         ColShape = FCollisionShape::MakeSphere(CloseSlamRange);
         QueryParams.AddIgnoredActor(this);
         ObjectQueryParams.AddObjectTypesToQuery(ECC_Pawn);
@@ -157,12 +154,37 @@ void ARodmasterEnemy::TriggerExplosion(EExplosionType ExplosionType)
         ExplosionImpulse = CloseSlamImpulse;
         InDamageSource = FName("RodSlam");
         KillRodmaster = false;
+
+        if(CloseSlamSFX) UGameplayStatics::PlaySoundAtLocation(GetWorld(), CloseSlamSFX, ExplodeLoc);
+        if(CloseSlamVFX)
+		{
+			float HalfHeight = GetCapsuleComponent()->GetScaledCapsuleHalfHeight();
+			FVector FloorLocation = GetActorLocation() - FVector(0.0f, 0.0f, HalfHeight-5);
+
+			UNiagaraComponent* Blast = UNiagaraFunctionLibrary::SpawnSystemAtLocation(GetWorld(), CloseSlamVFX, FloorLocation, FRotator::ZeroRotator);
+			if(Blast)
+			{
+				//send the dynamically calculated radius to niagara material
+				Blast->SetFloatParameter(FName("BlastScale"), CloseSlamRange*2); 
+			}
+        }
+        if(SlamCameraShake)
+        {
+            UGameplayStatics::PlayWorldCameraShake(
+                GetWorld(),
+                SlamCameraShake,
+                ExplodeLoc,
+                SlamShakeInnerRadius,
+                SlamShakeOuterRadius,
+                1.f,
+                false  
+            );
+        }       
+
         break;
     
     case EExplosionType::Overcharge:
         bIsExploding = true;
-        ExplosionVFXToPlay = OverchargeExplosionVFX;
-        ExplosionSFXToPlay = OverchargeExplosionSFX;
         ColShape = FCollisionShape::MakeSphere(OverchargeExplosionRadius);
         QueryParams.AddIgnoredActor(this);
         ObjectQueryParams.AddObjectTypesToQuery(ECC_Pawn);
@@ -170,6 +192,10 @@ void ARodmasterEnemy::TriggerExplosion(EExplosionType ExplosionType)
         ExplosionImpulse = OverchargeExplosionImpulse;
         InDamageSource = FName("Overcharge");
         KillRodmaster = true;
+
+        if(OverchargeExplosionSFX) UGameplayStatics::PlaySoundAtLocation(GetWorld(), OverchargeExplosionSFX, ExplodeLoc);
+        if(OverchargeExplosionVFX) UNiagaraFunctionLibrary::SpawnSystemAtLocation(GetWorld(), OverchargeExplosionVFX, ExplodeLoc);
+
         break;
 
     default:
@@ -177,8 +203,8 @@ void ARodmasterEnemy::TriggerExplosion(EExplosionType ExplosionType)
     }
 
     //FX
-    if(ExplosionVFXToPlay) UNiagaraFunctionLibrary::SpawnSystemAtLocation(GetWorld(), ExplosionVFXToPlay, ExplodeLoc);
-    if(ExplosionSFXToPlay) UGameplayStatics::PlaySoundAtLocation(GetWorld(), ExplosionSFXToPlay, ExplodeLoc);
+    // if(ExplosionVFXToPlay) UNiagaraFunctionLibrary::SpawnSystemAtLocation(GetWorld(), ExplosionVFXToPlay, ExplodeLoc);
+    // if(ExplosionSFXToPlay) UGameplayStatics::PlaySoundAtLocation(GetWorld(), ExplosionSFXToPlay, ExplodeLoc);
 
     bool bHasOverlap = GetWorld()->OverlapMultiByObjectType(
         OverlapResults,
@@ -218,6 +244,57 @@ void ARodmasterEnemy::ExecuteSlam()
 {
     if(bIsDead || bIsStunned || bIsExploding) return;
     TriggerExplosion(EExplosionType::Slam);
+}
+
+void ARodmasterEnemy::ExecuteSlamJump()
+{
+    if(bIsDead || bIsStunned || bIsExploding) return;
+
+    FVector JumpDirection = GetActorForwardVector();
+
+    APawn* PlayerTarget = UGameplayStatics::GetPlayerPawn(GetWorld(), 0);
+    if(PlayerTarget)
+    {
+        FVector ToPlayer = PlayerTarget->GetActorLocation() - GetActorLocation();
+        ToPlayer.Z = 0.0f;  //flatten the vector(if there's a difference in Z coordinates of rodmaster and player this fixes that)
+        
+        JumpDirection = ToPlayer.GetSafeNormal();
+    }
+
+    JumpDirection.Z += 1.4;
+    JumpDirection.Normalize();
+
+	FVector CalculatedVelocity = JumpDirection * LaunchSpeed;
+
+    bIsSlamJumping = true;
+	LaunchCharacter(CalculatedVelocity, true, true);
+}
+
+void ARodmasterEnemy::PauseSlamMontage()
+{
+    if(!bIsSlamJumping) return; //if landed early then no need to pause
+
+    UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance();
+    if(AnimInstance && CloseSlamMontage)
+    {
+        AnimInstance->Montage_SetPlayRate(CloseSlamMontage, 0.0f);
+    }
+}
+
+void ARodmasterEnemy::Landed(const FHitResult& Hit)
+{
+    Super::Landed(Hit);
+
+    if(bIsSlamJumping)
+    {
+        bIsSlamJumping = false;
+
+        UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance();
+        if(AnimInstance && CloseSlamMontage)
+        {
+            AnimInstance->Montage_SetPlayRate(CloseSlamMontage, 1.0f);
+        }
+    }
 }
 
 void ARodmasterEnemy::ExecuteOverchargeExplosion()

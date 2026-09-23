@@ -38,6 +38,10 @@ public:
 	//oerride activation to reset overcharge meter when pooled
 	virtual void ActivateEnemy(const FTransform& SpawnTransform, const TArray<float>& DifficultyMultipliers) override;
 
+    UPROPERTY(BlueprintReadWrite)
+    bool bIsSlamJumping = false; 
+
+    virtual void Landed(const FHitResult& Hit) override;
 
 protected:
 	virtual void BeginPlay() override;
@@ -45,8 +49,15 @@ protected:
 	UFUNCTION(BlueprintCallable)
 	void ExecuteSlam(); //bind this in anim notify for slam montages
 
+	UFUNCTION(BlueprintCallable) //bind this in anim notify for slam montages
+	void ExecuteSlamJump();
+
+	UFUNCTION(BlueprintCallable)//bind this in anim notify for slam montages
+    void PauseSlamMontage();
+
 	UFUNCTION(BlueprintCallable)
 	void ExecuteOverchargeExplosion(); //bind this in anim notify of overcharge montages
+
 
 	//BULLET RESISTANCE:
 	UPROPERTY(EditDefaultsOnly, Category = "Rodmaster|Stats")
@@ -98,20 +109,32 @@ protected:
 	float CloseSlamDamage = 50.0f;
 
 	UPROPERTY(EditDefaultsOnly, Category = "Rodmaster|Combat|Stats")
+	float LaunchSpeed = 1500.0f;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Rodmaster|Combat|Stats")
 	float CloseSlamImpulse = 200000.0f;
 
-	UPROPERTY(EditDefaultsOnly, Category = "Rodmaster|Combat|Stats")
+	UPROPERTY(EditDefaultsOnly, Category = "Rodmaster|Combat|Effects")
 	UNiagaraSystem* CloseSlamVFX;
 
-	UPROPERTY(EditDefaultsOnly, Category = "Rodmaster|Combat|Stats")
+	UPROPERTY(EditDefaultsOnly, Category = "Rodmaster|Combat|Effects")
 	USoundBase* CloseSlamSFX;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Rodmaster|Combat|Effects")
+	TSubclassOf<UCameraShakeBase> SlamCameraShake;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Rodmaster|Combat|Effects")
+	float SlamShakeInnerRadius = 300.f; // Inside this radius, the shake is at 100% power
+
+	UPROPERTY(EditDefaultsOnly, Category = "Rodmaster|Combat|Effects")
+	float SlamShakeOuterRadius = 1500.f; // Shake fades to 0% at this distance
 
 
 	UPROPERTY(EditDefaultsOnly, Category = "Rodmaster|Combat")
 	TArray<UAnimMontage*> RangedPlasmaMontages;
 
 	UPROPERTY(EditDefaultsOnly, Category = "Rodmaster|Combat")
-	TArray<UAnimMontage*> CloseSlamMontages;
+	UAnimMontage* CloseSlamMontage;
 
 
 private:
@@ -124,5 +147,7 @@ private:
 	void TriggerExplosion(EExplosionType ExplosionType);
 	void UpdateOverchargeVisuals(float OverchargeRatio);
 	void StartOverchargeSequence();
+
+
 
 };

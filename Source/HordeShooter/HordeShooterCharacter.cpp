@@ -607,9 +607,9 @@ void AHordeShooterCharacter::Landed(const FHitResult& Hit)
 		if (SlamVFX)
 		{
 			float HalfHeight = GetCapsuleComponent()->GetScaledCapsuleHalfHeight();
-			FVector FloorLocation = GetActorLocation() - FVector(0.0f, 0.0f, HalfHeight+10);
+			FVector FloorLocation = GetActorLocation() - FVector(0.0f, 0.0f, HalfHeight-10);
 
-			UNiagaraComponent* Blast = UNiagaraFunctionLibrary::SpawnSystemAtLocation(GetWorld(), SlamVFX, GetActorLocation(), FRotator::ZeroRotator);
+			UNiagaraComponent* Blast = UNiagaraFunctionLibrary::SpawnSystemAtLocation(GetWorld(), SlamVFX, FloorLocation, FRotator::ZeroRotator);
 			if (Blast)
 			{
 				//send the dynamically calculated radius to niagara material
