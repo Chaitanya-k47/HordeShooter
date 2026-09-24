@@ -13,6 +13,9 @@
 
 ARodmasterEnemy::ARodmasterEnemy()
 {
+    PrimaryActorTick.bCanEverTick = true;
+    PrimaryActorTick.SetTickFunctionEnable(false);
+
     MaxHealth = 800.f;
     AttackRange = 4000.f;
     WalkSpeed = 250.f;
@@ -27,13 +30,14 @@ ARodmasterEnemy::ARodmasterEnemy()
     GetCharacterMovement()->RotationRate = FRotator(0.0f, 200.0f, 0.0f);
 }
 
-
 void ARodmasterEnemy::BeginPlay()
 {
     Super::BeginPlay();
     BaseWalkSpeed = WalkSpeed;
     BaseAttackDamage = AttackDamage;
     BaseCloseSlamDamage = CloseSlamDamage;
+
+    OriginalMeshZ = GetMesh()->GetRelativeLocation().Z;
 
     //register the custom attack montages with the AttackMontages array of base class
 	//this ensures OnMontageEnded correctly resets bIsAttacking to false
@@ -44,6 +48,26 @@ void ARodmasterEnemy::BeginPlay()
 	
 	if(CloseSlamMontage) AttackMontages.AddUnique(CloseSlamMontage);
 	
+    if(GetMesh())
+	{
+		DynamicGlowMat = GetMesh()->CreateAndSetMaterialInstanceDynamic(0);
+	}
+}
+
+
+void ARodmasterEnemy::Tick(float DeltaTime)
+{
+    Super::Tick(DeltaTime);
+
+    FVector CurrentLoc = GetMesh()->GetRelativeLocation();
+    float NewZ = FMath::FInterpTo(CurrentLoc.Z, TargetMeshZ, DeltaTime, 20.f);
+    GetMesh()->SetRelativeLocation(FVector(CurrentLoc.X, CurrentLoc.Y, NewZ));
+
+    if(bIsLandingRecovery && FMath::IsNearlyEqual(NewZ, OriginalMeshZ, 0.5f))
+    {
+        bIsLandingRecovery = false; //turn off recovery flag
+        SetActorTickEnabled(false); //turn off tick
+    }
 }
 
 void ARodmasterEnemy::ActivateEnemy(const FTransform& SpawnTransform, const TArray<float>& DifficultyMultipliers)
@@ -263,8 +287,14 @@ void ARodmasterEnemy::ExecuteSlamJump()
 
     JumpDirection.Z += 1.4;
     JumpDirection.Normalize();
-
 	FVector CalculatedVelocity = JumpDirection * LaunchSpeed;
+
+    //Calculate how far down the mesh needs to slide.
+    //(If he tucks his legs up by 40 units, slide the mesh down by 40 units)
+    TargetMeshZ = OriginalMeshZ - 40.f;
+
+    //enable tick for interpolation:
+    SetActorTickEnabled(true);
 
     bIsSlamJumping = true;
 	LaunchCharacter(CalculatedVelocity, true, true);
@@ -289,6 +319,10 @@ void ARodmasterEnemy::Landed(const FHitResult& Hit)
     {
         bIsSlamJumping = false;
 
+        TargetMeshZ = OriginalMeshZ;
+
+        bIsLandingRecovery = true;
+
         UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance();
         if(AnimInstance && CloseSlamMontage)
         {
@@ -305,12 +339,17 @@ void ARodmasterEnemy::ExecuteOverchargeExplosion()
 
 void ARodmasterEnemy::UpdateOverchargeVisuals(float OverchargeRatio)
 {
-    // C++ to Blueprint hook. You can use this to drive a Material Instance Dynamic (MID) 
-	// to make his veins glow bright red/orange as he charges up.
-	if (GetMesh())
+    if(DynamicGlowMat)
 	{
-		// Example if you have a MID set up:
-		// DynamicMat->SetScalarParameterValue(FName("OverchargeGlow"), OverchargeRatio * 50.0f);
+		float CurrentGlow = OverchargeRatio * MaxGlowIntensity;
+		DynamicGlowMat->SetScalarParameterValue(FName("GlowIntensity"), CurrentGlow);
+
+        //if setup GlowColor parameter in material(for dynamic color change):
+        FLinearColor SafeColor = FLinearColor(0.0f, 1.0f, 0.0f); // green
+		FLinearColor DangerColor = FLinearColor(1.0f, 0.0f, 0.0f); // Pure Red
+		
+		FLinearColor CurrentColor = FMath::Lerp(SafeColor, DangerColor, OverchargeRatio);
+		DynamicGlowMat->SetVectorParameterValue(FName("GlowColor"), CurrentColor);
 	}
 }
 

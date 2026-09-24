@@ -29,6 +29,8 @@ class HORDESHOOTER_API ARodmasterEnemy : public AHordeShooterEnemy
 public:
 	ARodmasterEnemy();
 
+	virtual void Tick(float DeltaTime) override;
+
 	//attack fn override for distance specific attacks
 	virtual void PerformAttack() override;
 
@@ -76,6 +78,9 @@ protected:
 
 	UPROPERTY(EditDefaultsOnly, Category = "Rodmaster|Overcharge")
 	float MaxDamageMultiplier = 2.0f; //hits 2x harder at 99% charge
+
+	UPROPERTY(EditDefaultsOnly, Category = "Rodmaster|Overcharge")
+	float MaxGlowIntensity = 50.0f;
 
 
 	//OVERCHARGE EXPLOSION:
@@ -148,6 +153,10 @@ private:
 	void UpdateOverchargeVisuals(float OverchargeRatio);
 	void StartOverchargeSequence();
 
+	float OriginalMeshZ;
+	float TargetMeshZ;
+	bool bIsLandingRecovery = false;
 
-
+	UPROPERTY()
+	class UMaterialInstanceDynamic* DynamicGlowMat;
 };
