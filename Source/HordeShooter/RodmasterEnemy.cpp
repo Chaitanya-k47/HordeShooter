@@ -6,8 +6,9 @@
 #include "NiagaraComponent.h"
 #include "EnemyAIController.h"
 #include "Components/CapsuleComponent.h"
-// Fill out your copyright notice in the Description page of Project Settings.
+#include "HordeWaveManager.h"
 
+// Fill out your copyright notice in the Description page of Project Settings.
 
 #include "RodmasterEnemy.h"
 
@@ -60,8 +61,13 @@ void ARodmasterEnemy::Tick(float DeltaTime)
     Super::Tick(DeltaTime);
 
     FVector CurrentLoc = GetMesh()->GetRelativeLocation();
-    float NewZ = FMath::FInterpTo(CurrentLoc.Z, TargetMeshZ, DeltaTime, 20.f);
-    GetMesh()->SetRelativeLocation(FVector(CurrentLoc.X, CurrentLoc.Y, NewZ));
+    float NewZ = FMath::FInterpTo(CurrentLoc.Z, TargetMeshZ, DeltaTime, 2.f);
+    GetMesh()->SetRelativeLocation(
+        FVector(CurrentLoc.X, CurrentLoc.Y, NewZ), 
+        false,
+        nullptr,
+        ETeleportType::TeleportPhysics
+    );
 
     if(bIsLandingRecovery && FMath::IsNearlyEqual(NewZ, OriginalMeshZ, 0.5f))
     {
@@ -264,12 +270,6 @@ void ARodmasterEnemy::TriggerExplosion(EExplosionType ExplosionType)
     if(KillRodmaster) Super::ReactToHit(MaxHealth + 500.f, FVector::ZeroVector, NAME_None, InDamageSource);
 }
 
-void ARodmasterEnemy::ExecuteSlam()
-{
-    if(bIsDead || bIsStunned || bIsExploding) return;
-    TriggerExplosion(EExplosionType::Slam);
-}
-
 void ARodmasterEnemy::ExecuteSlamJump()
 {
     if(bIsDead || bIsStunned || bIsExploding) return;
@@ -299,6 +299,13 @@ void ARodmasterEnemy::ExecuteSlamJump()
     bIsSlamJumping = true;
 	LaunchCharacter(CalculatedVelocity, true, true);
 }
+
+void ARodmasterEnemy::ExecuteSlam()
+{
+    if(bIsDead || bIsStunned || bIsExploding) return;
+    TriggerExplosion(EExplosionType::Slam);
+}
+
 
 void ARodmasterEnemy::PauseSlamMontage()
 {
@@ -346,7 +353,7 @@ void ARodmasterEnemy::UpdateOverchargeVisuals(float OverchargeRatio)
 
         //if setup GlowColor parameter in material(for dynamic color change):
         FLinearColor SafeColor = FLinearColor(0.0f, 1.0f, 0.0f); // green
-		FLinearColor DangerColor = FLinearColor(1.0f, 0.0f, 0.0f); // Pure Red
+		FLinearColor DangerColor = FLinearColor(1.0f, 0.0f, 0.0f); //Red
 		
 		FLinearColor CurrentColor = FMath::Lerp(SafeColor, DangerColor, OverchargeRatio);
 		DynamicGlowMat->SetVectorParameterValue(FName("GlowColor"), CurrentColor);
@@ -375,4 +382,22 @@ void ARodmasterEnemy::StartOverchargeSequence()
         }
         else ExecuteOverchargeExplosion(); //failsafe: if no montage provided.
     }
+}
+
+void ARodmasterEnemy::ExecutePlasmaShot()
+{
+	if(bIsDead || bIsStunned || bIsExploding) return;
+
+	APawn* PlayerTarget = UGameplayStatics::GetPlayerPawn(GetWorld(), 0);
+	if(!PlayerTarget) return;
+
+	FVector StartLoc = GetMesh()->GetSocketLocation(FName("Projectile_Socket"));
+	FVector TargetLoc = PlayerTarget->GetActorLocation(); 
+	FVector AimDirection = (TargetLoc - StartLoc).GetSafeNormal();
+
+	AActor* WaveManagerActor = UGameplayStatics::GetActorOfClass(GetWorld(), AHordeWaveManager::StaticClass());
+	if(AHordeWaveManager* WaveManager = Cast<AHordeWaveManager>(WaveManagerActor))
+	{
+		WaveManager->SpawnEnemyProjectile(StartLoc, AimDirection);
+	}
 }

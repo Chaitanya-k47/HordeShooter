@@ -8,6 +8,7 @@
 #include "ArenaManager.h"
 #include "HordeShooterPlayerController.h"
 #include "HordeShooterCharacter.h"
+#include "HordeShooterProjectile.h"	
 
 // Sets default values
 AHordeWaveManager::AHordeWaveManager()
@@ -42,6 +43,19 @@ void AHordeWaveManager::BeginPlay()
 			{
 				PickupPool.Add(NewPickup);
 			}
+		}
+	}
+
+	//create projectile pool:
+	if(EnemyProjectileClass)
+	{
+		FActorSpawnParameters SpawnParams;
+		SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+		
+		for(int32 i = 0; i < ProjectilePoolSize; i++)
+		{
+			AHordeShooterProjectile* Proj = GetWorld()->SpawnActor<AHordeShooterProjectile>(EnemyProjectileClass, FVector(0,0,-10000), FRotator::ZeroRotator, SpawnParams);
+			if(Proj) ProjectilePool.Add(Proj);
 		}
 	}
 
@@ -238,6 +252,18 @@ void AHordeWaveManager::SpawnPickup(const FVector& Location, EPickupType Type, E
 	
 	// (Optional) If pool is exhausted, steal the oldest active one, or just ignore. 
 	// 50 pool size should be enough for an arena.
+}
+
+void AHordeWaveManager::SpawnEnemyProjectile(const FVector& Location, const FVector& Direction)
+{
+	for(AHordeShooterProjectile* Proj : ProjectilePool)
+	{
+		if(Proj && !Proj->bIsActive)
+		{
+			Proj->ActivateProjectile(Location, Direction);
+			return;
+		}
+	}
 }
 
 void AHordeWaveManager::PrintPoolStats()

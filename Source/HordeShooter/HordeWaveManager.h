@@ -10,6 +10,7 @@
 class AHordeShooterEnemy;
 class AArenaManager;
 class AHordeShooterPickup;
+class AHordeShooterProjectile;
 enum class EPickupSize : uint8;
 enum class EPickupType : uint8;
 
@@ -48,6 +49,8 @@ public:
 
 	void SpawnPickup(const FVector& Location, EPickupType Type, EPickupSize Size);
 
+	void SpawnEnemyProjectile(const FVector& Location, const FVector& Direction);
+
 protected:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
@@ -76,6 +79,12 @@ protected:
 
 	UPROPERTY(EditDefaultsOnly, Category = "Horde Setup|Pool")
 	int32 PickupPoolSize = 50;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Horde Setup|Pool")
+	TSubclassOf<AHordeShooterProjectile> EnemyProjectileClass;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Horde Setup|Pool")
+	int32 ProjectilePoolSize = 30; 
 
 	UPROPERTY(EditAnywhere, Category = "Horde Setup|Progression")
 	int32 UpgradeWaveInterval = 1;
@@ -113,6 +122,9 @@ private:
 
 	UPROPERTY()
 	TArray<AHordeShooterPickup*> PickupPool;
+
+	UPROPERTY()
+	TArray<AHordeShooterProjectile*> ProjectilePool;
 
 	// --- POOL DEBUGGER ---
 	FTimerHandle DebugTelemetryTimer;

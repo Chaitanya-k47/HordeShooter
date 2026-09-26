@@ -60,6 +60,8 @@ protected:
 	UFUNCTION(BlueprintCallable)
 	void ExecuteOverchargeExplosion(); //bind this in anim notify of overcharge montages
 
+	UFUNCTION(BlueprintCallable)//bind this in anim notify for slam montages
+    void ExecutePlasmaShot();
 
 	//BULLET RESISTANCE:
 	UPROPERTY(EditDefaultsOnly, Category = "Rodmaster|Stats")
