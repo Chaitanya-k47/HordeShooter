@@ -99,7 +99,7 @@ void AHordeShooterPickup::OnPickupActivated(EPickupType Type, EPickupSize Size)
 		default:
 			break;
 	}
-	PickupVFX->SetNiagaraVariableLinearColor(TEXT("EnergyColour"), EnergyColour);
+	PickupVFX->SetVariableLinearColor(FName("EnergyColour"), EnergyColour);
 
 	//scale the pickup based on size:
 	float SizeMultiplier = 1.0f;
@@ -132,7 +132,7 @@ void AHordeShooterPickup::DeactivatePickup()
 
 	VacuumSphere->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 	PickupVFX->SetFloatParameter(FName("SizeMultiplier"), 1.f);
-	PickupVFX->SetNiagaraVariableLinearColor(TEXT("EnergyColour"), FLinearColor::White);
+	PickupVFX->SetVariableLinearColor(FName("EnergyColour"), FLinearColor::White);
 	PickupVFX->DeactivateImmediate(); 
 	SetActorHiddenInGame(true);
 

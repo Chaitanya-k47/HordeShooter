@@ -49,7 +49,7 @@ public:
 
 	void SpawnPickup(const FVector& Location, EPickupType Type, EPickupSize Size);
 
-	void SpawnEnemyProjectile(const FVector& Location, const FVector& Direction);
+	void SpawnEnemyProjectile(const FVector& Location, const FVector& Direction, AActor* Shooter, FLinearColor PlasmaColor);
 
 protected:
 	// Called when the game starts or when spawned

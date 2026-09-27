@@ -9,6 +9,7 @@
 class USphereComponent;
 class UNiagaraComponent;
 class UProjectileMovementComponent;
+class UAudioComponent;
 
 UCLASS()
 class HORDESHOOTER_API AHordeShooterProjectile : public AActor
@@ -19,7 +20,7 @@ public:
 	// Sets default values for this actor's properties
 	AHordeShooterProjectile();
 
-	void ActivateProjectile(const FVector& StartLocation, const FVector& Direction);
+	void ActivateProjectile(const FVector& StartLocation, const FVector& Direction, AActor* Shooter, FLinearColor PlasmaColor);
 	void DeactivateProjectile();
 
 	bool bIsActive = false;
@@ -32,7 +33,13 @@ protected:
 	USphereComponent* CollisionSphere;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
-	UNiagaraComponent* ProjectileVFX;
+	UNiagaraComponent* CoreVFX;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
+	UNiagaraComponent* TrailVFX;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
+	UAudioComponent* FlightAudioComp;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
 	UProjectileMovementComponent* ProjectileMovement;
@@ -43,10 +50,16 @@ protected:
 	UPROPERTY(EditDefaultsOnly, Category = "Projectile Stats")
 	float MaxLifespan = 5.0f; //failsafe it flies into void
 
+	UPROPERTY(EditDefaultsOnly, Category = "Projectile Stats")
+	float CollisionSphereRadius = 70.0f; // at 70.0f the niagara vfx parameter SizeMultiplier = 1.
+
 	UFUNCTION()
 	void OnHit(UPrimitiveComponent* HitComp, AActor* OtherActor, UPrimitiveComponent* OtherComp, FVector NormalImpulse, const FHitResult& Hit);
 
 private:
 	FTimerHandle FailsafeDeactivateTimer;
+	FTimerHandle RibbonDecayTimer;
+
+	void ReturnToPool();
 
 };

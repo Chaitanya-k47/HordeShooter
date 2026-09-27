@@ -254,13 +254,13 @@ void AHordeWaveManager::SpawnPickup(const FVector& Location, EPickupType Type, E
 	// 50 pool size should be enough for an arena.
 }
 
-void AHordeWaveManager::SpawnEnemyProjectile(const FVector& Location, const FVector& Direction)
+void AHordeWaveManager::SpawnEnemyProjectile(const FVector& Location, const FVector& Direction, AActor* Shooter, FLinearColor PlasmaColor)
 {
 	for(AHordeShooterProjectile* Proj : ProjectilePool)
 	{
 		if(Proj && !Proj->bIsActive)
 		{
-			Proj->ActivateProjectile(Location, Direction);
+			Proj->ActivateProjectile(Location, Direction, Shooter, PlasmaColor);
 			return;
 		}
 	}

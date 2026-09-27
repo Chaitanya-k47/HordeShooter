@@ -6,6 +6,7 @@
 #include "GameFramework/ProjectileMovementComponent.h"
 #include "NiagaraComponent.h"
 #include "DamageableInterface.h"
+#include "Components/AudioComponent.h"
 
 // Sets default values
 AHordeShooterProjectile::AHordeShooterProjectile()
@@ -15,13 +16,21 @@ AHordeShooterProjectile::AHordeShooterProjectile()
 
 	CollisionSphere = CreateDefaultSubobject<USphereComponent>(TEXT("CollisionSphere"));
 	RootComponent = CollisionSphere;
-	CollisionSphere->InitSphereRadius(15.0f);
+	CollisionSphere->InitSphereRadius(CollisionSphereRadius);
 
-	ProjectileVFX = CreateDefaultSubobject<UNiagaraComponent>(TEXT("ProjectileVFX"));
-	ProjectileVFX->SetupAttachment(RootComponent);
-	ProjectileVFX->bAutoActivate = false;
+	CoreVFX = CreateDefaultSubobject<UNiagaraComponent>(TEXT("CoreVFX"));
+	CoreVFX->SetupAttachment(RootComponent);
+	CoreVFX->bAutoActivate = false;
+
+	TrailVFX = CreateDefaultSubobject<UNiagaraComponent>(TEXT("TrailVFX"));
+	TrailVFX->SetupAttachment(RootComponent);
+	TrailVFX->bAutoActivate = false;
 
 	ProjectileMovement = CreateDefaultSubobject<UProjectileMovementComponent>(TEXT("ProjectileMovement"));
+
+	FlightAudioComp = CreateDefaultSubobject<UAudioComponent>(TEXT("FlightAudioComp"));
+	FlightAudioComp->SetupAttachment(RootComponent);
+	FlightAudioComp->bAutoActivate = false;
 
 	//optimization:
 	CollisionSphere->SetCollisionProfileName(TEXT("Custom"));
@@ -48,15 +57,28 @@ void AHordeShooterProjectile::BeginPlay()
 	
 }
 
-void AHordeShooterProjectile::ActivateProjectile(const FVector &StartLocation, const FVector &Direction)
+void AHordeShooterProjectile::ActivateProjectile(const FVector &StartLocation, const FVector &Direction, AActor* Shooter, FLinearColor PlasmaColor)
 {
 	bIsActive = true;
 
+	GetWorldTimerManager().ClearTimer(RibbonDecayTimer);
+
 	SetActorLocationAndRotation(StartLocation, Direction.Rotation());
+	SetActorHiddenInGame(false);
+
+	if(Shooter) CollisionSphere->IgnoreActorWhenMoving(Shooter, true);
 
 	CollisionSphere->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
-	ProjectileVFX->Activate(true);
-	SetActorHiddenInGame(false);
+	
+	CoreVFX->Activate(true); 
+	CoreVFX->SetFloatParameter(FName("SizeMultiplier"), (CollisionSphereRadius / 70.0f));
+	CoreVFX->SetVariableLinearColor(FName("EnergyColour"), PlasmaColor);
+
+	TrailVFX->SetFloatParameter(FName("SizeMultiplier"), (CollisionSphereRadius / 70.0f));
+	TrailVFX->SetVariableLinearColor(FName("EnergyColour"), PlasmaColor);
+	TrailVFX->Activate(true);
+
+	if (FlightAudioComp->Sound) FlightAudioComp->Play();
 
 	ProjectileMovement->SetUpdatedComponent(CollisionSphere);
 	ProjectileMovement->Velocity = Direction * ProjectileMovement->InitialSpeed;
@@ -67,16 +89,30 @@ void AHordeShooterProjectile::ActivateProjectile(const FVector &StartLocation, c
 
 void AHordeShooterProjectile::DeactivateProjectile()
 {
+	if(!bIsActive) return;
 	bIsActive = false;
+
+	GetWorldTimerManager().ClearTimer(FailsafeDeactivateTimer);
 
 	ProjectileMovement->Deactivate();
 	ProjectileMovement->Velocity = FVector::ZeroVector;
 	CollisionSphere->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	FlightAudioComp->FadeOut(0.1f, 0.0f);
 	
-	ProjectileVFX->DeactivateImmediate();
-	SetActorHiddenInGame(true);
+	CoreVFX->SetFloatParameter(FName("SizeMultiplier"), 1.0f);
+	CoreVFX->SetVariableLinearColor(FName("EnergyColour"), FLinearColor(1.0f, 1.0f, 1.0f, 1.0f));
+	CoreVFX->DeactivateImmediate();
 
-	GetWorldTimerManager().ClearTimer(FailsafeDeactivateTimer);
+	TrailVFX->SetFloatParameter(FName("SizeMultiplier"), 1.0f);
+	TrailVFX->SetVariableLinearColor(FName("EnergyColour"), FLinearColor(1.0f, 1.0f, 1.0f, 1.0f));
+	TrailVFX->Deactivate();
+
+	GetWorldTimerManager().SetTimer(RibbonDecayTimer, this, &AHordeShooterProjectile::ReturnToPool, 0.4f, false);
+}
+
+void AHordeShooterProjectile::ReturnToPool()
+{
+	SetActorHiddenInGame(true);
 	SetActorLocation(FVector(0, 0, -10000.f));
 }
 

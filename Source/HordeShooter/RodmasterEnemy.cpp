@@ -61,13 +61,18 @@ void ARodmasterEnemy::Tick(float DeltaTime)
     Super::Tick(DeltaTime);
 
     FVector CurrentLoc = GetMesh()->GetRelativeLocation();
-    float NewZ = FMath::FInterpTo(CurrentLoc.Z, TargetMeshZ, DeltaTime, 2.f);
+    float NewZ = FMath::FInterpTo(CurrentLoc.Z, TargetMeshZ, DeltaTime, 10.0f);
+
     GetMesh()->SetRelativeLocation(
         FVector(CurrentLoc.X, CurrentLoc.Y, NewZ), 
         false,
         nullptr,
         ETeleportType::TeleportPhysics
     );
+
+    if (GEngine) {
+        GEngine->AddOnScreenDebugMessage(-1, 0.0f, FColor::Red, FString::Printf(TEXT("Mesh Z: %f | Target Z: %f"), NewZ, TargetMeshZ));
+    }
 
     if(bIsLandingRecovery && FMath::IsNearlyEqual(NewZ, OriginalMeshZ, 0.5f))
     {
@@ -177,7 +182,7 @@ void ARodmasterEnemy::TriggerExplosion(EExplosionType ExplosionType)
     switch(ExplosionType)
     {
     case EExplosionType::Slam:
-        ColShape = FCollisionShape::MakeSphere(CloseSlamRange);
+        ColShape = FCollisionShape::MakeSphere(CloseSlamDamageRadius);
         QueryParams.AddIgnoredActor(this);
         ObjectQueryParams.AddObjectTypesToQuery(ECC_Pawn);
         ExplosionDamage = CloseSlamDamage;
@@ -195,7 +200,7 @@ void ARodmasterEnemy::TriggerExplosion(EExplosionType ExplosionType)
 			if(Blast)
 			{
 				//send the dynamically calculated radius to niagara material
-				Blast->SetFloatParameter(FName("BlastScale"), CloseSlamRange*2); 
+				Blast->SetFloatParameter(FName("BlastScale"), CloseSlamDamageRadius*2); 
 			}
         }
         if(SlamCameraShake)
@@ -291,7 +296,7 @@ void ARodmasterEnemy::ExecuteSlamJump()
 
     //Calculate how far down the mesh needs to slide.
     //(If he tucks his legs up by 40 units, slide the mesh down by 40 units)
-    TargetMeshZ = OriginalMeshZ - 40.f;
+    TargetMeshZ = OriginalMeshZ - 40.0f;
 
     //enable tick for interpolation:
     SetActorTickEnabled(true);
@@ -326,16 +331,19 @@ void ARodmasterEnemy::Landed(const FHitResult& Hit)
     {
         bIsSlamJumping = false;
 
-        TargetMeshZ = OriginalMeshZ;
-
-        bIsLandingRecovery = true;
-
         UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance();
         if(AnimInstance && CloseSlamMontage)
         {
             AnimInstance->Montage_SetPlayRate(CloseSlamMontage, 1.0f);
         }
     }
+}
+
+void ARodmasterEnemy::LandingRecovery()
+{
+    TargetMeshZ = OriginalMeshZ;
+    bIsLandingRecovery = true;
+    SetActorTickEnabled(true);
 }
 
 void ARodmasterEnemy::ExecuteOverchargeExplosion()
@@ -352,10 +360,10 @@ void ARodmasterEnemy::UpdateOverchargeVisuals(float OverchargeRatio)
 		DynamicGlowMat->SetScalarParameterValue(FName("GlowIntensity"), CurrentGlow);
 
         //if setup GlowColor parameter in material(for dynamic color change):
-        FLinearColor SafeColor = FLinearColor(0.0f, 1.0f, 0.0f); // green
+        FLinearColor SafeColor = FLinearColor(0.0f, 0.0f, 1.0f); // blue
 		FLinearColor DangerColor = FLinearColor(1.0f, 0.0f, 0.0f); //Red
 		
-		FLinearColor CurrentColor = FMath::Lerp(SafeColor, DangerColor, OverchargeRatio);
+		CurrentColor = FMath::Lerp(SafeColor, DangerColor, OverchargeRatio);
 		DynamicGlowMat->SetVectorParameterValue(FName("GlowColor"), CurrentColor);
 	}
 }
@@ -398,6 +406,6 @@ void ARodmasterEnemy::ExecutePlasmaShot()
 	AActor* WaveManagerActor = UGameplayStatics::GetActorOfClass(GetWorld(), AHordeWaveManager::StaticClass());
 	if(AHordeWaveManager* WaveManager = Cast<AHordeWaveManager>(WaveManagerActor))
 	{
-		WaveManager->SpawnEnemyProjectile(StartLoc, AimDirection);
+		WaveManager->SpawnEnemyProjectile(StartLoc, AimDirection, this, CurrentColor);
 	}
 }

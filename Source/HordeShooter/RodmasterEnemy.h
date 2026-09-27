@@ -63,6 +63,9 @@ protected:
 	UFUNCTION(BlueprintCallable)//bind this in anim notify for slam montages
     void ExecutePlasmaShot();
 
+	UFUNCTION(BlueprintCallable)//bind this in anim notify for slam montages
+    void LandingRecovery();
+
 	//BULLET RESISTANCE:
 	UPROPERTY(EditDefaultsOnly, Category = "Rodmaster|Stats")
 	float BulletDamageMultiplier = 0.25f; //for value x, takes ((1-x)*100)% less damage. Keep between 0 to 1.
@@ -116,6 +119,9 @@ protected:
 	float CloseSlamDamage = 50.0f;
 
 	UPROPERTY(EditDefaultsOnly, Category = "Rodmaster|Combat|Stats")
+	float CloseSlamDamageRadius = 800.0f;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Rodmaster|Combat|Stats")
 	float LaunchSpeed = 1500.0f;
 
 	UPROPERTY(EditDefaultsOnly, Category = "Rodmaster|Combat|Stats")
@@ -161,4 +167,6 @@ private:
 
 	UPROPERTY()
 	class UMaterialInstanceDynamic* DynamicGlowMat;
+
+	FLinearColor CurrentColor = FLinearColor(1.0f, 1.0f, 1.0f, 1.0f);
 };
