@@ -5,6 +5,7 @@
 #include "Components/SphereComponent.h"
 #include "GameFramework/ProjectileMovementComponent.h"
 #include "NiagaraComponent.h"
+#include "NiagaraFunctionLibrary.h"
 #include "DamageableInterface.h"
 #include "Components/AudioComponent.h"
 #include "Sound/SoundBase.h"
@@ -65,8 +66,12 @@ void AHordeShooterProjectile::ActivateProjectile(const FVector &StartLocation, c
 
 	GetWorldTimerManager().ClearTimer(RibbonDecayTimer);
 
-	SetActorLocationAndRotation(StartLocation, Direction.Rotation());
+	//deactivate old stuff
+	TrailVFX->DeactivateImmediate();
+	CoreVFX->DeactivateImmediate();
+	
 	SetActorHiddenInGame(false);
+	SetActorLocationAndRotation(StartLocation, Direction.Rotation(), false, nullptr, ETeleportType::TeleportPhysics);
 
 	Damage = InDamage;
 	if(Shooter) CollisionSphere->IgnoreActorWhenMoving(Shooter, true);
@@ -115,8 +120,9 @@ void AHordeShooterProjectile::DeactivateProjectile()
 
 void AHordeShooterProjectile::ReturnToPool()
 {
+	TrailVFX->DeactivateImmediate();
 	SetActorHiddenInGame(true);
-	SetActorLocation(FVector(0, 0, -10000.f));
+	SetActorLocation(FVector(0.0f, 0.0f, -10000.0f), false, nullptr, ETeleportType::TeleportPhysics);
 }
 
 void AHordeShooterProjectile::OnHit(UPrimitiveComponent* HitComp, AActor* OtherActor, UPrimitiveComponent* OtherComp, FVector NormalImpulse, const FHitResult& Hit)
@@ -124,6 +130,14 @@ void AHordeShooterProjectile::OnHit(UPrimitiveComponent* HitComp, AActor* OtherA
 	if(!bIsActive) return;
 
 	if(ProjectileHitSound) UGameplayStatics::PlaySoundAtLocation(GetWorld(), ProjectileHitSound, Hit.ImpactPoint);
+	if(ProjectileHitVFX)
+	{
+		UNiagaraComponent* Impact = UNiagaraFunctionLibrary::SpawnSystemAtLocation(GetWorld(), ProjectileHitVFX, Hit.ImpactPoint, Hit.ImpactNormal.Rotation());
+		if(Impact)
+		{
+			Impact->SetFloatParameter(FName("SizeMultiplier"), CollisionSphereRadius / 70.0f); 
+		}
+	}
 
 	if(OtherActor && OtherActor->GetClass()->ImplementsInterface(UDamageableInterface::StaticClass()))
 	{

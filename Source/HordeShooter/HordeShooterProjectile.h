@@ -8,6 +8,7 @@
 
 class USphereComponent;
 class UNiagaraComponent;
+class UNiagaraSystem;
 class UProjectileMovementComponent;
 class UAudioComponent;
 class USoundBase;
@@ -47,6 +48,9 @@ protected:
 
 	UPROPERTY(EditDefaultsOnly, Category = "Effects")
 	USoundBase* ProjectileHitSound;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Effects")
+	UNiagaraSystem* ProjectileHitVFX;
 
 	UPROPERTY(EditDefaultsOnly, Category = "Projectile Stats")
 	float Damage = 30.0f;

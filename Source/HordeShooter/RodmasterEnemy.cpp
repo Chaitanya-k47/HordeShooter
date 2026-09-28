@@ -61,7 +61,7 @@ void ARodmasterEnemy::Tick(float DeltaTime)
     Super::Tick(DeltaTime);
 
     FVector CurrentLoc = GetMesh()->GetRelativeLocation();
-    float NewZ = FMath::FInterpTo(CurrentLoc.Z, TargetMeshZ, DeltaTime, 10.0f);
+    float NewZ = FMath::FInterpTo(CurrentLoc.Z, TargetMeshZ, DeltaTime, 5.0f);
 
     GetMesh()->SetRelativeLocation(
         FVector(CurrentLoc.X, CurrentLoc.Y, NewZ), 
@@ -102,7 +102,7 @@ bool ARodmasterEnemy::ReactToHit(float DamageAmount, const FVector &HitImpulse, 
     if(bIsDead || bIsExploding) return false;
 
     //if energy based, then overcharge
-    if(DamageSource == FName("RayGun") || DamageSource == FName("RayGunAlt") || DamageSource == FName("Lightning"))
+    if(DamageSource == FName("RayGun") || DamageSource == FName("RayGunAlt") || DamageSource == FName("Lightning") || DamageSource == FName("Plasma"))
     {
         CurrentOvercharge += DamageAmount;
         float ChargeRatio = FMath::Clamp(CurrentOvercharge/MaxOvercharge, 0.f, 1.f);
@@ -130,7 +130,7 @@ bool ARodmasterEnemy::ReactToHit(float DamageAmount, const FVector &HitImpulse, 
     float ResistedDamage = DamageAmount;
     if(DamageSource == FName("Slam") || DamageSource == FName("Melee") || DamageSource == NAME_None)
 	{
-		ResistedDamage *= BulletDamageMultiplier; // 75% reduction
+		ResistedDamage *= BulletDamageMultiplier; // X% reduction
 	}
 
     return Super::ReactToHit(ResistedDamage, HitImpulse, HitBoneName, DamageSource);
@@ -303,7 +303,7 @@ void ARodmasterEnemy::ExecuteSlamJump()
 
     //Calculate how far down the mesh needs to slide.
     //(If he tucks his legs up by 40 units, slide the mesh down by 40 units)
-    TargetMeshZ = OriginalMeshZ - 40.0f;
+    TargetMeshZ = OriginalMeshZ - 12.0f;
 
     //enable tick for interpolation:
     SetActorTickEnabled(true);
@@ -408,11 +408,20 @@ void ARodmasterEnemy::ExecutePlasmaShot()
 
 	FVector StartLoc = GetMesh()->GetSocketLocation(FName("Projectile_Socket"));
 	FVector TargetLoc = PlayerTarget->GetActorLocation(); 
-	FVector AimDirection = (TargetLoc - StartLoc).GetSafeNormal();
+	FVector BaseAimDirection  = (TargetLoc - StartLoc).GetSafeNormal();
+    BaseAimDirection.Z = 0;
 
 	AActor* WaveManagerActor = UGameplayStatics::GetActorOfClass(GetWorld(), AHordeWaveManager::StaticClass());
 	if(AHordeWaveManager* WaveManager = Cast<AHordeWaveManager>(WaveManagerActor))
 	{
-		WaveManager->SpawnEnemyProjectile(StartLoc, AimDirection, this, CurrentColor, CurrentProjectileDamage);
+        TArray<float> SpreadAngles = {-10.f, 0.f, 10.f};
+
+        for(float Angle : SpreadAngles)
+        {
+            //rotate the base aim direction in given angles, around Z axis.
+            FVector FireDirection  = BaseAimDirection.RotateAngleAxis(Angle, FVector::UpVector);
+            WaveManager->SpawnEnemyProjectile(StartLoc, FireDirection, this, CurrentColor, CurrentProjectileDamage);
+        }
+		
 	}
 }
