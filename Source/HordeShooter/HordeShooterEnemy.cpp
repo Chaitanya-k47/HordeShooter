@@ -479,4 +479,3 @@ void AHordeShooterEnemy::OnDeath_Implementation()
 	}
 	GetMesh()->AddImpulse(LastHitImpulse, PhysicsBone, false);
 }
-

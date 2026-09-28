@@ -109,14 +109,16 @@ protected:
 
 
 	//ATTACK:
-	//long range attack damage is to be set on 'AttackDamage' variable on parent class
+	//long range attack damage
+	UPROPERTY(EditDefaultsOnly, Category = "Rodmaster|Combat")
+	float DefaultProjectileDamage = 30.0f;
 
 	//close quarter PowerMOve
 	UPROPERTY(EditDefaultsOnly, Category = "Rodmaster|Combat|Stats")
 	float CloseSlamRange = 600.0f;
 
 	UPROPERTY(EditDefaultsOnly, Category = "Rodmaster|Combat|Stats")
-	float CloseSlamDamage = 50.0f;
+	float DefaultCloseSlamDamage  = 50.0f;
 
 	UPROPERTY(EditDefaultsOnly, Category = "Rodmaster|Combat|Stats")
 	float CloseSlamDamageRadius = 800.0f;
@@ -142,6 +144,11 @@ protected:
 	UPROPERTY(EditDefaultsOnly, Category = "Rodmaster|Combat|Effects")
 	float SlamShakeOuterRadius = 1500.f; // Shake fades to 0% at this distance
 
+	//runtime scaling:
+	float CurrentCloseSlamDamage;
+	float CurrentProjectileDamage;
+
+	float CachedDifficultyAttackMult = 1.0f;
 
 	UPROPERTY(EditDefaultsOnly, Category = "Rodmaster|Combat")
 	TArray<UAnimMontage*> RangedPlasmaMontages;
@@ -152,8 +159,6 @@ protected:
 
 private:
 	float BaseWalkSpeed;
-	float BaseAttackDamage; //long range
-	float BaseCloseSlamDamage;
 
 	bool bIsExploding = false;
 

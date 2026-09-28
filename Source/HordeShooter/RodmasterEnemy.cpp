@@ -35,8 +35,8 @@ void ARodmasterEnemy::BeginPlay()
 {
     Super::BeginPlay();
     BaseWalkSpeed = WalkSpeed;
-    BaseAttackDamage = AttackDamage;
-    BaseCloseSlamDamage = CloseSlamDamage;
+    CurrentCloseSlamDamage = DefaultCloseSlamDamage;
+    CurrentProjectileDamage = DefaultProjectileDamage;
 
     OriginalMeshZ = GetMesh()->GetRelativeLocation().Z;
 
@@ -81,9 +81,15 @@ void ARodmasterEnemy::Tick(float DeltaTime)
     }
 }
 
+//for Difficulty multipliers index 0 is Attack multplier, index 1 is Health multiplier.
 void ARodmasterEnemy::ActivateEnemy(const FTransform& SpawnTransform, const TArray<float>& DifficultyMultipliers)
 {
     Super::ActivateEnemy(SpawnTransform, DifficultyMultipliers);
+
+    CachedDifficultyAttackMult = DifficultyMultipliers[0];
+
+    CurrentCloseSlamDamage = DefaultCloseSlamDamage * CachedDifficultyAttackMult;
+	CurrentProjectileDamage = DefaultProjectileDamage * CachedDifficultyAttackMult;
 
     CurrentOvercharge = 0.0f;
 	bIsExploding = false;
@@ -99,16 +105,17 @@ bool ARodmasterEnemy::ReactToHit(float DamageAmount, const FVector &HitImpulse, 
     if(DamageSource == FName("RayGun") || DamageSource == FName("RayGunAlt") || DamageSource == FName("Lightning"))
     {
         CurrentOvercharge += DamageAmount;
-
         float ChargeRatio = FMath::Clamp(CurrentOvercharge/MaxOvercharge, 0.f, 1.f);
 
         //scale speed:
         GetCharacterMovement()->MaxWalkSpeed = BaseWalkSpeed * FMath::Lerp(1.f, MaxSpeedMultiplier, ChargeRatio);
 
         //scale attack damage:
-        float AttackMultiplier = FMath::Lerp(1.f, MaxDamageMultiplier, ChargeRatio);
-        AttackDamage = BaseAttackDamage * AttackMultiplier;
-        CloseSlamDamage = BaseCloseSlamDamage * AttackMultiplier;
+        float OverchargeAttackMult = FMath::Lerp(1.f, MaxDamageMultiplier, ChargeRatio);
+        float TotalAttackMult = CachedDifficultyAttackMult * OverchargeAttackMult;
+        AttackDamage = BaseAttackDamage * TotalAttackMult; //Base attack(from parent class)
+		CurrentCloseSlamDamage = DefaultCloseSlamDamage * TotalAttackMult;
+		CurrentProjectileDamage = DefaultProjectileDamage * TotalAttackMult;
 
         //visuals:
         UpdateOverchargeVisuals(ChargeRatio);
@@ -185,7 +192,7 @@ void ARodmasterEnemy::TriggerExplosion(EExplosionType ExplosionType)
         ColShape = FCollisionShape::MakeSphere(CloseSlamDamageRadius);
         QueryParams.AddIgnoredActor(this);
         ObjectQueryParams.AddObjectTypesToQuery(ECC_Pawn);
-        ExplosionDamage = CloseSlamDamage;
+        ExplosionDamage = CurrentCloseSlamDamage;
         ExplosionImpulse = CloseSlamImpulse;
         InDamageSource = FName("RodSlam");
         KillRodmaster = false;
@@ -406,6 +413,6 @@ void ARodmasterEnemy::ExecutePlasmaShot()
 	AActor* WaveManagerActor = UGameplayStatics::GetActorOfClass(GetWorld(), AHordeWaveManager::StaticClass());
 	if(AHordeWaveManager* WaveManager = Cast<AHordeWaveManager>(WaveManagerActor))
 	{
-		WaveManager->SpawnEnemyProjectile(StartLoc, AimDirection, this, CurrentColor);
+		WaveManager->SpawnEnemyProjectile(StartLoc, AimDirection, this, CurrentColor, CurrentProjectileDamage);
 	}
 }

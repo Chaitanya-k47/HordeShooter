@@ -7,6 +7,8 @@
 #include "NiagaraComponent.h"
 #include "DamageableInterface.h"
 #include "Components/AudioComponent.h"
+#include "Sound/SoundBase.h"
+#include "Kismet/GameplayStatics.h"   
 
 // Sets default values
 AHordeShooterProjectile::AHordeShooterProjectile()
@@ -57,7 +59,7 @@ void AHordeShooterProjectile::BeginPlay()
 	
 }
 
-void AHordeShooterProjectile::ActivateProjectile(const FVector &StartLocation, const FVector &Direction, AActor* Shooter, FLinearColor PlasmaColor)
+void AHordeShooterProjectile::ActivateProjectile(const FVector &StartLocation, const FVector &Direction, AActor* Shooter, FLinearColor PlasmaColor, float InDamage)
 {
 	bIsActive = true;
 
@@ -66,6 +68,7 @@ void AHordeShooterProjectile::ActivateProjectile(const FVector &StartLocation, c
 	SetActorLocationAndRotation(StartLocation, Direction.Rotation());
 	SetActorHiddenInGame(false);
 
+	Damage = InDamage;
 	if(Shooter) CollisionSphere->IgnoreActorWhenMoving(Shooter, true);
 
 	CollisionSphere->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
@@ -119,6 +122,8 @@ void AHordeShooterProjectile::ReturnToPool()
 void AHordeShooterProjectile::OnHit(UPrimitiveComponent* HitComp, AActor* OtherActor, UPrimitiveComponent* OtherComp, FVector NormalImpulse, const FHitResult& Hit)
 {
 	if(!bIsActive) return;
+
+	if(ProjectileHitSound) UGameplayStatics::PlaySoundAtLocation(GetWorld(), ProjectileHitSound, Hit.ImpactPoint);
 
 	if(OtherActor && OtherActor->GetClass()->ImplementsInterface(UDamageableInterface::StaticClass()))
 	{

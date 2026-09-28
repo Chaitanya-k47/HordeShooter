@@ -10,6 +10,7 @@ class USphereComponent;
 class UNiagaraComponent;
 class UProjectileMovementComponent;
 class UAudioComponent;
+class USoundBase;
 
 UCLASS()
 class HORDESHOOTER_API AHordeShooterProjectile : public AActor
@@ -20,7 +21,7 @@ public:
 	// Sets default values for this actor's properties
 	AHordeShooterProjectile();
 
-	void ActivateProjectile(const FVector& StartLocation, const FVector& Direction, AActor* Shooter, FLinearColor PlasmaColor);
+	void ActivateProjectile(const FVector& StartLocation, const FVector& Direction, AActor* Shooter, FLinearColor PlasmaColor, float InDamage);
 	void DeactivateProjectile();
 
 	bool bIsActive = false;
@@ -43,6 +44,9 @@ protected:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
 	UProjectileMovementComponent* ProjectileMovement;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Effects")
+	USoundBase* ProjectileHitSound;
 
 	UPROPERTY(EditDefaultsOnly, Category = "Projectile Stats")
 	float Damage = 30.0f;
