@@ -12,6 +12,7 @@
  */
 
 class UNiagaraSystem;
+class UNiagaraComponent;
 class USoundBase;
 
 UENUM(BlueprintType)
@@ -48,6 +49,8 @@ public:
 protected:
 	virtual void BeginPlay() override;
 
+	virtual void OnDeath_Implementation() override;
+
 	UFUNCTION(BlueprintCallable)
 	void ExecuteSlam(); //bind this in anim notify for slam montages
 
@@ -65,6 +68,12 @@ protected:
 
 	UFUNCTION(BlueprintCallable)//bind this in anim notify for slam montages
     void LandingRecovery();
+
+	UFUNCTION(BlueprintCallable)//bind this in anim notify for slam montages
+    void PlayRateFWD();
+
+	UFUNCTION(BlueprintCallable)//bind this in anim notify for slam montages
+    void PlayRateBKD();
 
 	//BULLET RESISTANCE:
 	UPROPERTY(EditDefaultsOnly, Category = "Rodmaster|Stats")
@@ -87,6 +96,12 @@ protected:
 	UPROPERTY(EditDefaultsOnly, Category = "Rodmaster|Overcharge")
 	float MaxGlowIntensity = 50.0f;
 
+	UPROPERTY(EditDefaultsOnly, Category = "Rodmaster|Overcharge")
+	float MinAttackCooldown = 1.5f;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Rodmaster|Overcharge")
+	float OverchargeBuildUpTime = 3.0f;
+
 
 	//OVERCHARGE EXPLOSION:
 	UPROPERTY(EditDefaultsOnly, Category = "Rodmaster|Overcharge")
@@ -98,6 +113,9 @@ protected:
 	UPROPERTY(EditDefaultsOnly, Category = "Rodmaster|Overcharge")
 	float OverchargeExplosionImpulse = 400000.0f;
 
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
+	UNiagaraComponent* OverchargeBuildUpVFX;
+
 	UPROPERTY(EditDefaultsOnly, Category = "Rodmaster|Overcharge")
 	UNiagaraSystem* OverchargeExplosionVFX;
 
@@ -105,13 +123,24 @@ protected:
 	USoundBase* OverchargeExplosionSFX;
 
 	UPROPERTY(EditDefaultsOnly, Category = "Rodmaster|Overcharge")
-	TArray<UAnimMontage*> OverchargeExplosionMontages;
+	UNiagaraSystem* GibbingExplosionVFX; //dismemberment vfx
+
+	FTimerHandle OverchargeDetonationTimer;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Rodmaster|Overcharge")
+	UAnimMontage* OverchargeExplosionMontage;
 
 
 	//ATTACK:
 	//long range attack damage
 	UPROPERTY(EditDefaultsOnly, Category = "Rodmaster|Combat")
 	float DefaultProjectileDamage = 30.0f;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Rodmaster|Combat")
+	float DefaultProjectileSpeed = 2000.0f;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Rodmaster|Combat")
+	float MaxProjectileSpeed = 5000.0f;
 
 	//close quarter PowerMOve
 	UPROPERTY(EditDefaultsOnly, Category = "Rodmaster|Combat|Stats")
@@ -147,6 +176,7 @@ protected:
 	//runtime scaling:
 	float CurrentCloseSlamDamage;
 	float CurrentProjectileDamage;
+	float CurrentProjectileSpeed;
 
 	float CachedDifficultyAttackMult = 1.0f;
 
@@ -159,6 +189,7 @@ protected:
 
 private:
 	float BaseWalkSpeed;
+	float BaseAttackCooldown;
 
 	bool bIsExploding = false;
 

@@ -29,14 +29,20 @@ ARodmasterEnemy::ARodmasterEnemy()
     AttackCooldown = 3.f;
 
     GetCharacterMovement()->RotationRate = FRotator(0.0f, 200.0f, 0.0f);
+
+    OverchargeBuildUpVFX = CreateDefaultSubobject<UNiagaraComponent>(TEXT("OverchargeBuildUpVFX"));
+	OverchargeBuildUpVFX->SetupAttachment(RootComponent);
+	OverchargeBuildUpVFX->bAutoActivate = false;
 }
 
 void ARodmasterEnemy::BeginPlay()
 {
     Super::BeginPlay();
     BaseWalkSpeed = WalkSpeed;
+    BaseAttackCooldown = AttackCooldown;
     CurrentCloseSlamDamage = DefaultCloseSlamDamage;
     CurrentProjectileDamage = DefaultProjectileDamage;
+    CurrentProjectileSpeed = DefaultProjectileSpeed;
 
     OriginalMeshZ = GetMesh()->GetRelativeLocation().Z;
 
@@ -90,7 +96,9 @@ void ARodmasterEnemy::ActivateEnemy(const FTransform& SpawnTransform, const TArr
 
     CurrentCloseSlamDamage = DefaultCloseSlamDamage * CachedDifficultyAttackMult;
 	CurrentProjectileDamage = DefaultProjectileDamage * CachedDifficultyAttackMult;
+    CurrentProjectileSpeed = DefaultProjectileSpeed;
 
+    AttackCooldown = BaseAttackCooldown;
     CurrentOvercharge = 0.0f;
 	bIsExploding = false;
 	GetCharacterMovement()->MaxWalkSpeed = BaseWalkSpeed;
@@ -109,6 +117,7 @@ bool ARodmasterEnemy::ReactToHit(float DamageAmount, const FVector &HitImpulse, 
 
         //scale speed:
         GetCharacterMovement()->MaxWalkSpeed = BaseWalkSpeed * FMath::Lerp(1.f, MaxSpeedMultiplier, ChargeRatio);
+        CurrentProjectileSpeed = FMath::Lerp(DefaultProjectileSpeed, MaxProjectileSpeed, ChargeRatio);
 
         //scale attack damage:
         float OverchargeAttackMult = FMath::Lerp(1.f, MaxDamageMultiplier, ChargeRatio);
@@ -116,6 +125,8 @@ bool ARodmasterEnemy::ReactToHit(float DamageAmount, const FVector &HitImpulse, 
         AttackDamage = BaseAttackDamage * TotalAttackMult; //Base attack(from parent class)
 		CurrentCloseSlamDamage = DefaultCloseSlamDamage * TotalAttackMult;
 		CurrentProjectileDamage = DefaultProjectileDamage * TotalAttackMult;
+
+        AttackCooldown = FMath::Lerp(BaseAttackCooldown, MinAttackCooldown, ChargeRatio);
 
         //visuals:
         UpdateOverchargeVisuals(ChargeRatio);
@@ -353,9 +364,20 @@ void ARodmasterEnemy::LandingRecovery()
     SetActorTickEnabled(true);
 }
 
+void ARodmasterEnemy::PlayRateFWD()
+{
+    GetMesh()->GetAnimInstance()->Montage_SetPlayRate(OverchargeExplosionMontage, 1.0f);
+}
+
+void ARodmasterEnemy::PlayRateBKD()
+{
+    GetMesh()->GetAnimInstance()->Montage_SetPlayRate(OverchargeExplosionMontage, -1.0f);
+}
+
 void ARodmasterEnemy::ExecuteOverchargeExplosion()
 {
     if(bIsDead) return;
+    OverchargeBuildUpVFX->Deactivate();
     TriggerExplosion(EExplosionType::Overcharge);
 }
 
@@ -389,13 +411,10 @@ void ARodmasterEnemy::StartOverchargeSequence()
     if(GetMesh()->GetAnimInstance())
     {
         GetMesh()->GetAnimInstance()->Montage_Stop(0.1f, nullptr); 
-
-        if(OverchargeExplosionMontages.Num() > 0)
-        {
-            UAnimMontage* MontageToPlay = OverchargeExplosionMontages[FMath::RandRange(0, OverchargeExplosionMontages.Num() - 1)];
-            if(MontageToPlay) GetMesh()->GetAnimInstance()->Montage_Play(MontageToPlay, 1.f);
-        }
-        else ExecuteOverchargeExplosion(); //failsafe: if no montage provided.
+    
+        if(OverchargeExplosionMontage) GetMesh()->GetAnimInstance()->Montage_Play(OverchargeExplosionMontage, 1.f);        
+        OverchargeBuildUpVFX->Activate(true);
+        GetWorldTimerManager().SetTimer(OverchargeDetonationTimer, this, &ARodmasterEnemy::ExecuteOverchargeExplosion, OverchargeBuildUpTime, false);
     }
 }
 
@@ -420,8 +439,33 @@ void ARodmasterEnemy::ExecutePlasmaShot()
         {
             //rotate the base aim direction in given angles, around Z axis.
             FVector FireDirection  = BaseAimDirection.RotateAngleAxis(Angle, FVector::UpVector);
-            WaveManager->SpawnEnemyProjectile(StartLoc, FireDirection, this, CurrentColor, CurrentProjectileDamage);
+            WaveManager->SpawnEnemyProjectile(StartLoc, FireDirection, this, CurrentColor, CurrentProjectileDamage, CurrentProjectileSpeed);
         }
+	}
+}
+
+
+void ARodmasterEnemy::OnDeath_Implementation()
+{
+	if(LastDamageSource == FName("Overcharge"))
+	{
+		GetCharacterMovement()->DisableMovement();
+		GetCharacterMovement()->StopMovementImmediately();
+		GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 		
+		GetMesh()->SetSimulatePhysics(false);
+		GetMesh()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+		GetMesh()->bPauseAnims = true;
+
+		SetActorHiddenInGame(true);
+
+		if(GibbingExplosionVFX)
+		{
+			UNiagaraFunctionLibrary::SpawnSystemAtLocation(GetWorld(), GibbingExplosionVFX, GetActorLocation(), GetActorRotation());
+		}
+	}
+	else
+	{
+		Super::OnDeath_Implementation();
 	}
 }

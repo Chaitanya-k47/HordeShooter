@@ -22,7 +22,7 @@ public:
 	// Sets default values for this actor's properties
 	AHordeShooterProjectile();
 
-	void ActivateProjectile(const FVector& StartLocation, const FVector& Direction, AActor* Shooter, FLinearColor PlasmaColor, float InDamage);
+	void ActivateProjectile(const FVector& StartLocation, const FVector& Direction, AActor* Shooter, FLinearColor PlasmaColor, float InDamage, float InSpeed);
 	void DeactivateProjectile();
 
 	bool bIsActive = false;

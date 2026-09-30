@@ -194,11 +194,12 @@ protected:
 	//cache these so pooling doesnt cause infinite compound scaling
 	float BaseMaxHealth;
 	float BaseAttackDamage;
+	
+	FName LastDamageSource;
 
 private:
 	FVector LastHitImpulse;
 	FName LastHitBoneName;
-	FName LastDamageSource;
 	FTimerHandle DespawnTimerHandle;
 
 	class 

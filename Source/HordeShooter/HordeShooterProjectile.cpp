@@ -60,7 +60,7 @@ void AHordeShooterProjectile::BeginPlay()
 	
 }
 
-void AHordeShooterProjectile::ActivateProjectile(const FVector &StartLocation, const FVector &Direction, AActor* Shooter, FLinearColor PlasmaColor, float InDamage)
+void AHordeShooterProjectile::ActivateProjectile(const FVector &StartLocation, const FVector &Direction, AActor* Shooter, FLinearColor PlasmaColor, float InDamage, float InSpeed)
 {
 	bIsActive = true;
 
@@ -88,6 +88,8 @@ void AHordeShooterProjectile::ActivateProjectile(const FVector &StartLocation, c
 
 	if (FlightAudioComp->Sound) FlightAudioComp->Play();
 
+	ProjectileMovement->InitialSpeed = InSpeed;
+	ProjectileMovement->MaxSpeed = InSpeed;
 	ProjectileMovement->SetUpdatedComponent(CollisionSphere);
 	ProjectileMovement->Velocity = Direction * ProjectileMovement->InitialSpeed;
 	ProjectileMovement->Activate();

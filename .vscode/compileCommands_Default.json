@@ -200,6 +200,22 @@
 		"directory": "D:\\UE_5.6\\Engine\\Source"
 	},
 	{
+		"file": "D:\\Unreal Projects\\HordeShooter\\Source\\HordeShooter\\HordeShooterProjectile.cpp",
+		"arguments": [
+			"C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\bin\\Hostx64\\x64\\cl.exe",
+			"@D:\\Unreal Projects\\HordeShooter\\.vscode\\compileCommands_Default\\HordeShooter.1.rsp"
+		],
+		"directory": "D:\\UE_5.6\\Engine\\Source"
+	},
+	{
+		"file": "D:\\Unreal Projects\\HordeShooter\\Source\\HordeShooter\\HordeShooterProjectile.h",
+		"arguments": [
+			"C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\bin\\Hostx64\\x64\\cl.exe",
+			"@D:\\Unreal Projects\\HordeShooter\\.vscode\\compileCommands_Default\\HordeShooter.1.rsp"
+		],
+		"directory": "D:\\UE_5.6\\Engine\\Source"
+	},
+	{
 		"file": "D:\\Unreal Projects\\HordeShooter\\Source\\HordeShooter\\HordeShooterWeapon.cpp",
 		"arguments": [
 			"C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\bin\\Hostx64\\x64\\cl.exe",
@@ -248,6 +264,22 @@
 		"directory": "D:\\UE_5.6\\Engine\\Source"
 	},
 	{
+		"file": "D:\\Unreal Projects\\HordeShooter\\Source\\HordeShooter\\PlayerProgressionComponent.cpp",
+		"arguments": [
+			"C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\bin\\Hostx64\\x64\\cl.exe",
+			"@D:\\Unreal Projects\\HordeShooter\\.vscode\\compileCommands_Default\\HordeShooter.1.rsp"
+		],
+		"directory": "D:\\UE_5.6\\Engine\\Source"
+	},
+	{
+		"file": "D:\\Unreal Projects\\HordeShooter\\Source\\HordeShooter\\PlayerProgressionComponent.h",
+		"arguments": [
+			"C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\bin\\Hostx64\\x64\\cl.exe",
+			"@D:\\Unreal Projects\\HordeShooter\\.vscode\\compileCommands_Default\\HordeShooter.1.rsp"
+		],
+		"directory": "D:\\UE_5.6\\Engine\\Source"
+	},
+	{
 		"file": "D:\\Unreal Projects\\HordeShooter\\Source\\HordeShooter\\RayGun.cpp",
 		"arguments": [
 			"C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\bin\\Hostx64\\x64\\cl.exe",
@@ -257,6 +289,22 @@
 	},
 	{
 		"file": "D:\\Unreal Projects\\HordeShooter\\Source\\HordeShooter\\RayGun.h",
+		"arguments": [
+			"C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\bin\\Hostx64\\x64\\cl.exe",
+			"@D:\\Unreal Projects\\HordeShooter\\.vscode\\compileCommands_Default\\HordeShooter.1.rsp"
+		],
+		"directory": "D:\\UE_5.6\\Engine\\Source"
+	},
+	{
+		"file": "D:\\Unreal Projects\\HordeShooter\\Source\\HordeShooter\\RodmasterEnemy.cpp",
+		"arguments": [
+			"C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\bin\\Hostx64\\x64\\cl.exe",
+			"@D:\\Unreal Projects\\HordeShooter\\.vscode\\compileCommands_Default\\HordeShooter.1.rsp"
+		],
+		"directory": "D:\\UE_5.6\\Engine\\Source"
+	},
+	{
+		"file": "D:\\Unreal Projects\\HordeShooter\\Source\\HordeShooter\\RodmasterEnemy.h",
 		"arguments": [
 			"C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\bin\\Hostx64\\x64\\cl.exe",
 			"@D:\\Unreal Projects\\HordeShooter\\.vscode\\compileCommands_Default\\HordeShooter.1.rsp"
