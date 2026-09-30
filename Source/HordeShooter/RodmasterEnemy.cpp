@@ -31,7 +31,7 @@ ARodmasterEnemy::ARodmasterEnemy()
     GetCharacterMovement()->RotationRate = FRotator(0.0f, 200.0f, 0.0f);
 
     OverchargeBuildUpVFX = CreateDefaultSubobject<UNiagaraComponent>(TEXT("OverchargeBuildUpVFX"));
-	OverchargeBuildUpVFX->SetupAttachment(RootComponent);
+	OverchargeBuildUpVFX->SetupAttachment(GetMesh(), FName("Spine2")); 
 	OverchargeBuildUpVFX->bAutoActivate = false;
 }
 
@@ -412,8 +412,14 @@ void ARodmasterEnemy::StartOverchargeSequence()
     {
         GetMesh()->GetAnimInstance()->Montage_Stop(0.1f, nullptr); 
     
-        if(OverchargeExplosionMontage) GetMesh()->GetAnimInstance()->Montage_Play(OverchargeExplosionMontage, 1.f);        
-        OverchargeBuildUpVFX->Activate(true);
+        if(OverchargeExplosionMontage) GetMesh()->GetAnimInstance()->Montage_Play(OverchargeExplosionMontage, 1.f);
+
+        if(OverchargeBuildUpVFX)
+        {
+            OverchargeBuildUpVFX->SetFloatParameter(FName("BuildUpTime"), OverchargeBuildUpTime);
+            OverchargeBuildUpVFX->Activate(true);
+        }
+        
         GetWorldTimerManager().SetTimer(OverchargeDetonationTimer, this, &ARodmasterEnemy::ExecuteOverchargeExplosion, OverchargeBuildUpTime, false);
     }
 }
