@@ -7,6 +7,7 @@
 #include "EnemyAIController.h"
 #include "Components/CapsuleComponent.h"
 #include "HordeWaveManager.h"
+#include "Components/AudioComponent.h"
 
 // Fill out your copyright notice in the Description page of Project Settings.
 
@@ -33,6 +34,10 @@ ARodmasterEnemy::ARodmasterEnemy()
     OverchargeBuildUpVFX = CreateDefaultSubobject<UNiagaraComponent>(TEXT("OverchargeBuildUpVFX"));
 	OverchargeBuildUpVFX->SetupAttachment(GetMesh(), FName("Spine2")); 
 	OverchargeBuildUpVFX->bAutoActivate = false;
+
+    OverchargeBuildUpSFX = CreateDefaultSubobject<UAudioComponent>(TEXT("OverchargeBuildUpSFX"));
+	OverchargeBuildUpSFX->SetupAttachment(GetMesh(), FName("Spine2"));
+	OverchargeBuildUpSFX->bAutoActivate = false;
 }
 
 void ARodmasterEnemy::BeginPlay()
@@ -246,8 +251,21 @@ void ARodmasterEnemy::TriggerExplosion(EExplosionType ExplosionType)
         InDamageSource = FName("Overcharge");
         KillRodmaster = true;
 
+        if(GetMesh()) ExplodeLoc = GetMesh()->GetSocketLocation(FName("Spine2"));
         if(OverchargeExplosionSFX) UGameplayStatics::PlaySoundAtLocation(GetWorld(), OverchargeExplosionSFX, ExplodeLoc);
         if(OverchargeExplosionVFX) UNiagaraFunctionLibrary::SpawnSystemAtLocation(GetWorld(), OverchargeExplosionVFX, ExplodeLoc);
+        if(OverchargeExpCameraShake)
+        {
+            UGameplayStatics::PlayWorldCameraShake(
+                GetWorld(),
+                OverchargeExpCameraShake,
+                ExplodeLoc,
+                OverchargeExpShakeInnerRadius,
+                OverchargeExpShakeOuterRadius,
+                1.f,
+                false  
+            );
+        }
 
         break;
 
@@ -377,7 +395,9 @@ void ARodmasterEnemy::PlayRateBKD()
 void ARodmasterEnemy::ExecuteOverchargeExplosion()
 {
     if(bIsDead) return;
-    OverchargeBuildUpVFX->Deactivate();
+    if(OverchargeBuildUpVFX) OverchargeBuildUpVFX->DeactivateImmediate();
+    if(OverchargeBuildUpSFX) OverchargeBuildUpSFX->Stop();
+
     TriggerExplosion(EExplosionType::Overcharge);
 }
 
@@ -404,7 +424,9 @@ void ARodmasterEnemy::StartOverchargeSequence()
     bIsExploding = true;
 
     //force AI and movement to stop:
-    GetCharacterMovement()->DisableMovement();
+    GetCharacterMovement()->StopMovementImmediately();
+	GetCharacterMovement()->MaxWalkSpeed = 0.0f;
+
     if(AEnemyAIController* AICon = Cast<AEnemyAIController>(GetController())) AICon->SleepAI();
 
     //interrupt any anim montages and play overcharge one:
@@ -418,6 +440,11 @@ void ARodmasterEnemy::StartOverchargeSequence()
         {
             OverchargeBuildUpVFX->SetFloatParameter(FName("BuildUpTime"), OverchargeBuildUpTime);
             OverchargeBuildUpVFX->Activate(true);
+        }
+
+        if(OverchargeBuildUpSFX)
+        {
+            OverchargeBuildUpSFX->Play();
         }
         
         GetWorldTimerManager().SetTimer(OverchargeDetonationTimer, this, &ARodmasterEnemy::ExecuteOverchargeExplosion, OverchargeBuildUpTime, false);

@@ -14,6 +14,7 @@
 class UNiagaraSystem;
 class UNiagaraComponent;
 class USoundBase;
+class UAudioComponent;
 
 UENUM(BlueprintType)
 enum class EExplosionType : uint8
@@ -116,6 +117,9 @@ protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
 	UNiagaraComponent* OverchargeBuildUpVFX;
 
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
+	UAudioComponent* OverchargeBuildUpSFX;
+
 	UPROPERTY(EditDefaultsOnly, Category = "Rodmaster|Overcharge")
 	UNiagaraSystem* OverchargeExplosionVFX;
 
@@ -124,6 +128,15 @@ protected:
 
 	UPROPERTY(EditDefaultsOnly, Category = "Rodmaster|Overcharge")
 	UNiagaraSystem* GibbingExplosionVFX; //dismemberment vfx
+
+	UPROPERTY(EditDefaultsOnly, Category = "Rodmaster|Overcharge")
+	TSubclassOf<UCameraShakeBase> OverchargeExpCameraShake;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Rodmaster|Overcharge")
+	float OverchargeExpShakeInnerRadius = 1000;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Rodmaster|Overcharge")
+	float OverchargeExpShakeOuterRadius = 6000;
 
 	FTimerHandle OverchargeDetonationTimer;
 
