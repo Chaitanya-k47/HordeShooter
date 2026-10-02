@@ -120,6 +120,9 @@ protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
 	UAudioComponent* OverchargeBuildUpSFX;
 
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
+	UAudioComponent* OverchargeScreamSFX;
+
 	UPROPERTY(EditDefaultsOnly, Category = "Rodmaster|Overcharge")
 	UNiagaraSystem* OverchargeExplosionVFX;
 
@@ -154,6 +157,9 @@ protected:
 
 	UPROPERTY(EditDefaultsOnly, Category = "Rodmaster|Combat")
 	float MaxProjectileSpeed = 5000.0f;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Rodmaster|Combat")
+	USoundBase* ProjectileFireSFX;
 
 	//close quarter PowerMOve
 	UPROPERTY(EditDefaultsOnly, Category = "Rodmaster|Combat|Stats")

@@ -38,6 +38,10 @@ ARodmasterEnemy::ARodmasterEnemy()
     OverchargeBuildUpSFX = CreateDefaultSubobject<UAudioComponent>(TEXT("OverchargeBuildUpSFX"));
 	OverchargeBuildUpSFX->SetupAttachment(GetMesh(), FName("Spine2"));
 	OverchargeBuildUpSFX->bAutoActivate = false;
+
+    OverchargeScreamSFX = CreateDefaultSubobject<UAudioComponent>(TEXT("OverchargeScreamSFX"));
+    OverchargeScreamSFX->SetupAttachment(GetMesh(), FName("Head"));
+    OverchargeScreamSFX->bAutoActivate = false;
 }
 
 void ARodmasterEnemy::BeginPlay()
@@ -397,6 +401,7 @@ void ARodmasterEnemy::ExecuteOverchargeExplosion()
     if(bIsDead) return;
     if(OverchargeBuildUpVFX) OverchargeBuildUpVFX->DeactivateImmediate();
     if(OverchargeBuildUpSFX) OverchargeBuildUpSFX->Stop();
+    if(OverchargeScreamSFX) OverchargeScreamSFX->Stop();
 
     TriggerExplosion(EExplosionType::Overcharge);
 }
@@ -446,6 +451,11 @@ void ARodmasterEnemy::StartOverchargeSequence()
         {
             OverchargeBuildUpSFX->Play();
         }
+
+        if(OverchargeScreamSFX)
+        {
+            OverchargeScreamSFX->Play();
+        }
         
         GetWorldTimerManager().SetTimer(OverchargeDetonationTimer, this, &ARodmasterEnemy::ExecuteOverchargeExplosion, OverchargeBuildUpTime, false);
     }
@@ -475,6 +485,8 @@ void ARodmasterEnemy::ExecutePlasmaShot()
             WaveManager->SpawnEnemyProjectile(StartLoc, FireDirection, this, CurrentColor, CurrentProjectileDamage, CurrentProjectileSpeed);
         }
 	}
+
+    if(ProjectileFireSFX) UGameplayStatics::PlaySoundAtLocation(GetWorld(), ProjectileFireSFX, StartLoc);
 }
 
 
