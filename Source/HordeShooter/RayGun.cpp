@@ -312,15 +312,12 @@ void ARayGun::PerformBeamTick()
 			IDamageableInterface* DamageableActor = Cast<IDamageableInterface>(CurrentBeamTarget);
 			if (DamageableActor)
 			{
-                float DamageMultiplier = 1.0f;
-				if(CurrentOwner && CurrentOwner->ProgressionComponent)
-				{
-					DamageMultiplier = CurrentOwner->ProgressionComponent->GetDamageMultiplier();
-				}
+                float FinalDamage = BeamDamagePerBeamTick;
+                if(CurrentOwner) FinalDamage *= CurrentOwner->GetTotalDamageMultiplier();
 
 				FVector PushDirection = CurrentOwner->FirstPersonCamera->GetForwardVector();
                 FVector FinalImpulse = PushDirection * (ShotImpulse * 0.2f);
-				DamageableActor->ReactToHit(BeamDamagePerBeamTick * DamageMultiplier, FinalImpulse, CurrentBeamHitBone, FName("RayGun"));
+				DamageableActor->ReactToHit(FinalDamage, FinalImpulse, CurrentBeamHitBone, FName("RayGun"));
 			}
 		}
 	}
@@ -528,18 +525,15 @@ void ARayGun::PerformAltFire()
                     {   
                         DamagedActors.Add(HitActor);
 
-                        float DamageMultiplier = 1.0f;
-                        if(CurrentOwner && CurrentOwner->ProgressionComponent)
-                        {
-                            DamageMultiplier = CurrentOwner->ProgressionComponent->GetDamageMultiplier();
-                        }
+                        float FinalDamage = AltFireDamage;
+                        if(CurrentOwner) FinalDamage *= CurrentOwner->GetTotalDamageMultiplier();
 
                         //push the ememies out from the centre of the blast
                         FVector PushDirection = (HitActor->GetActorLocation() - ImpactPoint).GetSafeNormal();
                         PushDirection.Z += 0.6f;
                         PushDirection.Normalize();
                         FVector FinalImpulse = PushDirection * AltFireImpulse;
-                        DamageableActor->ReactToHit(AltFireDamage * DamageMultiplier, FinalImpulse, NAME_None, FName("RayGunAlt"));
+                        DamageableActor->ReactToHit(FinalDamage, FinalImpulse, NAME_None, FName("RayGunAlt"));
                     }
                 }
             }

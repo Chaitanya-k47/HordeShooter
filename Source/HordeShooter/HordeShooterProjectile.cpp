@@ -20,6 +20,7 @@ AHordeShooterProjectile::AHordeShooterProjectile()
 	CollisionSphere = CreateDefaultSubobject<USphereComponent>(TEXT("CollisionSphere"));
 	RootComponent = CollisionSphere;
 	CollisionSphere->InitSphereRadius(CollisionSphereRadius);
+	CollisionSphere->CanCharacterStepUpOn = ECB_No;
 
 	CoreVFX = CreateDefaultSubobject<UNiagaraComponent>(TEXT("CoreVFX"));
 	CoreVFX->SetupAttachment(RootComponent);
@@ -74,7 +75,15 @@ void AHordeShooterProjectile::ActivateProjectile(const FVector &StartLocation, c
 	SetActorLocationAndRotation(StartLocation, Direction.Rotation(), false, nullptr, ETeleportType::TeleportPhysics);
 
 	Damage = InDamage;
-	if(Shooter) CollisionSphere->IgnoreActorWhenMoving(Shooter, true);
+	if(Shooter)
+	{
+		CollisionSphere->IgnoreActorWhenMoving(Shooter, true);
+
+		if(UPrimitiveComponent* ShooterRoot = Cast<UPrimitiveComponent>(Shooter->GetRootComponent()))
+		{
+			ShooterRoot->IgnoreActorWhenMoving(this, true);
+		}
+	}
 
 	CollisionSphere->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
 	

@@ -167,8 +167,7 @@ void AHordeShooterPickup::OnVacuumOverlap(UPrimitiveComponent* OverlappedComp, A
 
 		else if(CurrentType == EPickupType::Surge)
 		{
-			// bNeedsPickup = (Player->CurrentSurge < Player->MaxSurge); // Future implementation
-			bNeedsPickup = true; 
+			bNeedsPickup = true;
 		}
 
 		if(bNeedsPickup)
@@ -247,7 +246,26 @@ void AHordeShooterPickup::GrantReward()
 
 	else if(CurrentType == EPickupType::Surge)
 	{
-		//implementation
+		float SurgeAmount = 10.f;
+		switch(CurrentSize)
+		{
+			case EPickupSize::Small:
+				SurgeAmount = 10.f;
+				break;
+
+			case EPickupSize::Medium:
+				SurgeAmount = 20.f;
+				break;
+
+			case EPickupSize::Large:
+				SurgeAmount = 30.f;
+				break;
+
+			default:
+				break;
+		}
+
+		TargetPlayer->ActivateSurge(SurgeAmount);
 		bWasConsumed = true;
 		PickupSound = SurgePickupSound;
 	}

@@ -46,6 +46,20 @@ struct FHealthDropConfig
 	float ProximityRadius = 400.0f;
 };
 
+USTRUCT(BlueprintType)
+struct FSurgeDropConfig
+{
+	GENERATED_BODY()
+
+	//defaults to large, but exposed just in case you ever want a mini boss to drop medium
+	UPROPERTY(EditDefaultsOnly, Category = "Surge Drops")
+	EPickupSize DropSize = EPickupSize::Large;
+
+	//0.0 to 1.0 (0% to 100% chance to drop Surge on death)
+	UPROPERTY(EditDefaultsOnly, meta = (ClampMin = "0.0", ClampMax = "1.0"), Category = "Surge Drops")
+	float DropChance = 0.0f;
+};
+
 UCLASS()
 class HORDESHOOTER_API AHordeShooterEnemy : public ACharacter, public IDamageableInterface
 {
@@ -115,6 +129,9 @@ public:
 
 	UPROPERTY(EditDefaultsOnly, Category = "Combat|Drops")
 	FHealthDropConfig HealthDropSettings;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Combat|Drops")
+	FSurgeDropConfig SurgeDropSettings;
 	
 
 	//Maps specific bone name to damage multipliers.

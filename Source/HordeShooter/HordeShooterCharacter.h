@@ -97,6 +97,19 @@ public:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Player Stats")
 	float CurrentHealth;
 
+	//surge mode:
+	void ActivateSurge(float DurationToAdd); //stacks surge meter
+
+	float GetTotalDamageMultiplier() const; //multiplies progression damage by surge damage
+
+	float GetAnimPlayRate() const; //returns rate > 1.0f if surge is active
+
+	UPROPERTY(BlueprintReadOnly, Category = "Surge")
+	bool bIsSurgeActive = false;
+
+	UPROPERTY(BlueprintReadOnly, Category = "Surge")
+	float SurgeTimeRemaining = 0.0f;
+
 	//first person camera component:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Camera")
 	UCameraComponent* FirstPersonCamera;
@@ -284,6 +297,28 @@ protected:
 	void Melee();
 	void FinishMelee();
 
+	//Surge config:
+	UPROPERTY(EditDefaultsOnly, Category = "Surge")
+	float SurgeSpeedMultiplier = 1.5f; //from 1x to 1.5x speed, i.e. 50% faster movement speed
+
+	UPROPERTY(EditDefaultsOnly, Category = "Surge")
+	float SurgeDamageMultiplier = 2.0f;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Surge")
+	float SurgeDefenseMultiplier = 0.5f; //takes 50% less damage
+
+	UPROPERTY(EditDefaultsOnly, Category = "Surge")
+	float SurgeAnimMultiplier = 1.5f; //Reload/Switch 50% faster
+
+	UPROPERTY(EditDefaultsOnly, Category = "Surge")
+	float SurgeDashDamage = 75.0f;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
+	UAudioComponent* SurgeAudioLoopComp;
+
+	//call for HUD changes
+	UFUNCTION(BlueprintImplementableEvent, Category = "Surge")
+	void OnSurgeStateChanged(bool bIsActive);
 
 	//spped lines:
 	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Movement")
@@ -416,5 +451,9 @@ private:
 
 	void PerformWeaponSwitch(); //happens after holster anim finishes.(updates backend and UI)
 	void FinishEquipping(); //happens after equip anim finishes.
+
+	//surge:
+	void DeactivateSurge();
+	void HandleSurgeDashKill();
 
 };

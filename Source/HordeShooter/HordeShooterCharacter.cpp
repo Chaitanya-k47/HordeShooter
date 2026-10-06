@@ -20,6 +20,7 @@
 #include "NiagaraFunctionLibrary.h"
 
 #include "HordeShooterWeapon.h"
+#include "HordeShooterEnemy.h"
 #include "HordeShooterPlayerController.h"
 #include "HordeShooterHUDWidget.h"
 #include "Components/AudioComponent.h"
@@ -68,6 +69,10 @@ AHordeShooterCharacter::AHordeShooterCharacter()
 	FallAudioComp = CreateDefaultSubobject<UAudioComponent>(TEXT("FallAudioComp"));
 	FallAudioComp->SetupAttachment(GetRootComponent());
 	FallAudioComp->bAutoActivate = false;
+
+	SurgeAudioLoopComp = CreateDefaultSubobject<UAudioComponent>(TEXT("SurgeAudioLoopComp"));
+	SurgeAudioLoopComp->SetupAttachment(RootComponent);
+	SurgeAudioLoopComp->bAutoActivate = false;
 
 	ProgressionComponent = CreateDefaultSubobject<UPlayerProgressionComponent>(TEXT("ProgressionComponent"));
 
@@ -243,6 +248,15 @@ void AHordeShooterCharacter::Tick(float DeltaTime)
 			GetCharacterMovement()->Velocity = FVector(CappedVelocity.X, CappedVelocity.Y, CurrentZ);
 		}
 			
+	}
+
+	//surge logic:
+	if(bIsSurgeActive)
+	{
+		SurgeTimeRemaining -= DeltaTime;
+
+		if(bIsDashing) HandleSurgeDashKill();
+		if(SurgeTimeRemaining <= 0.0f) DeactivateSurge();
 	}
 
 	//Dynamic FOV state logic:
@@ -596,7 +610,7 @@ void AHordeShooterCharacter::Landed(const FHitResult& Hit)
 							DamagedActors.Add(HitActor); //mark hit.
 							FVector PushDirection = (HitActor->GetActorLocation() - GetActorLocation()).GetSafeNormal();
 							PushDirection.Z += 0.8f;
-							DamageableActor->ReactToHit(Damage * ProgressionComponent->GetDamageMultiplier(), PushDirection * Impulse, NAME_None, FName("Slam"));
+							DamageableActor->ReactToHit(Damage * GetTotalDamageMultiplier(), PushDirection * Impulse, NAME_None, FName("Slam"));
 						}
 					}
 				}
@@ -630,7 +644,7 @@ void AHordeShooterCharacter::StartSlide()
 
 		if(SlideAudioComponent && SlideAudioComponent->Sound) SlideAudioComponent->Play();
 
-		GetCharacterMovement()->MaxWalkSpeed = MaxSlideSpeed; 
+		GetCharacterMovement()->MaxWalkSpeed = (bIsSurgeActive ? MaxSlideSpeed * SurgeSpeedMultiplier : MaxSlideSpeed);
 		GetCharacterMovement()->GroundFriction = 0.0f;
 		GetCharacterMovement()->BrakingDecelerationWalking = 1000.0f;
 
@@ -695,7 +709,7 @@ void AHordeShooterCharacter::StopSlide()
 		SlideAudioComponent->FadeOut(0.2f, 0.0f);
 	}
 	
-	GetCharacterMovement()->MaxWalkSpeed = 1500.f;
+	GetCharacterMovement()->MaxWalkSpeed = (bIsSurgeActive ? 1500.f * SurgeSpeedMultiplier : 1500.f);
 
 	//reset friction and deceleration to default UE values.
 	GetCharacterMovement()->GroundFriction = 8.0f;
@@ -807,13 +821,14 @@ void AHordeShooterCharacter::EquipWeapon(AHordeShooterWeapon* NewWeapon)
 		}
 	}
 
+	float PlayRate = GetAnimPlayRate();
 	float EquipTime = 0.15f; //fallback time
-	if (CurrentEquippedWeapon->ArmsEquipMontage && CharacterArms)
+	if(CurrentEquippedWeapon->ArmsEquipMontage && CharacterArms)
 	{
-		if (UAnimInstance* AnimInst = CharacterArms->GetAnimInstance())
+		if(UAnimInstance* AnimInst = CharacterArms->GetAnimInstance())
 		{
-			AnimInst->Montage_Play(CurrentEquippedWeapon->ArmsEquipMontage);
-			EquipTime = CurrentEquippedWeapon->ArmsEquipMontage->GetPlayLength();
+			AnimInst->Montage_Play(CurrentEquippedWeapon->ArmsEquipMontage, PlayRate);
+			EquipTime = CurrentEquippedWeapon->ArmsEquipMontage->GetPlayLength() / PlayRate;
 		}
 	}
 
@@ -883,13 +898,15 @@ void AHordeShooterCharacter::SwitchWeapon(const FInputActionValue& Value)
 	}
 
 	//play holster anim
+	float PlayRate = GetAnimPlayRate();
 	float HolsterTime = 0.15f; //fallback time just in case
-	if (CurrentEquippedWeapon && CurrentEquippedWeapon->ArmsHolsterMontage && CharacterArms)
+
+	if(CurrentEquippedWeapon && CurrentEquippedWeapon->ArmsHolsterMontage && CharacterArms)
 	{
-		if (UAnimInstance* AnimInst = CharacterArms->GetAnimInstance())
+		if(UAnimInstance* AnimInst = CharacterArms->GetAnimInstance())
 		{
-			AnimInst->Montage_Play(CurrentEquippedWeapon->ArmsHolsterMontage);
-			HolsterTime = CurrentEquippedWeapon->ArmsHolsterMontage->GetPlayLength();
+			AnimInst->Montage_Play(CurrentEquippedWeapon->ArmsHolsterMontage, PlayRate);
+			HolsterTime = CurrentEquippedWeapon->ArmsHolsterMontage->GetPlayLength() / PlayRate;
 		}
 	}
 
@@ -1016,8 +1033,11 @@ bool AHordeShooterCharacter::IsCloseToWall()
 bool AHordeShooterCharacter::ReactToHit(float DamageAmount, const FVector& HitImpulse, FName HitBoneName, FName DamageSource)
 {
 	if(CurrentHealth <= 0.f) return false; //already dead
+	
+	float FinalDamage = DamageAmount;
+	if(bIsSurgeActive) FinalDamage *= SurgeDefenseMultiplier;
 
-	CurrentHealth -= DamageAmount;
+	CurrentHealth -= FinalDamage;
 
 	GetCharacterMovement()->AddImpulse(HitImpulse, false);
 
@@ -1234,11 +1254,8 @@ void AHordeShooterCharacter::ExecuteMeleeHit()
 			IDamageableInterface* DamageableActor = Cast<IDamageableInterface>(HitResult.GetActor());
 			if(DamageableActor)
 			{
-				float FinalDamage = MeleeDamage;
-				if(ProgressionComponent)
-				{
-					FinalDamage *= ProgressionComponent->GetDamageMultiplier();
-				}
+				//GetTotalDamageMultiplier() includes progression multiplier and surge multiplier if active
+				float FinalDamage = MeleeDamage * GetTotalDamageMultiplier();
 
 				FVector PushDirection = Forward;
 				PushDirection.Z += 0.2f;
@@ -1262,4 +1279,86 @@ bool AHordeShooterCharacter::Heal(float HealAmount)
 	}
 
 	return true;
+}
+
+void AHordeShooterCharacter::ActivateSurge(float DurationToAdd)
+{
+	SurgeTimeRemaining += DurationToAdd;
+
+	if(!bIsSurgeActive)
+	{
+		bIsSurgeActive = true;
+		if(SurgeAudioLoopComp->Sound) SurgeAudioLoopComp->Play();
+		if(!bIsSliding) GetCharacterMovement()->MaxWalkSpeed = 1500.0f * SurgeSpeedMultiplier;
+
+		OnSurgeStateChanged(true);
+	}
+}
+
+void AHordeShooterCharacter::DeactivateSurge()
+{
+	bIsSurgeActive = false;
+	SurgeTimeRemaining = 0.0f;
+	
+	SurgeAudioLoopComp->FadeOut(0.2f, 0.0f);
+
+	if(!bIsSliding) GetCharacterMovement()->MaxWalkSpeed = 1500.0f;
+
+	OnSurgeStateChanged(false);
+}
+
+void AHordeShooterCharacter::HandleSurgeDashKill()
+{
+	FVector Start = GetActorLocation();
+	FVector End = Start + (CurrentDashDirection * 150.0f);
+
+	FCollisionShape Sphere = FCollisionShape::MakeSphere(80.0f);
+	TArray<FHitResult> HitResults;
+	FCollisionQueryParams Params;
+	Params.AddIgnoredActor(this);
+	
+	if(GetWorld()->SweepMultiByChannel(HitResults, Start, End, FQuat::Identity, ECC_Pawn, Sphere, Params))
+	{
+		TSet<AActor*> DamagedActors;
+
+		for(const FHitResult& Hit : HitResults)
+		{
+			AActor* HitActor = Hit.GetActor();
+			if(HitActor && !DamagedActors.Contains(HitActor) && HitActor->GetClass()->ImplementsInterface(UDamageableInterface::StaticClass()))
+			{
+				DamagedActors.Add(HitActor);
+				IDamageableInterface* Damageable = Cast<IDamageableInterface>(HitActor);
+
+				//default Setup for Non-Fodder Enemies
+				float DamageToApply = SurgeDashDamage * GetTotalDamageMultiplier(); 
+				FVector ImpulseToApply = CurrentDashDirection * 100000.0f;
+				FName OutDamageSource = FName("SurgeDash"); 
+
+				//for fodder enemies
+				if(AHordeShooterEnemy* Enemy = Cast<AHordeShooterEnemy>(HitActor))
+				{
+					if(Enemy->bIsFodder)
+					{
+						DamageToApply = 99999.0f;
+						ImpulseToApply = CurrentDashDirection * 100000.0f;
+						OutDamageSource = FName("Melee"); 
+					}
+				}
+
+				Damageable->ReactToHit(DamageToApply, ImpulseToApply, Hit.BoneName, OutDamageSource);
+			}
+		}
+	}
+}
+
+float AHordeShooterCharacter::GetTotalDamageMultiplier() const
+{
+	float Mult = ProgressionComponent ? ProgressionComponent->GetDamageMultiplier() : 1.0f;
+	if(bIsSurgeActive) Mult *= SurgeDamageMultiplier;
+	return Mult;
+}
+
+float AHordeShooterCharacter::GetAnimPlayRate() const
+{
+	return bIsSurgeActive ? SurgeAnimMultiplier : 1.0f;
 }

@@ -426,13 +426,10 @@ void AHordeShooterWeapon::PerformFire()
 				if(DamageableActor)
 				{
 					FVector FinalImpulse = ForwardVector * ShotImpulse;
-					float DamageMultiplier = 1.0f;
-					if(CurrentOwner && CurrentOwner->ProgressionComponent)
-					{
-						DamageMultiplier = CurrentOwner->ProgressionComponent->GetDamageMultiplier();
-					}
+					float FinalDamage = BaseDamage;
+					if(CurrentOwner) FinalDamage *= CurrentOwner->GetTotalDamageMultiplier();
 
-					bool bIsHeadshot = DamageableActor->ReactToHit(BaseDamage * DamageMultiplier, FinalImpulse, HitResult.BoneName);
+					bool bIsHeadshot = DamageableActor->ReactToHit(FinalDamage, FinalImpulse, HitResult.BoneName);
 
 					if(bIsHeadshot && EffectsToPlay->HeadshotSound)
 					{
@@ -485,7 +482,8 @@ void AHordeShooterWeapon::Reload()
 	StopFire(); //cannot fire while reloading
 
 	//reload time logic:
-	float DynamicReloadTime = ReloadTime;
+	float PlayRate = CurrentOwner ? CurrentOwner->GetAnimPlayRate() : 1.0f;
+	float DynamicReloadTime = ReloadTime / PlayRate;
 	if(CurrentOwner && CurrentOwner->CharacterArms)
 	{
 		if(ArmsReloadMontage)
@@ -493,16 +491,16 @@ void AHordeShooterWeapon::Reload()
 			UAnimInstance* ArmsAnimInstance = CurrentOwner->CharacterArms->GetAnimInstance();
 			if(ArmsAnimInstance)
 			{
-				ArmsAnimInstance->Montage_Play(ArmsReloadMontage);
+				ArmsAnimInstance->Montage_Play(ArmsReloadMontage, PlayRate);
 				
 				//overwrite the timer duration with the exact length of the animation
-				DynamicReloadTime = ArmsReloadMontage->GetPlayLength();
+				DynamicReloadTime = ArmsReloadMontage->GetPlayLength() / PlayRate;
 			}
 		}
 
 		if(WeaponReloadMontage && Mesh->GetAnimInstance())
 		{
-			Mesh->GetAnimInstance()->Montage_Play(WeaponReloadMontage);
+			Mesh->GetAnimInstance()->Montage_Play(WeaponReloadMontage, PlayRate);
 		}
 	}
 

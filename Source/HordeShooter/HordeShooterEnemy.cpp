@@ -50,6 +50,9 @@ AHordeShooterEnemy::AHordeShooterEnemy()
 	PrimaryActorTick.bStartWithTickEnabled = false;
 	PrimaryActorTick.bCanEverTick = false;
 
+	GetCapsuleComponent()->CanCharacterStepUpOn = ECB_No;
+	GetMesh()->CanCharacterStepUpOn = ECB_No;
+
 	//anim culling:
 	/*
 		AlwaysTickPoseAndRefreshBones (default), (expensive)
@@ -360,37 +363,40 @@ void AHordeShooterEnemy::Die()
 	bIsDead = true;
 
 	//Drop logic:
-	if(CachedWaveManager && AmmoDrops.Num() > 0)
+	if(CachedWaveManager)
 	{
-		//ammo drop (RNG or HEADSHOT):
-		EPickupSize AmmoSizeToDrop = EPickupSize::Small;
-		bool bShouldDropAmmo = false;
-		bool bWasHeadshot = (LastHitBoneName == FName("Head"));
-
-		if(bWasHeadshot)
-		{	
-			//guaranteed drop on headshot, default to the first configured drop
-			bShouldDropAmmo = true;
-			AmmoSizeToDrop = AmmoDrops[0].Size; 
-		}
-		else
+		if(AmmoDrops.Num() > 0)
 		{
-			float Roll = FMath::FRand();
-			float CumulativeChance = 0.0f;
-			
-			for(const FAmmoDropConfig& Drop : AmmoDrops)
+			//ammo drop (RNG or HEADSHOT):
+			EPickupSize AmmoSizeToDrop = EPickupSize::Small;
+			bool bShouldDropAmmo = false;
+			bool bWasHeadshot = (LastHitBoneName == FName("Head"));
+
+			if(bWasHeadshot)
+			{	
+				//guaranteed drop on headshot, default to the first configured drop
+				bShouldDropAmmo = true;
+				AmmoSizeToDrop = AmmoDrops[0].Size; 
+			}
+			else
 			{
-				CumulativeChance += Drop.DropChance;
-				if(Roll <= CumulativeChance)
+				float Roll = FMath::FRand();
+				float CumulativeChance = 0.0f;
+				
+				for(const FAmmoDropConfig& Drop : AmmoDrops)
 				{
-					bShouldDropAmmo = true;
-					AmmoSizeToDrop = Drop.Size;
-					break;
+					CumulativeChance += Drop.DropChance;
+					if(Roll <= CumulativeChance)
+					{
+						bShouldDropAmmo = true;
+						AmmoSizeToDrop = Drop.Size;
+						break;
+					}
 				}
 			}
-		}
 
-		if(bShouldDropAmmo) CachedWaveManager->SpawnPickup(GetActorLocation(), EPickupType::Ammo, AmmoSizeToDrop);
+			if(bShouldDropAmmo) CachedWaveManager->SpawnPickup(GetActorLocation(), EPickupType::Ammo, AmmoSizeToDrop);
+		}
 
 		//Health drop (MELEE or PROXIMITY):
 		EPickupSize HealthSizeToDrop = EPickupSize::Small;
@@ -420,10 +426,13 @@ void AHordeShooterEnemy::Die()
 
 		if(bShouldDropHealth) CachedWaveManager->SpawnPickup(GetActorLocation(), EPickupType::Health, HealthSizeToDrop);
 
-		//Surge drop:
-		/*
-			implementation
-		*/
+		if(SurgeDropSettings.DropChance > 0.0f)
+		{
+			if(FMath::FRand() <= SurgeDropSettings.DropChance)
+			{
+				CachedWaveManager->SpawnPickup(GetActorLocation(), EPickupType::Surge, SurgeDropSettings.DropSize);
+			}
+		}
 	}
 
 	if(SprintAudioComp)
