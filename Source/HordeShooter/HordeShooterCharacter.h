@@ -316,9 +316,22 @@ protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
 	UAudioComponent* SurgeAudioLoopComp;
 
+	UPROPERTY(EditDefaultsOnly, Category = "Surge|Impact")
+	class UNiagaraSystem* SurgeDashImpactVFX;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Surge|Impact")
+	class USoundBase* SurgeDashImpactSFX;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Surge|Impact")
+	TSubclassOf<class UCameraShakeBase> SurgeDashCameraShake;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Surge|Impact")
+	float HitStopDuration = 0.05f;
+
 	//call for HUD changes
-	UFUNCTION(BlueprintImplementableEvent, Category = "Surge")
+	UFUNCTION(BlueprintNativeEvent, Category = "Surge")
 	void OnSurgeStateChanged(bool bIsActive);
+	virtual void OnSurgeStateChanged_Implementation(bool bIsActive);
 
 	//spped lines:
 	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Movement")
@@ -455,5 +468,8 @@ private:
 	//surge:
 	void DeactivateSurge();
 	void HandleSurgeDashKill();
+	FTimerHandle HitStopTimerHandle;
+	void ClearHitStop();
+
 
 };

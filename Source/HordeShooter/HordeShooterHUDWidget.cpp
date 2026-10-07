@@ -8,6 +8,7 @@
 #include "Components/Button.h"
 #include "Components/CanvasPanel.h"
 #include "Components/CanvasPanelSlot.h"
+#include "Components/Image.h"
 #include "Kismet/GameplayStatics.h"
 #include "HordeShooterCharacter.h"
 #include "HordeShooterPlayerController.h"
@@ -26,6 +27,8 @@ void UHordeShooterHUDWidget::NativeConstruct()
 	if(Btn_UpgradeDamage) Btn_UpgradeDamage->OnClicked.AddDynamic(this, &UHordeShooterHUDWidget::OnDamageUpgradeClicked);
 	if(Btn_UpgradeHealth) Btn_UpgradeHealth->OnClicked.AddDynamic(this, &UHordeShooterHUDWidget::OnHealthUpgradeClicked);
 	if(Btn_UpgradeAmmo) Btn_UpgradeAmmo->OnClicked.AddDynamic(this, &UHordeShooterHUDWidget::OnAmmoUpgradeClicked);
+
+	if(SurgeOverlay) SurgeOverlay->SetVisibility(ESlateVisibility::Hidden);
 
 	ToggleCrosshair(true);
 }
@@ -168,6 +171,14 @@ void UHordeShooterHUDWidget::ShowUpgradeScreen()
 	{
 		ToggleCrosshair(false);
 		UpgradePanel->SetVisibility(ESlateVisibility::Visible);
+	}
+}
+
+void UHordeShooterHUDWidget::ToggleSurgeOverlay(bool bIsActive)
+{
+	if(SurgeOverlay)
+	{
+		SurgeOverlay->SetVisibility(bIsActive ? ESlateVisibility::HitTestInvisible : ESlateVisibility::Hidden);
 	}
 }
 

@@ -1320,6 +1320,7 @@ void AHordeShooterCharacter::HandleSurgeDashKill()
 	if(GetWorld()->SweepMultiByChannel(HitResults, Start, End, FQuat::Identity, ECC_Pawn, Sphere, Params))
 	{
 		TSet<AActor*> DamagedActors;
+		bool bHitFodder = false;
 
 		for(const FHitResult& Hit : HitResults)
 		{
@@ -1330,8 +1331,8 @@ void AHordeShooterCharacter::HandleSurgeDashKill()
 				IDamageableInterface* Damageable = Cast<IDamageableInterface>(HitActor);
 
 				//default Setup for Non-Fodder Enemies
-				float DamageToApply = SurgeDashDamage * GetTotalDamageMultiplier(); 
-				FVector ImpulseToApply = CurrentDashDirection * 100000.0f;
+				float DamageToApply = SurgeDashDamage;
+				FVector ImpulseToApply = CurrentDashDirection * 200000.0f;
 				FName OutDamageSource = FName("SurgeDash"); 
 
 				//for fodder enemies
@@ -1340,15 +1341,40 @@ void AHordeShooterCharacter::HandleSurgeDashKill()
 					if(Enemy->bIsFodder)
 					{
 						DamageToApply = 99999.0f;
-						ImpulseToApply = CurrentDashDirection * 100000.0f;
+						ImpulseToApply = CurrentDashDirection * 200000.0f;
 						OutDamageSource = FName("Melee"); 
+
+						bHitFodder = true;
+						if(SurgeDashImpactVFX) UNiagaraFunctionLibrary::SpawnSystemAtLocation(GetWorld(), SurgeDashImpactVFX, Hit.ImpactPoint, CurrentDashDirection.Rotation());
+						if(SurgeDashImpactSFX) UGameplayStatics::PlaySoundAtLocation(GetWorld(), SurgeDashImpactSFX, Hit.ImpactPoint);
 					}
 				}
 
 				Damageable->ReactToHit(DamageToApply, ImpulseToApply, Hit.BoneName, OutDamageSource);
 			}
 		}
+
+		if(bHitFodder)
+		{
+			if(AHordeShooterPlayerController* PC = Cast<AHordeShooterPlayerController>(GetController()))
+			{
+				if(SurgeDashCameraShake) PC->ClientStartCameraShake(SurgeDashCameraShake);
+			}
+
+			// Drop time down to 5% speed to simulate immense physical resistance
+			UGameplayStatics::SetGlobalTimeDilation(GetWorld(), 0.05f);
+
+			// Because time is slowed down, we must multiply our real-world duration by the dilation
+			// so the timer doesn't take 20x longer to fire!
+			float DilatedTimer = HitStopDuration * 0.05f; 
+			GetWorldTimerManager().SetTimer(HitStopTimerHandle, this, &AHordeShooterCharacter::ClearHitStop, DilatedTimer, false);
+		}	
 	}
+}
+
+void AHordeShooterCharacter::ClearHitStop()
+{
+	UGameplayStatics::SetGlobalTimeDilation(GetWorld(), 1.0f);
 }
 
 float AHordeShooterCharacter::GetTotalDamageMultiplier() const
@@ -1361,4 +1387,15 @@ float AHordeShooterCharacter::GetTotalDamageMultiplier() const
 float AHordeShooterCharacter::GetAnimPlayRate() const
 {
 	return bIsSurgeActive ? SurgeAnimMultiplier : 1.0f;
+}
+
+void AHordeShooterCharacter::OnSurgeStateChanged_Implementation(bool bIsActive)
+{
+	if(AHordeShooterPlayerController* PC = Cast<AHordeShooterPlayerController>(GetController()))
+	{
+		if(PC->PlayerHUDWidget) 
+		{
+			PC->PlayerHUDWidget->ToggleSurgeOverlay(bIsActive);
+		}
+	}
 }

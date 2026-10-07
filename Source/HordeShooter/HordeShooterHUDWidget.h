@@ -12,6 +12,7 @@ class UWidget;
 class UProgressBar;
 class UButton;
 class UCanvasPanel;
+class UImage;
 
 UCLASS()
 class HORDESHOOTER_API UHordeShooterHUDWidget : public UUserWidget
@@ -65,6 +66,9 @@ protected:
 	UPROPERTY(meta = (BindWidget))
 	UButton* Btn_UpgradeAmmo;
 
+	UPROPERTY(meta = (BindWidget))
+	UImage* SurgeOverlay;
+
 	virtual void NativeConstruct() override;
 
 public:
@@ -84,6 +88,8 @@ public:
 	void ShowDamageIndicator(float Angle);
 
 	void ShowUpgradeScreen();
+
+	void ToggleSurgeOverlay(bool bIsActive);
 
 private:
 

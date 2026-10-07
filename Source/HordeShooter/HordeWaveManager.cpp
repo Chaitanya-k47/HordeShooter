@@ -223,21 +223,42 @@ void AHordeWaveManager::OnEnemyDied()
 }
 
 void AHordeWaveManager::SpawnPickup(const FVector& Location, EPickupType Type, EPickupSize Size)
-{
-	FVector SpawnLoc = Location;
-	float ScatterX = FMath::RandRange(-60.0f, 60.0f);
-	float ScatterY = FMath::RandRange(-60.0f, 60.0f);
-	
-	FVector TraceStart = Location + FVector(ScatterX, ScatterY, 0.0f);
+{	
+	FVector TraceStart = Location;
 
 	FHitResult Hit;
 	FCollisionQueryParams Params;
 	FCollisionObjectQueryParams ObjectParams;
 	ObjectParams.AddObjectTypesToQuery(ECC_WorldStatic);
 
+	//find the floor:
 	if(GetWorld()->LineTraceSingleByObjectType(Hit, TraceStart, TraceStart - FVector(0, 0, 3000.f), ObjectParams, Params))
 	{
-		SpawnLoc = Hit.ImpactPoint + FVector(0, 0, 25.f);
+		TraceStart = Hit.ImpactPoint + FVector(0, 0, 25.f);
+	}
+
+	//push the orb away from other orbs:
+	FVector FinalSpawnLoc = TraceStart;
+	float MinDistance = 80.0f;
+	float MinDistSq = FMath::Square(MinDistance);
+	
+	for(AHordeShooterPickup* ActivePickup : PickupPool)
+	{
+		if(ActivePickup && ActivePickup->bIsActive)
+		{
+			float DistSq = FVector::DistSquared(ActivePickup->GetActorLocation(), FinalSpawnLoc);
+			if(DistSq < MinDistSq) //too close, calculate push direction
+			{
+				FVector PushDir = (FinalSpawnLoc - ActivePickup->GetActorLocation()).GetSafeNormal2D();
+
+				if(PushDir.IsNearlyZero()) //if the two orbs are exactly on top of each other, randomize a direction
+				{
+					PushDir = FVector(FMath::RandRange(-1.f, 1.f), FMath::RandRange(-1.f, 1.f), 0.0f).GetSafeNormal2D();
+				}
+
+				FinalSpawnLoc += PushDir * MinDistance;
+			}
+		}
 	}
 
 	//find first inactive pickup
@@ -245,7 +266,7 @@ void AHordeWaveManager::SpawnPickup(const FVector& Location, EPickupType Type, E
 	{
 		if(Pickup && !Pickup->bIsActive)
 		{
-			Pickup->ActivatePickup(SpawnLoc, Type, Size);
+			Pickup->ActivatePickup(FinalSpawnLoc, Type, Size);
 			return;
 		}
 	}
