@@ -259,6 +259,21 @@ void AHordeShooterCharacter::Tick(float DeltaTime)
 		if(SurgeTimeRemaining <= 0.0f) DeactivateSurge();
 	}
 
+	if(bIsRecoveringTime)
+	{
+		float CurrentTimeDilation = UGameplayStatics::GetGlobalTimeDilation(GetWorld());
+		float UndilatedDeltaTime = FApp::GetDeltaTime();
+
+		float NewTimeDilation = FMath::FInterpTo(CurrentTimeDilation, 1.0f, UndilatedDeltaTime, SlowMoRecoverySpeed);
+		UGameplayStatics::SetGlobalTimeDilation(GetWorld(), NewTimeDilation);
+
+		if(NewTimeDilation >= 0.99f)
+		{
+			UGameplayStatics::SetGlobalTimeDilation(GetWorld(), 1.0f);
+			bIsRecoveringTime = false;
+		}
+	}
+
 	//Dynamic FOV state logic:
 	if(FirstPersonCamera)
 	{		
@@ -485,6 +500,7 @@ void AHordeShooterCharacter::Dash()
 	AvailableDashes--;
 	bIsDashing = true;
 	DashTimer = DashDuration;
+	DashDamagedActors.Empty();
 
 	if(SpeedLinesVFXComp)
 	{
@@ -1104,6 +1120,11 @@ void AHordeShooterCharacter::PlayerDie()
 		PC->ResetMultiKill();
 		PC->ShowGameOverScreen();
 	}
+
+	UGameplayStatics::SetGlobalTimeDilation(GetWorld(), 1.0f);
+	bIsRecoveringTime = false;
+	GetWorldTimerManager().ClearTimer(SlowMoDelayTimerHandle);
+	GetWorldTimerManager().ClearTimer(SlowMoTimerHandle);
 }
 
 void AHordeShooterCharacter::TogglePause()
@@ -1299,6 +1320,10 @@ void AHordeShooterCharacter::DeactivateSurge()
 {
 	bIsSurgeActive = false;
 	SurgeTimeRemaining = 0.0f;
+	UGameplayStatics::SetGlobalTimeDilation(GetWorld(), 1.0f);
+	bIsRecoveringTime = false;
+	GetWorldTimerManager().ClearTimer(SlowMoDelayTimerHandle);
+	GetWorldTimerManager().ClearTimer(SlowMoTimerHandle);
 	
 	SurgeAudioLoopComp->FadeOut(0.2f, 0.0f);
 
@@ -1319,38 +1344,39 @@ void AHordeShooterCharacter::HandleSurgeDashKill()
 	
 	if(GetWorld()->SweepMultiByChannel(HitResults, Start, End, FQuat::Identity, ECC_Pawn, Sphere, Params))
 	{
-		TSet<AActor*> DamagedActors;
 		bool bHitFodder = false;
 
 		for(const FHitResult& Hit : HitResults)
 		{
 			AActor* HitActor = Hit.GetActor();
-			if(HitActor && !DamagedActors.Contains(HitActor) && HitActor->GetClass()->ImplementsInterface(UDamageableInterface::StaticClass()))
+			if(HitActor && !DashDamagedActors.Contains(HitActor) && HitActor->GetClass()->ImplementsInterface(UDamageableInterface::StaticClass()))
 			{
-				DamagedActors.Add(HitActor);
+				AHordeShooterEnemy* Enemy = Cast<AHordeShooterEnemy>(HitActor);
+				if(Enemy && Enemy->bIsDead) continue;
+
+				DashDamagedActors.Add(HitActor);
 				IDamageableInterface* Damageable = Cast<IDamageableInterface>(HitActor);
 
 				//default Setup for Non-Fodder Enemies
 				float DamageToApply = SurgeDashDamage;
 				FVector ImpulseToApply = CurrentDashDirection * 200000.0f;
-				FName OutDamageSource = FName("SurgeDash"); 
+				FName OutDamageSource = FName("SurgeDash");
+				FName OutHitBoneName = Hit.BoneName;
 
 				//for fodder enemies
-				if(AHordeShooterEnemy* Enemy = Cast<AHordeShooterEnemy>(HitActor))
+				if(Enemy->bIsFodder)
 				{
-					if(Enemy->bIsFodder)
-					{
-						DamageToApply = 99999.0f;
-						ImpulseToApply = CurrentDashDirection * 200000.0f;
-						OutDamageSource = FName("Melee"); 
+					DamageToApply = 99999.0f;
+					ImpulseToApply = CurrentDashDirection * 200000.0f;
+					OutDamageSource = FName("Melee");
+					OutHitBoneName = FName("Neck");
 
-						bHitFodder = true;
-						if(SurgeDashImpactVFX) UNiagaraFunctionLibrary::SpawnSystemAtLocation(GetWorld(), SurgeDashImpactVFX, Hit.ImpactPoint, CurrentDashDirection.Rotation());
-						if(SurgeDashImpactSFX) UGameplayStatics::PlaySoundAtLocation(GetWorld(), SurgeDashImpactSFX, Hit.ImpactPoint);
-					}
+					bHitFodder = true;
+					if(SurgeDashImpactVFX) UNiagaraFunctionLibrary::SpawnSystemAtLocation(GetWorld(), SurgeDashImpactVFX, Hit.ImpactPoint, CurrentDashDirection.Rotation());
+					if(SurgeDashImpactSFX) UGameplayStatics::PlaySoundAtLocation(GetWorld(), SurgeDashImpactSFX, Hit.ImpactPoint);
 				}
 
-				Damageable->ReactToHit(DamageToApply, ImpulseToApply, Hit.BoneName, OutDamageSource);
+				Damageable->ReactToHit(DamageToApply, ImpulseToApply, OutHitBoneName, OutDamageSource);
 			}
 		}
 
@@ -1361,20 +1387,32 @@ void AHordeShooterCharacter::HandleSurgeDashKill()
 				if(SurgeDashCameraShake) PC->ClientStartCameraShake(SurgeDashCameraShake);
 			}
 
-			// Drop time down to 5% speed to simulate immense physical resistance
-			UGameplayStatics::SetGlobalTimeDilation(GetWorld(), 0.05f);
-
-			// Because time is slowed down, we must multiply our real-world duration by the dilation
-			// so the timer doesn't take 20x longer to fire!
-			float DilatedTimer = HitStopDuration * 0.05f; 
-			GetWorldTimerManager().SetTimer(HitStopTimerHandle, this, &AHordeShooterCharacter::ClearHitStop, DilatedTimer, false);
+			//dont queue another slow mo if we are already in slow mo and about to start a slowmo and are recovering from a slowmo:
+			if(!GetWorldTimerManager().IsTimerActive(SlowMoDelayTimerHandle) && !GetWorldTimerManager().IsTimerActive(SlowMoTimerHandle) && !bIsRecoveringTime)
+			{
+				//start micro delay:
+				GetWorldTimerManager().SetTimer(SlowMoDelayTimerHandle, this, &AHordeShooterCharacter::TriggerSlowMo, DelayBeforeSlowMo, false);
+			}
 		}	
 	}
 }
 
-void AHordeShooterCharacter::ClearHitStop()
+void AHordeShooterCharacter::TriggerSlowMo()
 {
-	UGameplayStatics::SetGlobalTimeDilation(GetWorld(), 1.0f);
+	//slowdown time:
+	UGameplayStatics::SetGlobalTimeDilation(GetWorld(), SlowMoTimeScale);
+	bIsRecoveringTime = false;
+
+	//now the game slows down to 25% of original speed, hence x secs at normal speed is now 4x sec in slow mo.
+	//but we want the slow mo timer to be exactly 0.3 sec in real world hence we scale the timer:
+	//dialated timer = SlowMoRealDuration * SlowMoTimeScale = 0.075;
+	float DilatedTimer = SlowMoRealDuration * SlowMoTimeScale;
+	GetWorldTimerManager().SetTimer(SlowMoTimerHandle, this, &AHordeShooterCharacter::BeginTimeRecovery, DilatedTimer, false);
+}
+
+void AHordeShooterCharacter::BeginTimeRecovery()
+{
+	bIsRecoveringTime = true;
 }
 
 float AHordeShooterCharacter::GetTotalDamageMultiplier() const

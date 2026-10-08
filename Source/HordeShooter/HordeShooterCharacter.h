@@ -325,8 +325,18 @@ protected:
 	UPROPERTY(EditDefaultsOnly, Category = "Surge|Impact")
 	TSubclassOf<class UCameraShakeBase> SurgeDashCameraShake;
 
+	//SURGE slow-motion config:
 	UPROPERTY(EditDefaultsOnly, Category = "Surge|Impact")
-	float HitStopDuration = 0.05f;
+	float DelayBeforeSlowMo = 0.08f;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Surge|Impact")
+	float SlowMoTimeScale = 0.25f; //scales down time to 25% of normal speed
+
+	UPROPERTY(EditDefaultsOnly, Category = "Surge|Impact")
+	float SlowMoRealDuration = 0.3f; //duration of the slowmotion effect (in real world seconds)
+
+	UPROPERTY(EditDefaultsOnly, Category = "Surge|Impact")
+	float SlowMoRecoverySpeed = 4.0f; //how fast time returns to normal after slowmotion ends
 
 	//call for HUD changes
 	UFUNCTION(BlueprintNativeEvent, Category = "Surge")
@@ -468,8 +478,12 @@ private:
 	//surge:
 	void DeactivateSurge();
 	void HandleSurgeDashKill();
-	FTimerHandle HitStopTimerHandle;
-	void ClearHitStop();
+	TSet<AActor*> DashDamagedActors;
 
+	FTimerHandle SlowMoDelayTimerHandle;
+	FTimerHandle SlowMoTimerHandle;
+	bool bIsRecoveringTime = false;
 
+	void TriggerSlowMo();
+	void BeginTimeRecovery();
 };
