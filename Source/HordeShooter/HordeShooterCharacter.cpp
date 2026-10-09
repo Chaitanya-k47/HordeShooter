@@ -1369,7 +1369,7 @@ void AHordeShooterCharacter::HandleSurgeDashKill()
 					DamageToApply = 99999.0f;
 					ImpulseToApply = CurrentDashDirection * 200000.0f;
 					OutDamageSource = FName("Melee");
-					OutHitBoneName = FName("Neck");
+					OutHitBoneName = FName("Head");
 
 					bHitFodder = true;
 					if(SurgeDashImpactVFX) UNiagaraFunctionLibrary::SpawnSystemAtLocation(GetWorld(), SurgeDashImpactVFX, Hit.ImpactPoint, CurrentDashDirection.Rotation());

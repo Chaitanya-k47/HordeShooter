@@ -239,7 +239,7 @@ void AHordeWaveManager::SpawnPickup(const FVector& Location, EPickupType Type, E
 
 	//push the orb away from other orbs:
 	FVector FinalSpawnLoc = TraceStart;
-	float MinDistance = 80.0f;
+	float MinDistance = 200.0f;
 	float MinDistSq = FMath::Square(MinDistance);
 	
 	for(AHordeShooterPickup* ActivePickup : PickupPool)
