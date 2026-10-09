@@ -148,8 +148,11 @@ void AHordeShooterEnemy::DeactivateEnemy()
 	GetMesh()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 
 	//re-attach the mesh
-	GetMesh()->AttachToComponent(GetCapsuleComponent(), FAttachmentTransformRules::KeepWorldTransform);
-	GetMesh()->SetRelativeLocation(FVector(0.0f, 0.0f, -96.0f));
+	//GetMesh()->AttachToComponent(GetCapsuleComponent(), FAttachmentTransformRules::KeepWorldTransform);
+	GetMesh()->AttachToComponent(GetCapsuleComponent(), FAttachmentTransformRules::KeepRelativeTransform);
+
+	float CapsuleBottomZ = -GetCapsuleComponent()->GetUnscaledCapsuleHalfHeight();
+	GetMesh()->SetRelativeLocation(FVector(0.0f, 0.0f, CapsuleBottomZ));
 	GetMesh()->SetRelativeRotation(FRotator(0.0f, -90.0f, 0.0f));
 
 	//hide
@@ -473,7 +476,7 @@ void AHordeShooterEnemy::OnDeath_Implementation()
 	GetMesh()->bPauseAnims = true;
 
 	//detach mesh:
-	GetMesh()->DetachFromComponent(FDetachmentTransformRules::KeepWorldTransform);
+	//GetMesh()->DetachFromComponent(FDetachmentTransformRules::KeepWorldTransform);
 
 	//mesh ignores living pawns but react to bullets
 	GetMesh()->SetCollisionResponseToChannel(ECC_Pawn, ECR_Ignore);
