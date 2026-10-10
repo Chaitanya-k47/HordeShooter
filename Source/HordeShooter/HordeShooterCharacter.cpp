@@ -96,6 +96,7 @@ void AHordeShooterCharacter::BeginPlay()
 	Super::BeginPlay();
 
 	CurrentHealth = MaxHealth;
+	DefaultDistancePerFootstep = DistancePerFootstep;
 	
 	//initialize target FOV to base FOV
 	TargetFOV = IdleFOV;
@@ -274,9 +275,43 @@ void AHordeShooterCharacter::Tick(float DeltaTime)
 		}
 	}
 
+	//On death:
+	if(CurrentHealth <= 0.f)
+	{
+		if(!GetCharacterMovement()->IsFalling())
+		{
+			if(!bDeathTimerStarted)
+			{
+				bDeathTimerStarted = true;
+
+				//clear the fail safe timer:
+				GetWorldTimerManager().ClearTimer(FailsafeGameOverTimerHandle);
+				GetWorldTimerManager().SetTimer(GameOverTimerHandle, this, &AHordeShooterCharacter::TriggerGameOverScreen, 3.0f, false);
+			}
+
+			if(FirstPersonCamera)
+			{
+				FVector CurrentLoc = FirstPersonCamera->GetRelativeLocation();
+				FRotator CurrentRot = FirstPersonCamera->GetRelativeRotation();
+				
+				float FloorZ = -GetCapsuleComponent()->GetScaledCapsuleHalfHeight() + 20.0f;
+
+				FVector TargetLoc = FVector(0.0f, 0.0f, FloorZ);
+				FRotator TargetRot = FRotator(-30.0f, CurrentRot.Yaw, 20.0f);  //(p, y ,r)
+
+				FirstPersonCamera->SetRelativeLocation(FMath::VInterpTo(CurrentLoc, TargetLoc, DeltaTime, 5.0f));
+				FirstPersonCamera->SetRelativeRotation(FMath::RInterpTo(CurrentRot, TargetRot, DeltaTime, 4.0f));
+			}
+		}
+
+		return;
+	}
+
+	Pivot->SetRelativeRotation(FRotator(GetControlRotation().Pitch, 0.f, 0.f));
+
 	//Dynamic FOV state logic:
 	if(FirstPersonCamera)
-	{		
+	{
 		// 1. Calculate directional movement alignment
 		FVector VelocityDir = GetCharacterMovement()->Velocity.GetSafeNormal();
 		FVector ActorForward = GetActorForwardVector();
@@ -307,7 +342,7 @@ void AHordeShooterCharacter::Tick(float DeltaTime)
 				AccumulatedStepDistance = 0.f;
 			}
 		}
-		else if (CurrentSpeed <= 10.f || GetCharacterMovement()->IsFalling())
+		else if(CurrentSpeed <= 10.f || GetCharacterMovement()->IsFalling())
 		{
 			//reset pedometer
 			AccumulatedStepDistance = 0.f;
@@ -315,7 +350,7 @@ void AHordeShooterCharacter::Tick(float DeltaTime)
 		}
 
 		// STATE 1: DASHING
-		if (bIsDashing)
+		if(bIsDashing)
 		{
 			TargetFOV = FMath::Lerp(IdleFOV, DashFOV, ForwardFactor);
 			CurrentInterpSpeed = DashFOVInterpSpeed;
@@ -328,7 +363,7 @@ void AHordeShooterCharacter::Tick(float DeltaTime)
 		}
 
 		// STATE 2: RUNNING
-		else if (CurrentSpeed > 10.f)
+		else if(CurrentSpeed > 10.f)
 		{
 			TargetFOV = RunFOV; // Standard run FOV
 			CurrentInterpSpeed = RunFOVInterpSpeed;
@@ -440,6 +475,8 @@ void AHordeShooterCharacter::UpgradeAmmoCapacity(float NewAmmoMultiplier)
 
 void AHordeShooterCharacter::Move(const FInputActionValue& Value)
 {
+	if(CurrentHealth <= 0.0f) return;
+
 	MovementInputValue = Value;
 
 	//disable movement input while sliding, as player must not be able to change direction while sliding.
@@ -455,6 +492,8 @@ void AHordeShooterCharacter::Move(const FInputActionValue& Value)
 
 void AHordeShooterCharacter::Look(const FInputActionValue& Value)
 {
+	if(CurrentHealth <= 0.0f) return;
+
 	MouseInputValue = Value;
 
 	FVector2D LookAxisVector = Value.Get<FVector2D>();
@@ -726,6 +765,7 @@ void AHordeShooterCharacter::StopSlide()
 	}
 	
 	GetCharacterMovement()->MaxWalkSpeed = (bIsSurgeActive ? 1500.f * SurgeSpeedMultiplier : 1500.f);
+	DistancePerFootstep = (bIsSurgeActive ? DefaultDistancePerFootstep * SurgeSpeedMultiplier : DefaultDistancePerFootstep);
 
 	//reset friction and deceleration to default UE values.
 	GetCharacterMovement()->GroundFriction = 8.0f;
@@ -1048,6 +1088,8 @@ bool AHordeShooterCharacter::IsCloseToWall()
 
 bool AHordeShooterCharacter::ReactToHit(float DamageAmount, const FVector& HitImpulse, FName HitBoneName, FName DamageSource)
 {
+	GetCharacterMovement()->AddImpulse(HitImpulse, false);
+
 	if(CurrentHealth <= 0.f) return false; //already dead
 	
 	float FinalDamage = DamageAmount;
@@ -1095,22 +1137,41 @@ void AHordeShooterCharacter::PlayerDie()
 {
 	//disable player movement and actions
 	GetWorldTimerManager().ClearTimer(SlamHangTimerHandle);
+	
 	GetCharacterMovement()->GravityScale = 2.0f;
-	GetCharacterMovement()->DisableMovement();
+	GetCharacterMovement()->MaxWalkSpeed = 0.0f;
+	GetCharacterMovement()->JumpZVelocity = 0.0f;
+	GetCharacterMovement()->GroundFriction = 2.0f;
+	GetCharacterMovement()->BrakingDecelerationWalking = 0.0f;
+	
 	bIsAiming = false;
 	bIsSliding = false;
 	bIsDashing = false;
 	bIsSlamming = false;
 	bIsSlamDropping = false;
 
+	if(bIsSurgeActive) DeactivateSurge();
 	if(SpeedLinesVFXComp) SpeedLinesVFXComp->Deactivate();
 	if(FallAudioComp) FallAudioComp->FadeOut(0.15f, 0.0f);
 	
+	UGameplayStatics::SetGlobalTimeDilation(GetWorld(), 1.0f);
+	bIsRecoveringTime = false;
+	GetWorldTimerManager().ClearTimer(SlowMoDelayTimerHandle);
+	GetWorldTimerManager().ClearTimer(SlowMoTimerHandle);
+
 	//hide/Disable weapon
 	if(CurrentEquippedWeapon)
 	{
 		CurrentEquippedWeapon->StopFire();
 		CurrentEquippedWeapon->bIsEquipped = false;
+
+		if(CurrentEquippedWeapon->ArmsHolsterMontage && CharacterArms)
+		{
+			if(UAnimInstance* AnimInst = CharacterArms->GetAnimInstance())
+			{
+				AnimInst->Montage_Play(CurrentEquippedWeapon->ArmsHolsterMontage, 0.50f);
+			}
+		}
 	}
 	
 	//tell the Controller to show the Game Over screen
@@ -1118,13 +1179,34 @@ void AHordeShooterCharacter::PlayerDie()
 	{
 		PC->ResetSpree();
 		PC->ResetMultiKill();
-		PC->ShowGameOverScreen();
 	}
 
-	UGameplayStatics::SetGlobalTimeDilation(GetWorld(), 1.0f);
-	bIsRecoveringTime = false;
-	GetWorldTimerManager().ClearTimer(SlowMoDelayTimerHandle);
-	GetWorldTimerManager().ClearTimer(SlowMoTimerHandle);
+	//detach camera from skeleton and attack to capsule for camera drop effect:
+	if(FirstPersonCamera)
+	{
+		FirstPersonCamera->DetachFromComponent(FDetachmentTransformRules::KeepWorldTransform);
+		FirstPersonCamera->AttachToComponent(GetCapsuleComponent(), FAttachmentTransformRules::KeepWorldTransform);
+	}
+
+	GetWorldTimerManager().SetTimer(FailsafeGameOverTimerHandle, this, &AHordeShooterCharacter::TriggerGameOverScreen, 5.0f, false);
+}
+
+void AHordeShooterCharacter::TriggerGameOverScreen()
+{
+	if(bGameOverTriggered) return;
+	bGameOverTriggered = true;
+
+	if(AHordeShooterPlayerController* PC = Cast<AHordeShooterPlayerController>(GetController()))
+	{
+		PC->ShowGameOverScreen();
+	}
+}
+
+void AHordeShooterCharacter::FellOutOfWorld(const class UDamageType& dmgType)
+{
+	TriggerGameOverScreen();
+
+	Super::FellOutOfWorld(dmgType);
 }
 
 void AHordeShooterCharacter::TogglePause()
@@ -1310,7 +1392,11 @@ void AHordeShooterCharacter::ActivateSurge(float DurationToAdd)
 	{
 		bIsSurgeActive = true;
 		if(SurgeAudioLoopComp->Sound) SurgeAudioLoopComp->Play();
-		if(!bIsSliding) GetCharacterMovement()->MaxWalkSpeed = 1500.0f * SurgeSpeedMultiplier;
+		if(!bIsSliding)
+		{
+			GetCharacterMovement()->MaxWalkSpeed = 1500.0f * SurgeSpeedMultiplier;
+			DistancePerFootstep *= SurgeSpeedMultiplier;
+		}
 
 		OnSurgeStateChanged(true);
 	}
@@ -1327,7 +1413,11 @@ void AHordeShooterCharacter::DeactivateSurge()
 	
 	SurgeAudioLoopComp->FadeOut(0.2f, 0.0f);
 
-	if(!bIsSliding) GetCharacterMovement()->MaxWalkSpeed = 1500.0f;
+	if(!bIsSliding)
+	{
+		GetCharacterMovement()->MaxWalkSpeed = 1500.0f;
+		DistancePerFootstep /= SurgeSpeedMultiplier;
+	}
 
 	OnSurgeStateChanged(false);
 }

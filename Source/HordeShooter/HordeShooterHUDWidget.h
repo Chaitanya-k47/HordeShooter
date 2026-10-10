@@ -69,6 +69,9 @@ protected:
 	UPROPERTY(meta = (BindWidget))
 	UImage* SurgeOverlay;
 
+	UPROPERTY(Transient, meta = (BindWidgetAnim))
+	class UWidgetAnimation* GameOverFadeAnim;
+
 	virtual void NativeConstruct() override;
 
 public:

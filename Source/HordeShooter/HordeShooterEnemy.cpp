@@ -231,7 +231,7 @@ void AHordeShooterEnemy::ExecuteAttack()
 					if (DamageableActor)
 					{
 						//Push the player slightly backward
-						FVector PushImpulse = GetActorForwardVector() * 100000.0f; 
+						FVector PushImpulse = GetActorForwardVector() * 120000.0f; 
 						DamageableActor->ReactToHit(AttackDamage, PushImpulse, NAME_None);
 						
 						break; //we hit the player, no need to keep looping

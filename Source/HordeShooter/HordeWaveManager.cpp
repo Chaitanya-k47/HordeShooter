@@ -204,8 +204,12 @@ void AHordeWaveManager::OnEnemyDied()
 		{
 			if(AHordeShooterPlayerController* PC = Cast<AHordeShooterPlayerController>(UGameplayStatics::GetPlayerController(GetWorld(), 0)))
 			{
-				FTimerHandle WaitABit;
-				GetWorldTimerManager().SetTimer(WaitABit, PC, &AHordeShooterPlayerController::ShowUpgradeScreen, 4.0f, false);
+				AHordeShooterCharacter* PlayerChar = Cast<AHordeShooterCharacter>(PC->GetPawn());
+				if(PlayerChar->CurrentHealth > 0.0f)
+				{
+					FTimerHandle WaitABit;
+					GetWorldTimerManager().SetTimer(WaitABit, PC, &AHordeShooterPlayerController::ShowUpgradeScreen, 4.0f, false);
+				}
 			}
 		}
 

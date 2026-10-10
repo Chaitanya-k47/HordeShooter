@@ -119,6 +119,11 @@ void UHordeShooterHUDWidget::ShowGameOver()
 	    if(TotalAmmo) TotalAmmo->SetVisibility(ESlateVisibility::Hidden);
 
 		GameOverPanel->SetVisibility(ESlateVisibility::Visible);
+
+		if(GameOverFadeAnim)
+		{
+			PlayAnimation(GameOverFadeAnim);
+		}
 	}
 }
 
@@ -167,6 +172,8 @@ void UHordeShooterHUDWidget::ShowDamageIndicator(float Angle)
 
 void UHordeShooterHUDWidget::ShowUpgradeScreen()
 {
+	
+
 	if(UpgradePanel)
 	{
 		ToggleCrosshair(false);

@@ -435,6 +435,7 @@ protected:
 	//Slam callback:
 	void ExecuteSlamDrop();
 
+	virtual void FellOutOfWorld(const class UDamageType& dmgType) override; 
 
 private:
 	//State variables:
@@ -486,4 +487,14 @@ private:
 
 	void TriggerSlowMo();
 	void BeginTimeRecovery();
+
+	float DefaultDistancePerFootstep;
+
+	FTimerHandle GameOverTimerHandle;
+	FTimerHandle FailsafeGameOverTimerHandle;
+	bool bDeathTimerStarted = false;
+	bool bGameOverTriggered = false;
+
+	void TriggerGameOverScreen();
+
 };
