@@ -1551,3 +1551,51 @@ void AHordeShooterCharacter::OnSurgeStateChanged_Implementation(bool bIsActive)
 		}
 	}
 }
+
+void AHordeShooterCharacter::ApplyVoidPenaltyAndRespawn(FVector TargetRespawnLoc)
+{
+	if(CurrentHealth <= 0.f) return;
+
+	//apply damage penalty:
+	ReactToHit(VoidFallDamagePenalty, FVector::ZeroVector, NAME_None, FName("Void"));
+
+	//if penalty killed the player, return and let PlayerDie() handle the rest:
+	if(CurrentHealth <= 0.f) return;
+
+	CachedVoidRespawnLoc = TargetRespawnLoc;
+
+	//freeze the player
+	GetCharacterMovement()->StopMovementImmediately();
+	GetCharacterMovement()->DisableMovement();
+	
+	//camera fade:
+	if(APlayerController* PC = Cast<APlayerController>(GetController()))
+	{
+		if(PC->PlayerCameraManager)
+		{
+			//from aplha 0 to 1 in 0.5 seconds, black fade, dont fade audio, hold when finished.
+			PC->PlayerCameraManager->StartCameraFade(0.0f, 1.0f, 0.5f, FLinearColor::Black, false, true);
+		}
+	}
+
+	//set timer for teleportation:
+	GetWorldTimerManager().SetTimer(VoidRespawnTimerHandle, this, &AHordeShooterCharacter::ExecuteVoidTeleport, 0.5f, false);
+}
+
+void AHordeShooterCharacter::ExecuteVoidTeleport()
+{
+	SetActorLocation(CachedVoidRespawnLoc, false, nullptr, ETeleportType::TeleportPhysics);
+
+	//unfreeze player movement:
+	GetCharacterMovement()->SetMovementMode(MOVE_Falling);
+	GetCharacterMovement()->Velocity = FVector::ZeroVector;
+
+	if(APlayerController* PC = Cast<APlayerController>(GetController()))
+	{
+		if(PC->PlayerCameraManager)
+		{
+			//From Alpha 1 to 0, over 0.5s, Color Black, don't fade audio, do not hold
+			PC->PlayerCameraManager->StartCameraFade(1.0f, 0.0f, 0.5f, FLinearColor::Black, false, false);
+		}
+	}
+}

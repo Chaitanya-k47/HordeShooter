@@ -46,6 +46,9 @@ public:
 	//returns true if healed, otherwise returns false;
 	bool Heal(float HealAmount);
 
+	//if player falls of the arena:
+	void ApplyVoidPenaltyAndRespawn(FVector TargetRespawnLoc); 
+
 
 protected:
 	//Input actions:
@@ -96,6 +99,10 @@ public:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Player Stats")
 	float CurrentHealth;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Player Stats")
+	float VoidFallDamagePenalty = 20.0f;
+
 
 	//surge mode:
 	void ActivateSurge(float DurationToAdd); //stacks surge meter
@@ -375,6 +382,7 @@ protected:
 	UPROPERTY(VisibleInstanceOnly, BlueprintReadWrite, Category = "Weapon")
 	int32 CurrentWeaponIndex = 0; //start with primary weapon equipped
 
+
 public:
 
 	UPROPERTY(VisibleInstanceOnly, BlueprintReadWrite, Category = "Weapon")
@@ -514,4 +522,7 @@ private:
 
 	void TriggerGameOverScreen();
 
+	FVector CachedVoidRespawnLoc;
+	FTimerHandle VoidRespawnTimerHandle;
+	void ExecuteVoidTeleport();
 };

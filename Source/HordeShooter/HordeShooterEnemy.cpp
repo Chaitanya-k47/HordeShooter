@@ -366,7 +366,7 @@ void AHordeShooterEnemy::Die()
 	bIsDead = true;
 
 	//Drop logic:
-	if(CachedWaveManager)
+	if(CachedWaveManager && LastDamageSource != FName("Void"))
 	{
 		if(AmmoDrops.Num() > 0)
 		{

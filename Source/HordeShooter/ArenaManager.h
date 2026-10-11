@@ -197,6 +197,7 @@ private:
 
 	FVector CachedCubeLocalCenter;
 	float CachedCubeMaxZ;
+	FVector CachedArenaCenter;
 
 	//block mesh dimensions default:
 	float MeshSizeX = 100.f;

@@ -89,10 +89,11 @@ void AArenaManager::BeginPlay()
 	float CenterX = ((GridSizeX - 1) * BlockSize)/2.0f;
 	float CenterY = ((GridSizeY - 1) * BlockSize)/2.0f;
 	FVector ArenaCenter = FVector(CenterX, CenterY, 0.0f) + GetActorLocation();
+	CachedArenaCenter = ArenaCenter;
 
 	//Scale and position kill volume:
 	KillVolume->SetBoxExtent(FVector(1000000.0f, 1000000.0f, 100.0f));
-	KillVolume->SetRelativeLocation(FVector(CenterX, CenterY, BlockLocZ - 10000.0f));
+	KillVolume->SetRelativeLocation(FVector(CenterX, CenterY, BlockLocZ - 5000.0f));
 	KillVolume->OnComponentBeginOverlap.AddDynamic(this, &AArenaManager::OnKillVolumeOverlap);
 
 	//autp position the player:
@@ -629,13 +630,26 @@ void AArenaManager::EndPlay(const EEndPlayReason::Type EndPlayReason)
 
 void AArenaManager::OnKillVolumeOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
 {
-	if (!OtherActor || OtherActor == this) return;
+	if(!OtherActor || OtherActor == this) return;
 
-	if (OtherActor->GetClass()->ImplementsInterface(UDamageableInterface::StaticClass()))
+	//if its player, penalize them for falling off the arena:
+	if(OtherActor->IsA(AHordeShooterCharacter::StaticClass()))
 	{
-		if (IDamageableInterface* DamageableActor = Cast<IDamageableInterface>(OtherActor))
+		AHordeShooterCharacter* Player = Cast<AHordeShooterCharacter>(OtherActor);
+
+		FVector RespawnLoc = CachedArenaCenter;
+		RespawnLoc.Z = PlayerSpawnHeight;
+
+		Player->ApplyVoidPenaltyAndRespawn(RespawnLoc);
+	}
+
+	//if enemy, instant kill
+	else if(OtherActor->GetClass()->ImplementsInterface(UDamageableInterface::StaticClass()))
+	{
+
+		if(IDamageableInterface* DamageableActor = Cast<IDamageableInterface>(OtherActor))
 		{
-			DamageableActor->ReactToHit(99999.0f, FVector::ZeroVector, NAME_None);
+			DamageableActor->ReactToHit(99999.0f, FVector::ZeroVector, NAME_None, FName("Void"));
 		}
 	}
 }
