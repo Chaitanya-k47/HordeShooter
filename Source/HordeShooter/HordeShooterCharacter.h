@@ -148,6 +148,23 @@ protected:
 
 
 protected:
+	//Hit reaction sound:
+	UPROPERTY(EditDefaultsOnly, Category = "Sound|Combat")
+	USoundBase* SmallPainSound;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Sound|Combat")
+	USoundBase* MediumPainSound;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Sound|Combat")
+	USoundBase* LargePainSound;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Sound|Combat")
+	USoundBase* DeathSound;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Sound|Combat")
+	class USoundConcurrency* PlayerVoiceConcurrency;
+	
+
 	//FP camera FOV config:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Camera|FOV")
 	float IdleFOV = 100.f;

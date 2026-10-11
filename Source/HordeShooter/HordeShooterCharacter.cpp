@@ -286,7 +286,7 @@ void AHordeShooterCharacter::Tick(float DeltaTime)
 
 				//clear the fail safe timer:
 				GetWorldTimerManager().ClearTimer(FailsafeGameOverTimerHandle);
-				GetWorldTimerManager().SetTimer(GameOverTimerHandle, this, &AHordeShooterCharacter::TriggerGameOverScreen, 3.0f, false);
+				GetWorldTimerManager().SetTimer(GameOverTimerHandle, this, &AHordeShooterCharacter::TriggerGameOverScreen, 2.5f, false);
 			}
 
 			if(FirstPersonCamera)
@@ -297,10 +297,10 @@ void AHordeShooterCharacter::Tick(float DeltaTime)
 				float FloorZ = -GetCapsuleComponent()->GetScaledCapsuleHalfHeight() + 20.0f;
 
 				FVector TargetLoc = FVector(0.0f, 0.0f, FloorZ);
-				FRotator TargetRot = FRotator(-30.0f, CurrentRot.Yaw, 20.0f);  //(p, y ,r)
+				FRotator TargetRot = FRotator(-20.0f, CurrentRot.Yaw, 20.0f);  //(p, y ,r)
 
-				FirstPersonCamera->SetRelativeLocation(FMath::VInterpTo(CurrentLoc, TargetLoc, DeltaTime, 5.0f));
-				FirstPersonCamera->SetRelativeRotation(FMath::RInterpTo(CurrentRot, TargetRot, DeltaTime, 4.0f));
+				FirstPersonCamera->SetRelativeLocation(FMath::VInterpTo(CurrentLoc, TargetLoc, DeltaTime, 4.0f));
+				FirstPersonCamera->SetRelativeRotation(FMath::RInterpTo(CurrentRot, TargetRot, DeltaTime, 3.0f));
 			}
 		}
 
@@ -1097,7 +1097,26 @@ bool AHordeShooterCharacter::ReactToHit(float DamageAmount, const FVector& HitIm
 
 	CurrentHealth -= FinalDamage;
 
-	GetCharacterMovement()->AddImpulse(HitImpulse, false);
+	//play hit reaction sounds if alive
+	if(CurrentHealth > 0.f)
+	{
+		//default to small pain sounds
+		USoundBase* HitReactionSound = SmallPainSound;
+
+		if(DamageSource == FName("Lightning")) //medium pain
+		{
+			HitReactionSound = MediumPainSound;
+		}
+		else if(DamageSource == FName("RodSlam") || DamageSource == FName("Plasma") || DamageSource == FName("Overcharge")) //large pain
+		{
+			HitReactionSound = LargePainSound;
+		}
+
+		if(HitReactionSound)
+		{
+			UGameplayStatics::PlaySound2D(GetWorld(), HitReactionSound, 1.0f, 1.0f, 0.0f, PlayerVoiceConcurrency);
+		}
+	}
 
 	//calculate damage direction angle
 	FVector DamageDirection = -HitImpulse.GetSafeNormal2D();
@@ -1159,6 +1178,11 @@ void AHordeShooterCharacter::PlayerDie()
 	GetWorldTimerManager().ClearTimer(SlowMoDelayTimerHandle);
 	GetWorldTimerManager().ClearTimer(SlowMoTimerHandle);
 
+	if(DeathSound)
+	{
+		UGameplayStatics::PlaySound2D(GetWorld(), DeathSound, 1.0f, 1.0f, 0.0f, PlayerVoiceConcurrency);
+	}
+
 	//hide/Disable weapon
 	if(CurrentEquippedWeapon)
 	{
@@ -1169,7 +1193,7 @@ void AHordeShooterCharacter::PlayerDie()
 		{
 			if(UAnimInstance* AnimInst = CharacterArms->GetAnimInstance())
 			{
-				AnimInst->Montage_Play(CurrentEquippedWeapon->ArmsHolsterMontage, 0.50f);
+				AnimInst->Montage_Play(CurrentEquippedWeapon->ArmsHolsterMontage, 0.80f);
 			}
 		}
 	}

@@ -157,7 +157,7 @@ void AHordeShooterProjectile::OnHit(UPrimitiveComponent* HitComp, AActor* OtherA
 		{
 			FVector PushDirection = ProjectileMovement->Velocity.GetSafeNormal();
 			PushDirection.Z += 0.2f;
-			Damageable->ReactToHit(Damage, PushDirection * 15000.0f, NAME_None, FName("Plasma"));
+			Damageable->ReactToHit(Damage, PushDirection * 200000.0f, NAME_None, FName("Plasma"));
 		}
 	}
 
