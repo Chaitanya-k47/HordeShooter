@@ -171,6 +171,18 @@ protected:
 	UPROPERTY(EditDefaultsOnly, Category = "Sound|Combat")
 	class USoundConcurrency* PlayerVoiceConcurrency;
 	
+	//Low Health config:
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
+	class UAudioComponent* HeartbeatAudioComp;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Player Stats")
+	float LowHealthThreshold = 0.25f; // triggers low health effect at 25% health or lower
+
+	bool bIsLowOnHealth = false;
+	float CurrentLowHealthWeight = 0.0f;
+
+	void CheckLowHealthState();
+	
 
 	//FP camera FOV config:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Camera|FOV")

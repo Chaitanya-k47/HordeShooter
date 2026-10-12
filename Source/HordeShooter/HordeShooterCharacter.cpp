@@ -74,6 +74,10 @@ AHordeShooterCharacter::AHordeShooterCharacter()
 	SurgeAudioLoopComp->SetupAttachment(RootComponent);
 	SurgeAudioLoopComp->bAutoActivate = false;
 
+	HeartbeatAudioComp = CreateDefaultSubobject<UAudioComponent>(TEXT("HeartbeatAudioComp"));
+	HeartbeatAudioComp->SetupAttachment(RootComponent);
+	HeartbeatAudioComp->bAutoActivate = false;
+
 	ProgressionComponent = CreateDefaultSubobject<UPlayerProgressionComponent>(TEXT("ProgressionComponent"));
 
 	//Movement config:
@@ -166,6 +170,35 @@ void AHordeShooterCharacter::BeginPlay()
 void AHordeShooterCharacter::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
+
+	//Low health screen:
+	float TargetWeight = bIsLowOnHealth ? 1.0f : 0.0f;
+	CurrentLowHealthWeight = FMath::FInterpTo(CurrentLowHealthWeight, TargetWeight, DeltaTime, 3.0f);
+
+	//override fps camera post process settings only when in transitioning state:
+	if(CurrentLowHealthWeight > 0.01f && FirstPersonCamera)
+	{
+		FPostProcessSettings& PP = FirstPersonCamera->PostProcessSettings;
+
+		//desaturation: (1.0: full color, 0.2: almost b/W)
+		PP.bOverride_ColorSaturation = true;
+		float Saturation = FMath::Lerp(1.0f, 0.5f, CurrentLowHealthWeight);
+		PP.ColorSaturation = FVector4(Saturation, Saturation, Saturation, 1.0f);
+
+		//CHROMATIC ABERRATION (0.0 is clear, 3.0 is heavy color splitting distortion)
+		PP.bOverride_SceneFringeIntensity = true;
+		PP.SceneFringeIntensity = FMath::Lerp(0.0f, 3.0f, CurrentLowHealthWeight);
+
+		//VIGNETTE (Darkens the corners of the screen to create tunnel vision)
+		PP.bOverride_VignetteIntensity = true;
+		PP.VignetteIntensity = FMath::Lerp(0.4f, 1.0f, CurrentLowHealthWeight);
+	}
+	else if(FirstPersonCamera)
+	{
+		FirstPersonCamera->PostProcessSettings.bOverride_ColorSaturation = false;
+		FirstPersonCamera->PostProcessSettings.bOverride_SceneFringeIntensity = false;
+		FirstPersonCamera->PostProcessSettings.bOverride_VignetteIntensity = false;
+	}
 
 	if(bIsSliding)
 	{
@@ -453,6 +486,24 @@ void AHordeShooterCharacter::SetupPlayerInputComponent(UInputComponent* PlayerIn
 		EnhancedInputComponent->BindAction(MeleeAction, ETriggerEvent::Started, this, &AHordeShooterCharacter::Melee);
 	}
 }
+
+void AHordeShooterCharacter::CheckLowHealthState()
+{
+	bool bWasLow = bIsLowOnHealth;
+
+	bIsLowOnHealth = (CurrentHealth > 0.0f && CurrentHealth <= (MaxHealth * LowHealthThreshold));
+
+	//did we just enter low health state?
+	if(bIsLowOnHealth && !bWasLow)
+	{
+		if(HeartbeatAudioComp->Sound) HeartbeatAudioComp->Play();
+	}
+	//did we heal of low health or just die
+	else if(!bIsLowOnHealth && bWasLow)
+	{
+		HeartbeatAudioComp->FadeOut(0.5f, 0.0f);
+	}
+} 
 
 void AHordeShooterCharacter::UpgradeMaxHealth(float BonusHealth)
 {
@@ -1097,6 +1148,8 @@ bool AHordeShooterCharacter::ReactToHit(float DamageAmount, const FVector& HitIm
 
 	CurrentHealth -= FinalDamage;
 
+	CheckLowHealthState();
+
 	//play hit reaction sounds if alive
 	if(CurrentHealth > 0.f)
 	{
@@ -1172,6 +1225,7 @@ void AHordeShooterCharacter::PlayerDie()
 	if(bIsSurgeActive) DeactivateSurge();
 	if(SpeedLinesVFXComp) SpeedLinesVFXComp->Deactivate();
 	if(FallAudioComp) FallAudioComp->FadeOut(0.15f, 0.0f);
+	if(HeartbeatAudioComp) HeartbeatAudioComp->FadeOut(0.5f, 0.0f); 
 	
 	UGameplayStatics::SetGlobalTimeDilation(GetWorld(), 1.0f);
 	bIsRecoveringTime = false;
@@ -1399,6 +1453,8 @@ bool AHordeShooterCharacter::Heal(float HealAmount)
 
 	CurrentHealth += HealAmount;
 	CurrentHealth = FMath::Clamp(CurrentHealth, 0.f, MaxHealth);
+
+	CheckLowHealthState();
 
 	if(AHordeShooterPlayerController* PC = Cast<AHordeShooterPlayerController>(GetController()))
 	{

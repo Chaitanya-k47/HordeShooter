@@ -85,10 +85,6 @@ void ARodmasterEnemy::Tick(float DeltaTime)
         ETeleportType::TeleportPhysics
     );
 
-    if (GEngine) {
-        GEngine->AddOnScreenDebugMessage(-1, 0.0f, FColor::Red, FString::Printf(TEXT("Mesh Z: %f | Target Z: %f"), NewZ, TargetMeshZ));
-    }
-
     if(bIsLandingRecovery && FMath::IsNearlyEqual(NewZ, OriginalMeshZ, 0.5f))
     {
         bIsLandingRecovery = false; //turn off recovery flag
