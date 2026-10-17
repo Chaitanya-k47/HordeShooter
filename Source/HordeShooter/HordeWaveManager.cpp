@@ -232,12 +232,12 @@ void AHordeWaveManager::OnEnemyDied(AHordeShooterEnemy* KilledEnemy)
 	//AmbientFodder injection:
 	if(ActiveFodderEnemies <= 0 && UnspawnedFodderEnemies <= 0) //0 fodder enemies in arena as well as in stack
 	{
-		if((ActiveCoreEnemies + UnspawnedCoreEnemies) > 0) // and their are still core enemies left to fight
+		if((ActiveCoreEnemies + UnspawnedCoreEnemies) > 0) //and their are still core enemies left to fight
 		{
-			if(AmbientFodderClass && AmbientFodderBatchSize > 0)
+			if(AmbientFodderClass && Waves[CurrentWaveIndex].AmbientFodderBatchSize > 0)
 			{
 				//inject fodder into the stack
-				for(int32 i = 0; i < AmbientFodderBatchSize; i++)
+				for(int32 i = 0; i < Waves[CurrentWaveIndex].AmbientFodderBatchSize; i++)
 				{
 					//insert at Index 0, the bottom of the stack so they spawn immediately
 					ShuffledSpawnStack.Add(AmbientFodderClass);

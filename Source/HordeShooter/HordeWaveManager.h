@@ -34,7 +34,10 @@ struct FWaveConfig
 	TMap<TSubclassOf<AHordeShooterEnemy>, int32> EnemyCounts;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	float SpawnDelay = 1.f; //time in between spawing a single enemy. 
+	float SpawnDelay = 1.f; //time in between spawing a single enemy.
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	int32 AmbientFodderBatchSize = 5;
 
 };
 
@@ -93,9 +96,6 @@ protected:
 	//Ambient fodder failsafe:
 	UPROPERTY(EditAnywhere, Category = "Horde Setup|Ambient Fodder")
 	TSubclassOf<AHordeShooterEnemy> AmbientFodderClass;
-
-	UPROPERTY(EditAnywhere, Category = "Horde Setup|Ambient Fodder")
-	int32 AmbientFodderBatchSize = 5;
 
 
 private:

@@ -23,9 +23,6 @@ void AEnemyAIController::OnPossess(APawn* InPawn)
     if(ControlledEnemy)
     {
         ControlledEnemy->OnAttackFinished.AddDynamic(this, &AEnemyAIController::OnEnemyAttackFinished);
-        
-        //wait a short time before trying to find the player, to ensure the player has spawned
-        GetWorldTimerManager().SetTimer(FindPlayerTimer, this, &AEnemyAIController::FindPlayer, 0.1f, true);
     }
 }
 
@@ -290,9 +287,19 @@ void AEnemyAIController::PickNewStrafeTarget()
 
 void AEnemyAIController::WakeAI()
 {
-    //wake the AI up, start ticking and chasing the player
-    CurrentState = EAIState::Chasing;
-    GetWorldTimerManager().SetTimer(AITickTimer, this, &AEnemyAIController::UpdateAILogic, 0.1f, true);
+    PlayerTarget = UGameplayStatics::GetPlayerPawn(GetWorld(), 0);
+	
+	if(PlayerTarget)
+	{
+		CurrentState = EAIState::Chasing;
+		float RandomStartDelay = FMath::RandRange(0.0f, 0.1f);
+		GetWorldTimerManager().SetTimer(AITickTimer, this, &AEnemyAIController::UpdateAILogic, 0.1f, true, RandomStartDelay);
+	}
+	else
+	{
+		//if player isnt loaded yet try again in 0.1 seconds
+		GetWorldTimerManager().SetTimer(FindPlayerTimer, this, &AEnemyAIController::FindPlayer, 0.1f, true);
+	}
 }
 
 void AEnemyAIController::SleepAI()
@@ -300,6 +307,8 @@ void AEnemyAIController::SleepAI()
     //stut down the AI
     GetWorldTimerManager().ClearTimer(AITickTimer);
     GetWorldTimerManager().ClearTimer(FindPlayerTimer);
+    GetWorldTimerManager().ClearTimer(AttackCooldownTimerHandle);
+
     StopMovement();
     ClearFocus(EAIFocusPriority::Gameplay);
 }

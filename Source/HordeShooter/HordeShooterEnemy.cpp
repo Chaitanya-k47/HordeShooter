@@ -139,6 +139,10 @@ void AHordeShooterEnemy::DeactivateEnemy()
 	//stop audio comp
 	if(SprintAudioComp) SprintAudioComp->Stop();
 
+	//disable movement:
+	GetCharacterMovement()->DisableMovement();
+	GetCharacterMovement()->StopMovementImmediately();
+
 	//kill physics first
 	GetMesh()->PutAllRigidBodiesToSleep();
 	GetMesh()->SetSimulatePhysics(false);
@@ -338,7 +342,8 @@ bool AHordeShooterEnemy::ReactToHit(float DamageAmount, const FVector& HitImpuls
 
 void AHordeShooterEnemy::Die()
 {
-	if(bIsDead) return;
+	//if already dead or is sleeping in pool
+	if(bIsDead || !bIsActive) return;
 
 	//report the kill to announcer:
 	if(APlayerController* BasePC = UGameplayStatics::GetPlayerController(GetWorld(), 0))
@@ -496,6 +501,9 @@ void AHordeShooterEnemy::OnDeath_Implementation()
 
 void AHordeShooterEnemy::FellOutOfWorld(const class UDamageType& dmgType)
 {
+	//KillZ should no affect inactive enemies
+	if(!bIsActive) return; 
+
 	if(!bIsDead)
 	{
 		CurrentHealth = 0.0f;
