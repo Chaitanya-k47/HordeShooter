@@ -90,6 +90,14 @@ protected:
 	int32 UpgradeWaveInterval = 1;
 
 
+	//Ambient fodder failsafe:
+	UPROPERTY(EditAnywhere, Category = "Horde Setup|Ambient Fodder")
+	TSubclassOf<AHordeShooterEnemy> AmbientFodderClass;
+
+	UPROPERTY(EditAnywhere, Category = "Horde Setup|Ambient Fodder")
+	int32 AmbientFodderBatchSize = 5;
+
+
 private:
 	//POOLING AND TRACKING
 	UPROPERTY()
@@ -105,6 +113,12 @@ private:
 	int32 CurrentWaveIndex = 0;
 	int32 ActiveLivingEnemies = 0;
 
+	int32 ActiveCoreEnemies = 0;
+	int32 UnspawnedCoreEnemies = 0;
+
+	int32 ActiveFodderEnemies = 0;
+	int32 UnspawnedFodderEnemies = 0;
+
 	//TIMERS AND LOGIC:
 	FTimerHandle SpawnTimerHandle;
 	FTimerHandle WaveTransitionTimerHandle;
@@ -118,7 +132,7 @@ private:
 
 	//callback for enemy death. to be bound to a delegate in enemy class.
 	UFUNCTION()
-	void OnEnemyDied();
+	void OnEnemyDied(AHordeShooterEnemy* KilledEnemy);
 
 	UPROPERTY()
 	TArray<AHordeShooterPickup*> PickupPool;

@@ -14,7 +14,7 @@ class UAudioComponent;
 class USoundBase;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnAttackFinishedSignature);
-DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnEnemyKilledSignature);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnEnemyKilledSignature, AHordeShooterEnemy*, KilledEnemy);
 
 USTRUCT(BlueprintType)
 struct FAmmoDropConfig
@@ -187,6 +187,8 @@ protected:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
 
+	//Intercept the Engine's hard KillZ deletion
+	virtual void FellOutOfWorld(const class UDamageType& dmgType) override;
 
 	//DAMAGE INTERFACE:
 	virtual bool ReactToHit(float DamageAmount, const FVector& HitImpulse, FName HitBoneName, FName DamageSource = NAME_None) override;

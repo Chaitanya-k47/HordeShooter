@@ -14,6 +14,7 @@
 #include "DamageableInterface.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "HordeShooterCharacter.h"
+#include "HordeShooterEnemy.h"
 
 
 // Sets default values
@@ -92,8 +93,8 @@ void AArenaManager::BeginPlay()
 	CachedArenaCenter = ArenaCenter;
 
 	//Scale and position kill volume:
-	KillVolume->SetBoxExtent(FVector(1000000.0f, 1000000.0f, 100.0f));
-	KillVolume->SetRelativeLocation(FVector(CenterX, CenterY, BlockLocZ - 5000.0f));
+	KillVolume->SetBoxExtent(FVector(1000000.0f, 1000000.0f, 5000.0f));
+	KillVolume->SetRelativeLocation(FVector(CenterX, CenterY, BlockLocZ - 8000.0f));
 	KillVolume->OnComponentBeginOverlap.AddDynamic(this, &AArenaManager::OnKillVolumeOverlap);
 
 	//autp position the player:
@@ -646,6 +647,12 @@ void AArenaManager::OnKillVolumeOverlap(UPrimitiveComponent* OverlappedComponent
 	//if enemy, instant kill
 	else if(OtherActor->GetClass()->ImplementsInterface(UDamageableInterface::StaticClass()))
 	{
+
+		// FAILSAFE: Ignore inactive pooled enemies
+		if(AHordeShooterEnemy* Enemy = Cast<AHordeShooterEnemy>(OtherActor))
+		{
+			if(!Enemy->bIsActive) return;
+		}
 
 		if(IDamageableInterface* DamageableActor = Cast<IDamageableInterface>(OtherActor))
 		{

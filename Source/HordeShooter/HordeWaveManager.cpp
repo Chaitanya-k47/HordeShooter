@@ -32,13 +32,13 @@ void AHordeWaveManager::BeginPlay()
 	//create the enemy pools.
 	InitializePools();
 
-	//create the ammo pickup pool:
+	//create the energy orbs pickup pool:
 	if(PickupClass)
 	{
 		FActorSpawnParameters SpawnParams;
 		for(int32 i = 0; i < PickupPoolSize; i++)
 		{
-			AHordeShooterPickup* NewPickup = GetWorld()->SpawnActor<AHordeShooterPickup>(PickupClass, FVector(0,0,-10000), FRotator::ZeroRotator, SpawnParams);
+			AHordeShooterPickup* NewPickup = GetWorld()->SpawnActor<AHordeShooterPickup>(PickupClass, FVector(0,0,50000), FRotator::ZeroRotator, SpawnParams);
 			if (NewPickup)
 			{
 				PickupPool.Add(NewPickup);
@@ -54,7 +54,7 @@ void AHordeWaveManager::BeginPlay()
 		
 		for(int32 i = 0; i < ProjectilePoolSize; i++)
 		{
-			AHordeShooterProjectile* Proj = GetWorld()->SpawnActor<AHordeShooterProjectile>(EnemyProjectileClass, FVector(0,0,-10000), FRotator::ZeroRotator, SpawnParams);
+			AHordeShooterProjectile* Proj = GetWorld()->SpawnActor<AHordeShooterProjectile>(EnemyProjectileClass, FVector(0,0,50000), FRotator::ZeroRotator, SpawnParams);
 			if(Proj) ProjectilePool.Add(Proj);
 		}
 	}
@@ -82,7 +82,7 @@ void AHordeWaveManager::InitializePools()
 		FEnemyPoolArray NewPool;
 		for(int32 i = 0; i < AmountToSpawn; i++)
 		{
-			AHordeShooterEnemy* NewEnemy = GetWorld()->SpawnActor<AHordeShooterEnemy>(EnemyClass, FVector(0,0,-10000), FRotator::ZeroRotator, SpawnParams);
+			AHordeShooterEnemy* NewEnemy = GetWorld()->SpawnActor<AHordeShooterEnemy>(EnemyClass, FVector(0,0,50000), FRotator::ZeroRotator, SpawnParams);
 			if(NewEnemy)
 			{
 				NewEnemy->OnEnemyKilled.AddDynamic(this, &AHordeWaveManager::OnEnemyDied); //bind to enemy death event
@@ -108,6 +108,12 @@ void AHordeWaveManager::StartNextWave()
 		return;
 	}
 
+	//reset the counters for new wave:
+	ActiveCoreEnemies = 0;
+	ActiveFodderEnemies = 0;
+	UnspawnedCoreEnemies = 0;
+	UnspawnedFodderEnemies = 0;
+
 	//read wave data
 	FWaveConfig CurrentWave = Waves[CurrentWaveIndex];
 	ShuffledSpawnStack.Empty();
@@ -118,9 +124,19 @@ void AHordeWaveManager::StartNextWave()
 		TSubclassOf<AHordeShooterEnemy> EnemyClass = EnemyKVP.Key;
 		int32 Count = EnemyKVP.Value;
 
+		//peak at the enemy class to see if its fodder:
+		bool bIsFodderClass = false;
+		if(AHordeShooterEnemy* CDO = Cast<AHordeShooterEnemy>(EnemyClass->GetDefaultObject()))
+		{
+			bIsFodderClass = CDO->bIsFodder;
+		}
+
 		for(int32 i = 0; i < Count; i++)
 		{
 			ShuffledSpawnStack.Add(EnemyClass);
+
+			if(bIsFodderClass) UnspawnedFodderEnemies++;
+			else UnspawnedCoreEnemies++;
 		}
 	}
 
@@ -147,9 +163,9 @@ void AHordeWaveManager::SpawnSingleEnemy()
 	}
 
 	//performance check: if too many enemies on the screen, skip this tick
-	if (ActiveLivingEnemies >= MaxEnemiesOnScreen)
+	if(ActiveLivingEnemies >= MaxEnemiesOnScreen)
 	{
-		return; 
+		return;	
 	}
 
 	//index 0 : Attack multplier 
@@ -168,6 +184,13 @@ void AHordeWaveManager::SpawnSingleEnemy()
 	//peek at the next class needed to spawn
 	TSubclassOf<AHordeShooterEnemy> ClassToSpawn = ShuffledSpawnStack.Last();
 
+	//check if the class is fodder:
+	bool bIsFodderSpawn = false;
+	if(AHordeShooterEnemy* CDO = Cast<AHordeShooterEnemy>(ClassToSpawn->GetDefaultObject()))
+	{
+		bIsFodderSpawn = CDO->bIsFodder;
+	}
+
 	//find an inactive enemy in the pool of this class:
 	if(EnemyPools.Contains(ClassToSpawn))
 	{
@@ -176,6 +199,17 @@ void AHordeWaveManager::SpawnSingleEnemy()
 			if(Enemy && !Enemy->bIsActive && CachedArenaManager)
 			{
 				ShuffledSpawnStack.Pop();
+
+				if(bIsFodderSpawn)
+				{
+					UnspawnedFodderEnemies--;
+					ActiveFodderEnemies++;
+				}
+				else
+				{
+					UnspawnedCoreEnemies--;
+					ActiveCoreEnemies++;
+				}
 
 				//Ask arena manager for random spawn point.
 				FTransform SpawnTransform = CachedArenaManager->GetRandomSpawnPoint();
@@ -187,12 +221,41 @@ void AHordeWaveManager::SpawnSingleEnemy()
 	}
 }
 
-void AHordeWaveManager::OnEnemyDied()
+void AHordeWaveManager::OnEnemyDied(AHordeShooterEnemy* KilledEnemy)
 {
 	ActiveLivingEnemies--;
 
+	//determine who died:
+	if(KilledEnemy && KilledEnemy->bIsFodder) ActiveFodderEnemies--;
+	else ActiveCoreEnemies--;
+
+	//AmbientFodder injection:
+	if(ActiveFodderEnemies <= 0 && UnspawnedFodderEnemies <= 0) //0 fodder enemies in arena as well as in stack
+	{
+		if((ActiveCoreEnemies + UnspawnedCoreEnemies) > 0) // and their are still core enemies left to fight
+		{
+			if(AmbientFodderClass && AmbientFodderBatchSize > 0)
+			{
+				//inject fodder into the stack
+				for(int32 i = 0; i < AmbientFodderBatchSize; i++)
+				{
+					//insert at Index 0, the bottom of the stack so they spawn immediately
+					ShuffledSpawnStack.Add(AmbientFodderClass);
+					UnspawnedFodderEnemies++;
+				}
+
+				//If the SpawnTimer had stopped because the stack was empty, restart it
+				if(!GetWorldTimerManager().IsTimerActive(SpawnTimerHandle))
+				{
+					float Delay = Waves[CurrentWaveIndex].SpawnDelay;
+					GetWorldTimerManager().SetTimer(SpawnTimerHandle, this, &AHordeWaveManager::SpawnSingleEnemy, Delay, true);
+				}
+			}
+		}
+	}
+
 	//if all the enemies in the wave have been spawned and all active nemies are dead i.e. wave is cleared.
-	if (ActiveLivingEnemies <= 0 && ShuffledSpawnStack.Num() <= 0)
+	if(ActiveLivingEnemies <= 0 && ShuffledSpawnStack.Num() <= 0)
 	{
 		CurrentWaveIndex++;
 

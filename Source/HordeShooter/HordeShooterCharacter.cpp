@@ -1326,7 +1326,7 @@ void AHordeShooterCharacter::GenerateArena()
 void AHordeShooterCharacter::Melee()
 {
 	//prevent meleeing if already meleeing, switching weapons, slamming, or dead
-	if(bIsMeleeing || bIsSwitchingWeapons || bIsSlamming || CurrentHealth <= 0.f) return;
+	if(bIsMeleeing || bIsSwitchingWeapons || bIsSlamming || CurrentEquippedWeapon->bIsLowered || CurrentHealth <= 0.f) return;
 
 	bIsMeleeing = true;
 
@@ -1635,7 +1635,7 @@ void AHordeShooterCharacter::ApplyVoidPenaltyAndRespawn(FVector TargetRespawnLoc
 	}
 
 	//set timer for teleportation:
-	GetWorldTimerManager().SetTimer(VoidRespawnTimerHandle, this, &AHordeShooterCharacter::ExecuteVoidTeleport, 0.5f, false);
+	GetWorldTimerManager().SetTimer(VoidRespawnTimerHandle, this, &AHordeShooterCharacter::ExecuteVoidTeleport, 1.0f, false);
 }
 
 void AHordeShooterCharacter::ExecuteVoidTeleport()

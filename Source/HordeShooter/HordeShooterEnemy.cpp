@@ -134,6 +134,8 @@ void AHordeShooterEnemy::DeactivateEnemy()
 {
 	bIsActive = false;
 
+	GetWorldTimerManager().ClearTimer(DespawnTimerHandle);
+
 	//stop audio comp
 	if(SprintAudioComp) SprintAudioComp->Stop();
 
@@ -157,7 +159,7 @@ void AHordeShooterEnemy::DeactivateEnemy()
 
 	//hide
 	SetActorHiddenInGame(true);
-	SetActorLocation(FVector(0.0f, 0.0f, -10000.0f), false, nullptr, ETeleportType::TeleportPhysics);
+	SetActorLocation(FVector(0.0f, 0.0f, 50000.0f), false, nullptr, ETeleportType::TeleportPhysics);
 }
 
 
@@ -448,7 +450,7 @@ void AHordeShooterEnemy::Die()
 		AttackSoundRef = nullptr;
 	}
 
-	OnEnemyKilled.Broadcast(); //tell wave manager this enemy is dead
+	OnEnemyKilled.Broadcast(this); //tell wave manager this enemy is dead
 	
 	OnDeath(); // Triggers BP logic, then C++ default
 
@@ -490,4 +492,15 @@ void AHordeShooterEnemy::OnDeath_Implementation()
 		PhysicsBone = NAME_None; 
 	}
 	GetMesh()->AddImpulse(LastHitImpulse, PhysicsBone, false);
+}
+
+void AHordeShooterEnemy::FellOutOfWorld(const class UDamageType& dmgType)
+{
+	if(!bIsDead)
+	{
+		CurrentHealth = 0.0f;
+		Die(); 
+	}
+
+	DeactivateEnemy();
 }
