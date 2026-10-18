@@ -22,7 +22,8 @@ public:
 
 	//ANNOUNCER SYSTEM:
 	//called when an enemy dies
-	void AddKill(FName DamageSource, bool bWasHeadshot, bool bIsAirborne, bool bIsLowHealth);
+	//returns 'true' when killed enemy hits the drop threshold for LifeCoreEnergy else returns 'false'
+	bool AddKill(FName DamageSource, bool bWasHeadshot, bool bIsAirborne, bool bIsLowHealth);
 
 	//called when player takes damage, to ruin their spree
 	void ResetSpree();
@@ -68,11 +69,14 @@ protected:
 	UPROPERTY(EditDefaultsOnly, Category = "Audio|Announcer")
 	float MultiKillWindow = 3.f; //3 sec to chain a multikill
 
+	UPROPERTY(EditDefaultsOnly, Category = "Progression")
+	int32 StyleKillsRequiredForCore = 50;
 
 private:
 	bool bHasFirstBlood = false;
 	int32 MultiKillCount = 0;
 	int32 SpreeCount = 0;
+	int32 StyleKillCount = 0;
 
 	FTimerHandle MultiKillTimerHandle;
 	void PlayAnnouncerSound(USoundBase* Sound);

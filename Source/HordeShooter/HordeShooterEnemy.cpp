@@ -345,6 +345,8 @@ void AHordeShooterEnemy::Die()
 	//if already dead or is sleeping in pool
 	if(bIsDead || !bIsActive) return;
 
+	bool bDropLifeCore = false;
+
 	//report the kill to announcer:
 	if(APlayerController* BasePC = UGameplayStatics::GetPlayerController(GetWorld(), 0))
 	{
@@ -352,21 +354,16 @@ void AHordeShooterEnemy::Die()
 		{
 			bool bWasHeadshot = (LastHitBoneName == FName("Head") && LastDamageSource != FName("Melee"));
 
-			//check if airborne
+			//check if airborne or low health
 			bool bIsAirborne = false;
-			if (AHordeShooterCharacter* PlayerChar = Cast<AHordeShooterCharacter>(PC->GetPawn()))
-			{
-				bIsAirborne = PlayerChar->GetCharacterMovement()->IsFalling();
-			}
-
-			//check if low health
 			bool bIsLowHealth = false;
 			if (AHordeShooterCharacter* PlayerChar = Cast<AHordeShooterCharacter>(PC->GetPawn()))
 			{
-				bIsLowHealth = (PlayerChar->CurrentHealth <= (PlayerChar->MaxHealth * 0.2f));
+				bIsAirborne = PlayerChar->GetCharacterMovement()->IsFalling();
+				bIsLowHealth = (PlayerChar->CurrentHealth <= (PlayerChar->MaxHealth * PlayerChar->GetLowHealthThreshold()));
 			}
 
-			PC->AddKill(LastDamageSource, bWasHeadshot, bIsAirborne, bIsLowHealth); 
+			bDropLifeCore = PC->AddKill(LastDamageSource, bWasHeadshot, bIsAirborne, bIsLowHealth); 
 		}
 	}
 
@@ -442,6 +439,11 @@ void AHordeShooterEnemy::Die()
 			{
 				CachedWaveManager->SpawnPickup(GetActorLocation(), EPickupType::Surge, SurgeDropSettings.DropSize);
 			}
+		}
+
+		if(bDropLifeCore)
+		{
+			CachedWaveManager->SpawnPickup(GetActorLocation(), EPickupType::LifeCore, EPickupSize::Large);
 		}
 	}
 

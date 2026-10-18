@@ -49,6 +49,7 @@ public:
 	//if player falls of the arena:
 	void ApplyVoidPenaltyAndRespawn(FVector TargetRespawnLoc); 
 
+	FORCEINLINE float GetLowHealthThreshold() const { return LowHealthThreshold; }
 
 protected:
 	//Input actions:
@@ -102,6 +103,14 @@ public:
 
 	UPROPERTY(EditDefaultsOnly, Category = "Player Stats")
 	float VoidFallDamagePenalty = 20.0f;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Revival")
+	int32 CurrentLifeCores = 0;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Revival")
+	int32 MaxLifeCores = 3;
+
+	bool AddLifeCore();
 
 
 	//surge mode:
@@ -374,6 +383,24 @@ protected:
 	UPROPERTY(EditDefaultsOnly, Category = "Surge|Impact")
 	float SlowMoRecoverySpeed = 4.0f; //how fast time returns to normal after slowmotion ends
 
+
+	//Revival blast config:
+	UPROPERTY(EditDefaultsOnly, Category = "Revival")
+	class UNiagaraSystem* RevivalBlastVFX;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Revival")
+	class USoundBase* RevivalBlastSFX;
+	
+	UPROPERTY(EditDefaultsOnly, Category = "Revival")
+	float RevivalBlastRadius = 100000.0f;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Revival")
+	float RevivalBlastImpulse = 1000.0f;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Revival")
+	float InvulnerabilityDuration = 2.0f;
+
+
 	//call for HUD changes
 	UFUNCTION(BlueprintNativeEvent, Category = "Surge")
 	void OnSurgeStateChanged(bool bIsActive);
@@ -537,4 +564,11 @@ private:
 	FVector CachedVoidRespawnLoc;
 	FTimerHandle VoidRespawnTimerHandle;
 	void ExecuteVoidTeleport();
+
+	bool bIsInvulnerable = false;
+	FTimerHandle InvulnerabilityTimerHandle;
+
+	void TriggerRevivalBlast();
+	void EndInvulnerability();
+
 };

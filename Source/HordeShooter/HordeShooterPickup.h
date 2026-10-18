@@ -16,7 +16,8 @@ enum class EPickupType : uint8
 {
 	Ammo, //Red
 	Health, //Green
-	Surge //Blue
+	Surge, //Blue
+	LifeCore //Golden
 };
 
 UENUM(BlueprintType)

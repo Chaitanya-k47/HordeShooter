@@ -60,7 +60,7 @@ void AHordeShooterPlayerController::PlayAnnouncerSound(USoundBase* Sound)
     }
 }
 
-void AHordeShooterPlayerController::AddKill(FName DamageSource, bool bWasHeadshot, bool bIsAirborne, bool bIsLowHealth)
+bool AHordeShooterPlayerController::AddKill(FName DamageSource, bool bWasHeadshot, bool bIsAirborne, bool bIsLowHealth)
 {
     SpreeCount++; //ruin spree count when player takes damage
     MultiKillCount++; //ruin multikill count when combo window is missed
@@ -104,9 +104,30 @@ void AHordeShooterPlayerController::AddKill(FName DamageSource, bool bWasHeadsho
     //play the sound:
     if(SoundToPlay) PlayAnnouncerSound(SoundToPlay);
 
+    //Style kill tracker:
+    bool bIsStyleKill = bWasHeadshot ||
+                        bIsAirborne ||
+                        bIsLowHealth ||
+                        (DamageSource == FName("Slam")) ||
+                        (DamageSource == FName("Melee")) ||
+                        (DamageSource == FName("SurgeDash")) ||
+                        (DamageSource == FName("RayGunAlt"));
+
+    if(bIsStyleKill)
+    {
+        StyleKillCount++;
+        if(StyleKillCount >= StyleKillsRequiredForCore)
+        {
+            StyleKillCount = 0; //reset
+            return true; //enemy drops the core
+        }
+    }
+
     //refresh the combo timer:
     //if window missed all ResetMultiKill()
     GetWorldTimerManager().SetTimer(MultiKillTimerHandle, this, &AHordeShooterPlayerController::ResetMultiKill, MultiKillWindow, false);
+
+    return false; //enemy doesnt drop the core.
 }
 
 void AHordeShooterPlayerController::ResetMultiKill()

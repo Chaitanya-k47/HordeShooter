@@ -1139,6 +1139,8 @@ bool AHordeShooterCharacter::IsCloseToWall()
 
 bool AHordeShooterCharacter::ReactToHit(float DamageAmount, const FVector& HitImpulse, FName HitBoneName, FName DamageSource)
 {
+	if(bIsInvulnerable) return false;
+
 	GetCharacterMovement()->AddImpulse(HitImpulse, false);
 
 	if(CurrentHealth <= 0.f) return false; //already dead
@@ -1199,6 +1201,12 @@ bool AHordeShooterCharacter::ReactToHit(float DamageAmount, const FVector& HitIm
 	
 	if(CurrentHealth <= 0)
 	{
+		if(CurrentLifeCores > 0 && DamageSource != FName("Void")) //cannot revive if you fell off the arena and die
+		{
+			TriggerRevivalBlast();
+			return false; // Skip the death sequence completely!
+		}
+
 		PlayerDie();
 	}
 
@@ -1532,6 +1540,7 @@ void AHordeShooterCharacter::HandleSurgeDashKill()
 				FVector ImpulseToApply = CurrentDashDirection * 200000.0f;
 				FName OutDamageSource = FName("SurgeDash");
 				FName OutHitBoneName = Hit.BoneName;
+				FVector OutHitLocation = Hit.ImpactPoint;
 
 				//for fodder enemies
 				if(Enemy->bIsFodder)
@@ -1539,14 +1548,15 @@ void AHordeShooterCharacter::HandleSurgeDashKill()
 					DamageToApply = 99999.0f;
 					ImpulseToApply = CurrentDashDirection * 200000.0f;
 					OutDamageSource = FName("Melee");
-					OutHitBoneName = FName("Head");
+					OutHitBoneName = FName("Spine2");
+					OutHitLocation = Enemy->GetMesh()->GetSocketLocation(OutHitBoneName);
 
 					bHitFodder = true;
-					if(SurgeDashImpactVFX) UNiagaraFunctionLibrary::SpawnSystemAtLocation(GetWorld(), SurgeDashImpactVFX, Hit.ImpactPoint, CurrentDashDirection.Rotation());
-					if(SurgeDashImpactSFX) UGameplayStatics::PlaySoundAtLocation(GetWorld(), SurgeDashImpactSFX, Hit.ImpactPoint);
 				}
 
 				Damageable->ReactToHit(DamageToApply, ImpulseToApply, OutHitBoneName, OutDamageSource);
+				if(SurgeDashImpactVFX) UNiagaraFunctionLibrary::SpawnSystemAtLocation(GetWorld(), SurgeDashImpactVFX, OutHitLocation, CurrentDashDirection.Rotation());
+				if(SurgeDashImpactSFX) UGameplayStatics::PlaySoundAtLocation(GetWorld(), SurgeDashImpactSFX, OutHitLocation);
 			}
 		}
 
@@ -1654,4 +1664,70 @@ void AHordeShooterCharacter::ExecuteVoidTeleport()
 			PC->PlayerCameraManager->StartCameraFade(1.0f, 0.0f, 0.5f, FLinearColor::Black, false, false);
 		}
 	}
+}
+
+bool AHordeShooterCharacter::AddLifeCore()
+{
+	if(CurrentLifeCores >= MaxLifeCores) return false;
+	CurrentLifeCores++;
+	return true;
+}
+
+void AHordeShooterCharacter::TriggerRevivalBlast()
+{
+	CurrentLifeCores--;
+
+	//max out health:
+	CurrentHealth = MaxHealth;
+	CheckLowHealthState(); //clear the lowhelath screen
+
+	//max out ammo for all weapons
+	for AHordeShooterWeapon* Weapon : Inventory)
+	{
+		if(Weapon) Weapon->AddAmmo(1.0f); //100% refill
+	}
+
+	//start invulberability
+	bIsInvulnerable = true;
+	GetWorldTimerManager().SetTimer(InvulnerabilityTimerHandle, this, &AHordeShooterCharacter::EndInvulnerability, InvulnerabilityDuration, false);
+
+	if(RevivalBlastVFX) UNiagaraFunctionLibrary::SpawnSystemAtLocation(GetWorld(), RevivalBlastVFX, GetActorLocation());
+	if(RevivalBlastSFX) UGameplayStatics::PlaySound2D(GetWorld(), RevivalBlastSFX);
+
+	//knockback blast
+	TArray<FOverlapResult> OverlapResults;
+	FCollisionShape SphereCol = FCollisionShape::MakeSphere(RevivalBlastRadius);
+	FCollisionObjectQueryParams ObjectQueryParams;
+	ObjectQueryParams.AddObjectTypesToQuery(ECC_Pawn);
+
+	FCollisionQueryParams QueryParams;
+	QueryParams.AddIgnoredActor(this);
+
+	if(GetWorld()->OverlapMultiByObjectType(OverlapResults, GetActorLocation(), FQuat::Identity, ObjectQueryParams, SphereCol, QueryParams))
+	{
+		TSet<AActor*> PushedActors;
+		for (const FOverlapResult& Overlap : OverlapResults)
+		{
+			AActor* HitActor = Overlap.GetActor();
+			if (HitActor && !PushedActors.Contains(HitActor))
+			{
+				PushedActors.Add(HitActor);
+				if(AHordeShooterEnemy* Enemy = Cast<AHordeShooterEnemy>(HitActor))
+				{
+					FVector PushDir = (Enemy->GetActorLocation() - GetActorLocation()).GetSafeNormal();
+					PushDir.Z += 0.5f; 
+					
+					if (Enemy->GetCharacterMovement())
+					{
+						Enemy->GetCharacterMovement()->AddImpulse(PushDir * RevivalBlastImpulse, true);
+					}
+				}
+			}
+		}
+	}
+}
+
+void AHordeShooterCharacter::EndInvulnerability()
+{
+	bIsInvulnerable = false;
 }

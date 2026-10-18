@@ -170,6 +170,11 @@ void AHordeShooterPickup::OnVacuumOverlap(UPrimitiveComponent* OverlappedComp, A
 			bNeedsPickup = true;
 		}
 
+		else if(CurrentType == EPickupType::LifeCore)
+		{
+			if(Player->CurrentLifeCores < Player->MaxLifeCores) bNeedsPickup = true;
+		}
+
 		if(bNeedsPickup)
 		{
 			TargetPlayer = Player;
@@ -268,6 +273,11 @@ void AHordeShooterPickup::GrantReward()
 		TargetPlayer->ActivateSurge(SurgeAmount);
 		bWasConsumed = true;
 		PickupSound = SurgePickupSound;
+	}
+
+	else if(CurrentType == EPickupType::LifeCore)
+	{
+		bWasConsumed = TargetPlayer->AddLifeCore();
 	}
 
 	if(bWasConsumed)
