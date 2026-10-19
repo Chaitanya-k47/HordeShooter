@@ -1546,7 +1546,7 @@ void AHordeShooterCharacter::HandleSurgeDashKill()
 				if(Enemy->bIsFodder)
 				{
 					DamageToApply = 99999.0f;
-					ImpulseToApply = CurrentDashDirection * 200000.0f;
+					ImpulseToApply = CurrentDashDirection * 400000.0f;
 					OutDamageSource = FName("Melee");
 					OutHitBoneName = FName("Spine2");
 					OutHitLocation = Enemy->GetMesh()->GetSocketLocation(OutHitBoneName);
@@ -1554,7 +1554,7 @@ void AHordeShooterCharacter::HandleSurgeDashKill()
 					bHitFodder = true;
 				}
 
-				Damageable->ReactToHit(DamageToApply, ImpulseToApply, OutHitBoneName, OutDamageSource);
+				Damageable->ReactToHit(DamageToApply, ImpulseToApply, Hit.BoneName, OutDamageSource); 
 				if(SurgeDashImpactVFX) UNiagaraFunctionLibrary::SpawnSystemAtLocation(GetWorld(), SurgeDashImpactVFX, OutHitLocation, CurrentDashDirection.Rotation());
 				if(SurgeDashImpactSFX) UGameplayStatics::PlaySoundAtLocation(GetWorld(), SurgeDashImpactSFX, OutHitLocation);
 			}
@@ -1682,9 +1682,20 @@ void AHordeShooterCharacter::TriggerRevivalBlast()
 	CheckLowHealthState(); //clear the lowhelath screen
 
 	//max out ammo for all weapons
-	for AHordeShooterWeapon* Weapon : Inventory)
+	for(AHordeShooterWeapon* Weapon : Inventory)
 	{
 		if(Weapon) Weapon->AddAmmo(1.0f); //100% refill
+	}
+
+	//update HUD
+	if(AHordeShooterPlayerController* PC = Cast<AHordeShooterPlayerController>(GetController()))
+	{
+		if(PC->PlayerHUDWidget)	
+		{
+			PC->PlayerHUDWidget->UpdateHealth(CurrentHealth, MaxHealth);
+			PC->PlayerHUDWidget->UpdateAmmo(CurrentEquippedWeapon->CurrentAmmo, CurrentEquippedWeapon->TotalAmmoReserve);
+			if(RevivalBlastCameraShake) PC->ClientStartCameraShake(RevivalBlastCameraShake, 1.0f);
+		}
 	}
 
 	//start invulberability
@@ -1717,15 +1728,16 @@ void AHordeShooterCharacter::TriggerRevivalBlast()
 					FVector PushDir = (Enemy->GetActorLocation() - GetActorLocation()).GetSafeNormal();
 					PushDir.Z += 0.5f; 
 					
-					if (Enemy->GetCharacterMovement())
+					if(Enemy->GetCharacterMovement())
 					{
-						Enemy->GetCharacterMovement()->AddImpulse(PushDir * RevivalBlastImpulse, true);
+						Enemy->GetCharacterMovement()->AddImpulse(PushDir * RevivalBlastImpulse, false); //force mode
 					}
 				}
 			}
 		}
 	}
 }
+
 
 void AHordeShooterCharacter::EndInvulnerability()
 {

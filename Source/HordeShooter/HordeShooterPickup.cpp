@@ -96,6 +96,10 @@ void AHordeShooterPickup::OnPickupActivated(EPickupType Type, EPickupSize Size)
 			EnergyColour = BlueEnergyColour;
 			break;
 
+		case EPickupType::LifeCore:
+			EnergyColour = YellowEnergyColour;
+			break;
+
 		default:
 			break;
 	}
@@ -278,6 +282,7 @@ void AHordeShooterPickup::GrantReward()
 	else if(CurrentType == EPickupType::LifeCore)
 	{
 		bWasConsumed = TargetPlayer->AddLifeCore();
+		PickupSound = LifeCorePickupSound;
 	}
 
 	if(bWasConsumed)

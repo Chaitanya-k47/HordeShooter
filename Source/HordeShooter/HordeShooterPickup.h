@@ -65,6 +65,9 @@ protected:
 	FLinearColor BlueEnergyColour = FLinearColor(0.0f, 0.0f, 1.0f, 1.0f);
 
 	UPROPERTY(EditDefaultsOnly, Category = "Pickup Config")
+	FLinearColor YellowEnergyColour = FLinearColor(1.0f, 1.0f, 0.0f, 1.0f);
+
+	UPROPERTY(EditDefaultsOnly, Category = "Pickup Config")
 	USoundBase* AmmoPickupSound;
 
 	UPROPERTY(EditDefaultsOnly, Category = "Pickup Config")
@@ -72,6 +75,9 @@ protected:
 	
 	UPROPERTY(EditDefaultsOnly, Category = "Pickup Config")
 	USoundBase* SurgePickupSound;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Pickup Config")
+	USoundBase* LifeCorePickupSound;
 
 	UPROPERTY(EditDefaultsOnly, Category = "Pickup Config")
 	float VacuumSpeed = 4000.f;

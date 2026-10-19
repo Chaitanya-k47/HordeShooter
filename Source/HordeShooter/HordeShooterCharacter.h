@@ -390,12 +390,15 @@ protected:
 
 	UPROPERTY(EditDefaultsOnly, Category = "Revival")
 	class USoundBase* RevivalBlastSFX;
-	
-	UPROPERTY(EditDefaultsOnly, Category = "Revival")
-	float RevivalBlastRadius = 100000.0f;
 
 	UPROPERTY(EditDefaultsOnly, Category = "Revival")
-	float RevivalBlastImpulse = 1000.0f;
+	TSubclassOf<class UCameraShakeBase> RevivalBlastCameraShake;
+	
+	UPROPERTY(EditDefaultsOnly, Category = "Revival")
+	float RevivalBlastRadius = 1000.0f;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Revival")
+	float RevivalBlastImpulse = 100000.0f;
 
 	UPROPERTY(EditDefaultsOnly, Category = "Revival")
 	float InvulnerabilityDuration = 2.0f;

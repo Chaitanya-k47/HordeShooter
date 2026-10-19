@@ -331,10 +331,11 @@ bool AHordeShooterEnemy::ReactToHit(float DamageAmount, const FVector& HitImpuls
 		PlayHitReaction();
 
 		//velocity mode by default but we trick it into Force mode by Dividing impulse(momentum vector) by mass to get real velocity.
-		float EnemyMass = GetCharacterMovement()->Mass;
-		if(EnemyMass <= 0.0f) EnemyMass = 100.0f; //fail safe
-		FVector CalculatedVelocity = LastHitImpulse/EnemyMass;
-		LaunchCharacter(CalculatedVelocity, true, true);
+		// float EnemyMass = GetCharacterMovement()->Mass;
+		// if(EnemyMass <= 0.0f) EnemyMass = 100.0f; //fail safe
+		// FVector CalculatedVelocity = LastHitImpulse/EnemyMass;
+		// LaunchCharacter(CalculatedVelocity, true, true);
+		GetCharacterMovement()->AddImpulse(LastHitImpulse, false);
 	}
 
 	return bIsHeadshot;
