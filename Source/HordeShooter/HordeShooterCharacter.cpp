@@ -139,7 +139,11 @@ void AHordeShooterCharacter::BeginPlay()
 	{
 		if(AHordeShooterPlayerController* PC = Cast<AHordeShooterPlayerController>(GetController()))
 		{
-			if(PC->PlayerHUDWidget)	PC->PlayerHUDWidget->UpdateHealth(CurrentHealth, MaxHealth);
+			if(PC->PlayerHUDWidget)
+			{
+				PC->PlayerHUDWidget->UpdateHealth(CurrentHealth, MaxHealth);
+				PC->PlayerHUDWidget->UpdateLifeCoresAmount(CurrentLifeCores, MaxLifeCores);
+			}
 		}
 
 		//spawn weapons and add to inventory:
@@ -1670,12 +1674,23 @@ bool AHordeShooterCharacter::AddLifeCore()
 {
 	if(CurrentLifeCores >= MaxLifeCores) return false;
 	CurrentLifeCores++;
+
+	if(AHordeShooterPlayerController* PC = Cast<AHordeShooterPlayerController>(GetController()))
+	{
+		if(PC->PlayerHUDWidget) PC->PlayerHUDWidget->UpdateLifeCoresAmount(CurrentLifeCores, MaxLifeCores);
+	}
+
 	return true;
 }
 
 void AHordeShooterCharacter::TriggerRevivalBlast()
 {
 	CurrentLifeCores--;
+
+	if(AHordeShooterPlayerController* PC = Cast<AHordeShooterPlayerController>(GetController()))
+	{
+		if(PC->PlayerHUDWidget) PC->PlayerHUDWidget->UpdateLifeCoresAmount(CurrentLifeCores, MaxLifeCores);
+	}
 
 	//max out health:
 	CurrentHealth = MaxHealth;

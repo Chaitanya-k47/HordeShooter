@@ -30,6 +30,12 @@ protected:
 	UTextBlock* TotalAmmo;
 
 	UPROPERTY(meta = (BindWidget))
+	UTextBlock* CurrentLifeCores;
+
+	UPROPERTY(meta = (BindWidget))
+	UTextBlock* MaxLifeCores;
+
+	UPROPERTY(meta = (BindWidget))
 	UWidget* CrossHair;
 
 	UPROPERTY(meta = (BindWidget))
@@ -78,6 +84,9 @@ public:
 
 	UFUNCTION()
 	void UpdateAmmo(int32 CurrentAmmo, int32 TotalAmmoReserve);
+
+	UFUNCTION()
+	void UpdateLifeCoresAmount(int32 CurrentAmount, int32 MaxAmmount);
 
 	UFUNCTION()
 	void UpdateHealth(float CurrentHealth, float MaxHealth);

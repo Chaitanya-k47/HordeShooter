@@ -23,6 +23,9 @@ public:
 	//we ovverride the attack funtion from base class
 	virtual void PerformAttack() override;
 
+	virtual void ActivateEnemy(const FTransform& SpawnTransform, const TArray<float>& DifficultyMultipliers) override;
+	virtual void DeactivateEnemy() override;
+
 	//called by anim notify inside the attack montages:
 	UFUNCTION(BlueprintCallable, Category = "Combat")
 	void CastLightningOnPlayer();
@@ -52,10 +55,18 @@ protected:
 	UPROPERTY(EditDefaultsOnly, Category = "Combat|VFX")
 	float AttackEyeSize = 3.0f;
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat|Stats")
+	FVector2D ConsecutiveStrikeDelayRange = FVector2D(0.2f, 0.4f);
+
 private:
 	void SetEyeIntensityAndSize(float Intensity, float Size);
 
 	UFUNCTION()
 	void OnSpellCastFinished();
+
+	int32 RemainingStrikesToCast = 0;
+	FTimerHandle StrikeWaveTimerHandle;
+
+	void ExecuteNextStrikeInWave();
 
 };

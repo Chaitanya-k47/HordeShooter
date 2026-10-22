@@ -84,7 +84,7 @@ bool AHordeShooterPlayerController::AddKill(FName DamageSource, bool bWasHeadsho
 	else if(MultiKillCount == 7) SoundToPlay = Sound_Outstanding;
 	else if(MultiKillCount == 8) SoundToPlay = Sound_Unreal;
     else if(MultiKillCount == 9) SoundToPlay = Sound_BloodBath;
-    else if(MultiKillCount >= 10) SoundToPlay = Sound_ComboKing;
+    else if(MultiKillCount >= 10 && (MultiKillCount % 5 == 0)) SoundToPlay = Sound_ComboKing;
 
     //SURVIVAL SPREE (overrides multikills)
     if(SpreeCount == 5) SoundToPlay = Sound_KillingSpree;  

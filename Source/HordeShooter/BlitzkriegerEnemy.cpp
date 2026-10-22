@@ -41,6 +41,21 @@ void ABlitzkriegerEnemy::BeginPlay()
 	OnAttackFinished.AddDynamic(this, &ABlitzkriegerEnemy::OnSpellCastFinished);
 }
 
+void ABlitzkriegerEnemy::ActivateEnemy(const FTransform& SpawnTransform, const TArray<float>& DifficultyMultipliers)
+{
+	Super::ActivateEnemy(SpawnTransform, DifficultyMultipliers);
+
+	GetWorldTimerManager().ClearTimer(StrikeWaveTimerHandle);
+	SetEyeIntensityAndSize(NormalEyeIntensity, NormalEyeSize);
+}
+
+void ABlitzkriegerEnemy::DeactivateEnemy()
+{
+	Super::DeactivateEnemy();
+
+	GetWorldTimerManager().ClearTimer(StrikeWaveTimerHandle);
+}
+
 void ABlitzkriegerEnemy::SetEyeIntensityAndSize(float Intensity, float Size)
 {
 	if(LeftEyeGlow)
@@ -66,12 +81,26 @@ void ABlitzkriegerEnemy::CastLightningOnPlayer()
 {
     if(bIsDead || bIsStunned) return;
 
-    AActor* ArenaActor = UGameplayStatics::GetActorOfClass(GetWorld(), AArenaManager::StaticClass());
+	RemainingStrikesToCast = NumberOfLightningsInAWave;
+	ExecuteNextStrikeInWave();
+}
 
-    if(ArenaActor)
+void ABlitzkriegerEnemy::ExecuteNextStrikeInWave()
+{
+	if(RemainingStrikesToCast <= 0 || bIsDead) return;
+
+	RemainingStrikesToCast--;
+
+	AActor* ArenaActor = UGameplayStatics::GetActorOfClass(GetWorld(), AArenaManager::StaticClass());
+	if(AArenaManager* Arena = Cast<AArenaManager>(ArenaActor))
 	{
-		AArenaManager* Arena = Cast<AArenaManager>(ArenaActor);
-		Arena->StartLightningWave(NumberOfLightningsInAWave);
+		Arena->FireOneLightningAtPlayer(); 
+	}
+
+	if(RemainingStrikesToCast > 0)
+	{
+		float NextStrikeDelay = FMath::RandRange(ConsecutiveStrikeDelayRange.X, ConsecutiveStrikeDelayRange.Y);
+		GetWorldTimerManager().SetTimer(StrikeWaveTimerHandle, this, &ABlitzkriegerEnemy::ExecuteNextStrikeInWave, NextStrikeDelay, false);
 	}
 }
 

@@ -58,7 +58,7 @@ public:
 	FOnArenaLayoutFinishedSignature OnArenaLayoutFinished;
 
 	UFUNCTION(BlueprintCallable, Category = "Arena|Hazards")
-	void StartLightningWave(int32 NumStrikes = 10);
+	void FireOneLightningAtPlayer();
 
 	void ExecuteLightningStrike(FVector StrikeLocation);
 
@@ -148,9 +148,6 @@ protected:
 	UPROPERTY(EditAnywhere, Category = "Arena Config|Anti-Camping")
 	FArenaFloatRange LightningSpawnRadiusRange = FArenaFloatRange(400.f, 1000.f);
 
-	UPROPERTY(EditAnywhere, Category = "Arena Config|Anti-Camping")
-	FArenaFloatRange ConsecutiveStrikeDelayRange = FArenaFloatRange(0.1f, 0.4f);
-
 	UPROPERTY(EditDefaultsOnly, Category = "Arena Config|Anti-Camping")
 	class UNiagaraSystem* LightningVFX;
 
@@ -227,12 +224,5 @@ private:
 	//track player's position.
 	int32 LastPlayerBlockIndex = -1;
 	float PlayerCampTimer = 0.f;
-
-	//lightning tracker:
-	int32 RemainingLightningStrikes = 0;
-	FTimerHandle LightningWaveTimerHandle;
-
-	//recursive fn that fires strikes.
-	void DropNextLightningInWave();
 
 };

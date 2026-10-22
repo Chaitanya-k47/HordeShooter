@@ -310,10 +310,6 @@ void AArenaManager::BeginNewLayoutGeneration()
 	UWorld* World = GetWorld();
 	if (!World) return;
 
-	//cancel active lightning strikes:
-	RemainingLightningStrikes = 0;
-	GetWorldTimerManager().ClearTimer(LightningWaveTimerHandle);
-
 	//prevent from spamming generation command:
 	if(TransitionState != EArenaTransitionState::Idle) return;
 
@@ -661,6 +657,56 @@ void AArenaManager::OnKillVolumeOverlap(UPrimitiveComponent* OverlappedComponent
 	}
 }
 
+void AArenaManager::FireOneLightningAtPlayer()
+{
+	if(!bIsCombatActive) return;
+
+	if(ACharacter* PlayerChar = UGameplayStatics::GetPlayerCharacter(GetWorld(), 0))
+	{
+		FVector PlayerLoc = PlayerChar->GetActorLocation();	
+
+		//pick a random xy coordinate in 1000 meter radius of player:
+		FVector CamForward = PlayerChar->GetViewRotation().Vector().GetSafeNormal2D();
+		FVector CamRight = FVector::CrossProduct(FVector::UpVector, CamForward);
+
+		float RandomAngle = FMath::DegreesToRadians(FMath::RandRange(LightningSpawnAngleRange.Min, LightningSpawnAngleRange.Max));
+		float RandomDist = FMath::RandRange(LightningSpawnRadiusRange.Min, LightningSpawnRadiusRange.Max);
+		
+		FVector Direction = CamForward * FMath::Cos(RandomAngle) + CamRight * FMath::Sin(RandomAngle);
+
+		FVector Offset = Direction * RandomDist;
+
+		FVector TargetXY = PlayerLoc + Offset;
+
+		//do a line trace from above the player to the ground to find the floor Z.
+		FHitResult Hit;
+		FVector TraceStart = FVector(TargetXY.X, TargetXY.Y, PlayerLoc.Z + 2000.f);
+		FVector TraceEnd = FVector(TraceStart.X, TraceStart.Y, TraceStart.Z - 10000.f);
+		FCollisionQueryParams Params;
+		Params.AddIgnoredActor(PlayerChar);
+
+		if(GetWorld()->LineTraceSingleByChannel(Hit, TraceStart, TraceEnd, ECC_Visibility, Params))
+		{
+			FVector StrikeLoc = Hit.ImpactPoint;
+			
+			if(LightningTelegraphVFX)
+			{
+				UNiagaraComponent* Telegraph = UNiagaraFunctionLibrary::SpawnSystemAtLocation(GetWorld(), LightningTelegraphVFX, StrikeLoc);
+				if(Telegraph) Telegraph->SetVariableFloat(FName("LifetimeOverride"), TelegraphTime);
+			}
+
+			FTimerHandle StrikeHandle;
+			FTimerDelegate StrikeDelegate = FTimerDelegate::CreateUObject(
+				this,
+				&AArenaManager::ExecuteLightningStrike,
+				StrikeLoc
+			);
+
+			GetWorldTimerManager().SetTimer(StrikeHandle, StrikeDelegate, TelegraphTime, false);
+		}
+	}
+}
+
 void AArenaManager::ExecuteLightningStrike(FVector StrikeLocation)
 {
 	float SkyZ = BlockLocZ + (MaxStairSteps * BlockSize) + LightningSpawnOffset;
@@ -742,79 +788,6 @@ void AArenaManager::ExecuteLightningStrike(FVector StrikeLocation)
 
 }
 
-void AArenaManager::StartLightningWave(int32 NumStrikes)
-{
-	//dont overlap waves
-	if(!bIsCombatActive || RemainingLightningStrikes > 0) return;
-	RemainingLightningStrikes = NumStrikes;
-
-	if(GEngine) GEngine->AddOnScreenDebugMessage(-1, 3.f, FColor::Orange, TEXT("HAZARD: LIGHTNING STORM INCOMING!"));
-
-	//start strike wave:
-	DropNextLightningInWave();
-}
-
-void AArenaManager::DropNextLightningInWave()
-{
-	if(RemainingLightningStrikes <= 0) return;
-
-	RemainingLightningStrikes--;
-
-	if(ACharacter* PlayerChar = UGameplayStatics::GetPlayerCharacter(GetWorld(), 0))
-	{
-		FVector PlayerLoc = PlayerChar->GetActorLocation();	
-
-		//pick a random xy coordinate in 1000 meter radius of player:
-		FVector CamForward = PlayerChar->GetViewRotation().Vector().GetSafeNormal2D();
-		FVector CamRight = FVector::CrossProduct(FVector::UpVector, CamForward);
-
-		float RandomAngle = FMath::DegreesToRadians(FMath::RandRange(LightningSpawnAngleRange.Min, LightningSpawnAngleRange.Max));
-		float RandomDist = FMath::RandRange(LightningSpawnRadiusRange.Min, LightningSpawnRadiusRange.Max);
-		
-		FVector Direction = CamForward * FMath::Cos(RandomAngle) + CamRight * FMath::Sin(RandomAngle);
-
-		FVector Offset = Direction * RandomDist;
-
-		FVector TargetXY = PlayerLoc + Offset;
-
-		//do a line trace from above the player to the ground to find the floor Z.
-		FHitResult Hit;
-		FVector TraceStart = FVector(TargetXY.X, TargetXY.Y, PlayerLoc.Z + 2000.f);
-		FVector TraceEnd = FVector(TraceStart.X, TraceStart.Y, TraceStart.Z - 10000.f);
-		FCollisionQueryParams Params;
-		Params.AddIgnoredActor(PlayerChar);
-
-		if(GetWorld()->LineTraceSingleByChannel(Hit, TraceStart, TraceEnd, ECC_Visibility, Params))
-		{
-			FVector StrikeLoc = Hit.ImpactPoint;
-			
-			if(LightningTelegraphVFX)
-			{
-				UNiagaraComponent* Telegraph = UNiagaraFunctionLibrary::SpawnSystemAtLocation(GetWorld(), LightningTelegraphVFX, StrikeLoc);
-				if(Telegraph) Telegraph->SetVariableFloat(FName("LifetimeOverride"), TelegraphTime);
-			}
-
-			FTimerHandle StrikeHandle;
-			FTimerDelegate StrikeDelegate = FTimerDelegate::CreateUObject(
-				this,
-				&AArenaManager::ExecuteLightningStrike,
-				StrikeLoc
-			);
-
-			GetWorldTimerManager().SetTimer(StrikeHandle, StrikeDelegate, TelegraphTime, false);
-		}
-
-	}
-
-	
-	//if we have strikes left queue up the next one with random delay
-	if(RemainingLightningStrikes > 0)
-	{
-		float NextStrikeDelay = FMath::RandRange(ConsecutiveStrikeDelayRange.Min, ConsecutiveStrikeDelayRange.Max);
-		GetWorldTimerManager().SetTimer(LightningWaveTimerHandle, this, &AArenaManager::DropNextLightningInWave, NextStrikeDelay, false);
-	}
-}
-
 void AArenaManager::SetCombatActive(bool bIsActive)
 {
 	bIsCombatActive = bIsActive;
@@ -822,7 +795,5 @@ void AArenaManager::SetCombatActive(bool bIsActive)
 	if(!bIsCombatActive)
 	{
 		PlayerCampTimer = 0.f;
-		RemainingLightningStrikes = 0;
-		GetWorldTimerManager().ClearTimer(LightningWaveTimerHandle);
 	}
 }

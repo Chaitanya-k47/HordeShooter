@@ -289,6 +289,11 @@ void AEnemyAIController::WakeAI()
 {
     PlayerTarget = UGameplayStatics::GetPlayerPawn(GetWorld(), 0);
 	
+    //wipe out previous ai memory:
+    bIsOnCooldown = false;
+	CurrentStrafeTarget = FVector::ZeroVector;
+	LastEdgeLocation = FVector::ZeroVector;
+
 	if(PlayerTarget)
 	{
 		CurrentState = EAIState::Chasing;
@@ -308,6 +313,9 @@ void AEnemyAIController::SleepAI()
     GetWorldTimerManager().ClearTimer(AITickTimer);
     GetWorldTimerManager().ClearTimer(FindPlayerTimer);
     GetWorldTimerManager().ClearTimer(AttackCooldownTimerHandle);
+
+    bIsOnCooldown = false;
+	CurrentState = EAIState::Idle;
 
     StopMovement();
     ClearFocus(EAIFocusPriority::Gameplay);

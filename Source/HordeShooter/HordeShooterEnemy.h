@@ -180,7 +180,7 @@ public:
 	bool bIsActive = false; //used by the horde wave manager to track if the enemy is currently active
 
 	virtual void ActivateEnemy(const FTransform& SpawnTransform, const TArray<float>& DifficultyMultipliers); //for Difficulty multipliers index 0 is Attack multplier, index 1 is Health multiplier.
-	void DeactivateEnemy();
+	virtual void DeactivateEnemy();
 
 
 protected:

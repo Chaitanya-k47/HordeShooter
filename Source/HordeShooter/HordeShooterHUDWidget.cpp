@@ -20,6 +20,8 @@ void UHordeShooterHUDWidget::NativeConstruct()
     if(HealthBar) HealthBar->SetVisibility(ESlateVisibility::Visible);
 	if(AmmoInMagazine) AmmoInMagazine->SetVisibility(ESlateVisibility::Visible);
 	if(TotalAmmo) TotalAmmo->SetVisibility(ESlateVisibility::Visible);
+	if(CurrentLifeCores) CurrentLifeCores->SetVisibility(ESlateVisibility::Visible);
+	if(MaxLifeCores) MaxLifeCores->SetVisibility(ESlateVisibility::Visible);
 	if(GameOverPanel) GameOverPanel->SetVisibility(ESlateVisibility::Hidden);
 	if(UpgradePanel) UpgradePanel->SetVisibility(ESlateVisibility::Hidden);
 
@@ -43,6 +45,14 @@ void UHordeShooterHUDWidget::UpdateAmmo(int32 CurrentAmmo, int32 TotalAmmoReserv
     }
 }
 
+void UHordeShooterHUDWidget::UpdateLifeCoresAmount(int32 CurrentAmount, int32 MaxAmmount)
+{
+	if(CurrentLifeCores && MaxLifeCores)
+	{
+		CurrentLifeCores->SetText(FText::AsNumber(CurrentAmount));
+		MaxLifeCores->SetText(FText::AsNumber(MaxAmmount));
+	}
+}
 
 void UHordeShooterHUDWidget::ToggleCrosshair(bool bShow)
 {
