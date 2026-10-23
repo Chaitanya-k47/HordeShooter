@@ -36,6 +36,9 @@ protected:
 	UTextBlock* MaxLifeCores;
 
 	UPROPERTY(meta = (BindWidget))
+	UProgressBar* StyleKillBar;
+
+	UPROPERTY(meta = (BindWidget))
 	UWidget* CrossHair;
 
 	UPROPERTY(meta = (BindWidget))
@@ -87,6 +90,8 @@ public:
 
 	UFUNCTION()
 	void UpdateLifeCoresAmount(int32 CurrentAmount, int32 MaxAmmount);
+
+	void UpdateStyleMeter(float Progress);
 
 	UFUNCTION()
 	void UpdateHealth(float CurrentHealth, float MaxHealth);

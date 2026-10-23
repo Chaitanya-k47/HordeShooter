@@ -71,6 +71,7 @@ bool AHordeShooterPlayerController::AddKill(FName DamageSource, bool bWasHeadsho
     if(DamageSource == FName("Slam")) SoundToPlay = Sound_Pancake;
     else if(DamageSource == FName("RayGunAlt")) SoundToPlay = Sound_Eradication;
     else if(DamageSource == FName("Melee")) SoundToPlay = Sound_JackHammer;
+    else if(DamageSource == FName("Void")) SoundToPlay = Sound_Rejected;
     else if(bIsLowHealth) SoundToPlay = Sound_Retribution;
     else if(bIsAirborne) SoundToPlay = Sound_TopGun;
     else if (bWasHeadshot) SoundToPlay = Sound_HeadShot;
@@ -111,14 +112,21 @@ bool AHordeShooterPlayerController::AddKill(FName DamageSource, bool bWasHeadsho
                         (DamageSource == FName("Slam")) ||
                         (DamageSource == FName("Melee")) ||
                         (DamageSource == FName("SurgeDash")) ||
-                        (DamageSource == FName("RayGunAlt"));
+                        (DamageSource == FName("RayGunAlt")) ||
+                        (DamageSource == FName("Lightning")) ||
+                        (DamageSource == FName("RodSlam")) ||
+						(DamageSource == FName("Void"));
 
     if(bIsStyleKill)
     {
         StyleKillCount++;
+        float StyleProgress = static_cast<float>(StyleKillCount) / static_cast<float>(StyleKillsRequiredForCore);
+		if(PlayerHUDWidget) PlayerHUDWidget->UpdateStyleMeter(StyleProgress);
+
         if(StyleKillCount >= StyleKillsRequiredForCore)
         {
             StyleKillCount = 0; //reset
+            if(PlayerHUDWidget) PlayerHUDWidget->UpdateStyleMeter(0.0f);
             return true; //enemy drops the core
         }
     }

@@ -65,6 +65,7 @@ protected:
 	UPROPERTY(EditDefaultsOnly, Category = "Audio|Announcer") USoundBase* Sound_Retribution;  //low health kill
 	UPROPERTY(EditDefaultsOnly, Category = "Audio|Announcer") USoundBase* Sound_Eradication; //blast kill
 	UPROPERTY(EditDefaultsOnly, Category = "Audio|Announcer") USoundBase* Sound_BloodBath;
+	UPROPERTY(EditDefaultsOnly, Category = "Audio|Announcer") USoundBase* Sound_Rejected; //void kill
 
 	UPROPERTY(EditDefaultsOnly, Category = "Audio|Announcer")
 	float MultiKillWindow = 3.f; //3 sec to chain a multikill

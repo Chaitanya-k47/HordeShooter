@@ -54,6 +54,14 @@ void UHordeShooterHUDWidget::UpdateLifeCoresAmount(int32 CurrentAmount, int32 Ma
 	}
 }
 
+void UHordeShooterHUDWidget::UpdateStyleMeter(float Progress)
+{
+	if (StyleKillBar)
+	{
+		StyleKillBar->SetPercent(Progress);
+	}
+}
+
 void UHordeShooterHUDWidget::ToggleCrosshair(bool bShow)
 {
     if(CrossHair)
