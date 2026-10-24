@@ -105,8 +105,14 @@ bool AHordeShooterPlayerController::AddKill(FName DamageSource, bool bWasHeadsho
     //play the sound:
     if(SoundToPlay) PlayAnnouncerSound(SoundToPlay);
 
+    //STYLE POINTS CALC:
+    int32 PointsToAdd = 0;
+
+    if(SpreeCount > 0 && (SpreeCount % 5 == 0)) PointsToAdd =+ SpreeStyleReward;
+    if(MultiKillCount >= 10 && (MultiKillCount % 5 == 0)) PointsToAdd += MultiKillStyleReward;
+
     //Style kill tracker:
-    bool bIsStyleKill = bWasHeadshot ||
+    bool bIsStyleAction = bWasHeadshot ||
                         bIsAirborne ||
                         bIsLowHealth ||
                         (DamageSource == FName("Slam")) ||
@@ -117,18 +123,27 @@ bool AHordeShooterPlayerController::AddKill(FName DamageSource, bool bWasHeadsho
                         (DamageSource == FName("RodSlam")) ||
 						(DamageSource == FName("Void"));
 
-    if(bIsStyleKill)
-    {
-        StyleKillCount++;
-        float StyleProgress = static_cast<float>(StyleKillCount) / static_cast<float>(StyleKillsRequiredForCore);
-		if(PlayerHUDWidget) PlayerHUDWidget->UpdateStyleMeter(StyleProgress);
+    if(bIsStyleAction) PointsToAdd += ActionStyleReward;
 
-        if(StyleKillCount >= StyleKillsRequiredForCore)
+    if(PointsToAdd > 0)
+    {
+        StylePoints += PointsToAdd;
+        bool bDropCore = false;
+
+        if(StylePoints >= StylePointsRequiredForCore)
         {
-            StyleKillCount = 0; //reset
-            if(PlayerHUDWidget) PlayerHUDWidget->UpdateStyleMeter(0.0f);
-            return true; //enemy drops the core
+            StylePoints -= StylePointsRequiredForCore; //rollover 
+            bDropCore = true;
         }
+
+        if(PlayerHUDWidget) 
+        {
+            float StyleProgress = static_cast<float>(StylePoints) / static_cast<float>(StylePointsRequiredForCore);
+            PlayerHUDWidget->UpdateStyleMeter(StyleProgress);
+        }
+
+        if(bDropCore) return true;
+		
     }
 
     //refresh the combo timer:

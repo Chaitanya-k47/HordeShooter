@@ -1262,6 +1262,7 @@ void AHordeShooterCharacter::PlayerDie()
 	if(SpeedLinesVFXComp) SpeedLinesVFXComp->Deactivate();
 	if(FallAudioComp) FallAudioComp->FadeOut(0.15f, 0.0f);
 	if(LowHealthSoundMix) UGameplayStatics::PopSoundMixModifier(GetWorld(), LowHealthSoundMix);
+	OnInvulnerabilityStateChanged(false);
 
 	UGameplayStatics::SetGlobalTimeDilation(GetWorld(), 1.0f);
 	bIsRecoveringTime = false;
@@ -1646,6 +1647,17 @@ void AHordeShooterCharacter::OnSurgeStateChanged_Implementation(bool bIsActive)
 	}
 }
 
+void AHordeShooterCharacter::OnInvulnerabilityStateChanged_Implementation(bool bIsActive)
+{
+	if(AHordeShooterPlayerController* PC = Cast<AHordeShooterPlayerController>(GetController()))
+	{
+		if(PC->PlayerHUDWidget) 
+		{
+			PC->PlayerHUDWidget->ToggleInvulnerabilityEffect(bIsActive);
+		}
+	}
+}
+
 void AHordeShooterCharacter::ApplyVoidPenaltyAndRespawn(FVector TargetRespawnLoc)
 {
 	if(CurrentHealth <= 0.f) return;
@@ -1739,6 +1751,7 @@ void AHordeShooterCharacter::TriggerRevivalBlast()
 
 	//start invulberability
 	bIsInvulnerable = true;
+	OnInvulnerabilityStateChanged(true);
 	GetWorldTimerManager().SetTimer(InvulnerabilityTimerHandle, this, &AHordeShooterCharacter::EndInvulnerability, InvulnerabilityDuration, false);
 
 	if(RevivalBlastVFX) UNiagaraFunctionLibrary::SpawnSystemAtLocation(GetWorld(), RevivalBlastVFX, GetActorLocation());
@@ -1781,4 +1794,5 @@ void AHordeShooterCharacter::TriggerRevivalBlast()
 void AHordeShooterCharacter::EndInvulnerability()
 {
 	bIsInvulnerable = false;
+	OnInvulnerabilityStateChanged(false);
 }

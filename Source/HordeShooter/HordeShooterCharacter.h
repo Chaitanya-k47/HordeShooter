@@ -423,6 +423,10 @@ protected:
 	void OnSurgeStateChanged(bool bIsActive);
 	virtual void OnSurgeStateChanged_Implementation(bool bIsActive);
 
+	UFUNCTION(BlueprintNativeEvent, Category = "Revival")
+	void OnInvulnerabilityStateChanged(bool bIsActive);
+	virtual void OnInvulnerabilityStateChanged_Implementation(bool bIsActive);
+
 	//spped lines:
 	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Movement")
 	class UNiagaraComponent* SpeedLinesVFXComp;

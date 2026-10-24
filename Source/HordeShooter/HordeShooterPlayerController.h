@@ -70,14 +70,23 @@ protected:
 	UPROPERTY(EditDefaultsOnly, Category = "Audio|Announcer")
 	float MultiKillWindow = 3.f; //3 sec to chain a multikill
 
-	UPROPERTY(EditDefaultsOnly, Category = "Progression")
-	int32 StyleKillsRequiredForCore = 50;
+	UPROPERTY(EditDefaultsOnly, Category = "Progression|Style")
+	int32 StylePointsRequiredForCore = 50;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Progression|Style")
+	int32 ActionStyleReward = 1;//standard reward for Headshot, Slam, Melee, Void, AltFire
+
+	UPROPERTY(EditDefaultsOnly, Category = "Progression|Style")
+	int32 SpreeStyleReward = 5; //reward every 5 kills without taking damage
+
+	UPROPERTY(EditDefaultsOnly, Category = "Progression|Style")
+	int32 MultiKillStyleReward = 5; //reward every 5 rapid kills starting at 10
 
 private:
 	bool bHasFirstBlood = false;
 	int32 MultiKillCount = 0;
 	int32 SpreeCount = 0;
-	int32 StyleKillCount = 0;
+	int32 StylePoints = 0;
 
 	FTimerHandle MultiKillTimerHandle;
 	void PlayAnnouncerSound(USoundBase* Sound);

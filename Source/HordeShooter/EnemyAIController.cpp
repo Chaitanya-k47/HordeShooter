@@ -107,7 +107,12 @@ void AEnemyAIController::UpdateAILogic()
             if(ControlledEnemy->AttackCooldown > 0.0f)
 			{
 				bIsOnCooldown = true;
-				GetWorldTimerManager().SetTimer(AttackCooldownTimerHandle, this, &AEnemyAIController::ResetAttackCooldown, ControlledEnemy->AttackCooldown, false);
+
+                //cooldown variance:
+                float Variance = ControlledEnemy->AttackCooldown * 0.25f;
+                float RandomCooldown = FMath::RandRange(ControlledEnemy->AttackCooldown - Variance, ControlledEnemy->AttackCooldown + Variance);
+				
+                GetWorldTimerManager().SetTimer(AttackCooldownTimerHandle, this, &AEnemyAIController::ResetAttackCooldown, RandomCooldown, false);
 			}
         }
 
@@ -293,6 +298,16 @@ void AEnemyAIController::WakeAI()
     bIsOnCooldown = false;
 	CurrentStrafeTarget = FVector::ZeroVector;
 	LastEdgeLocation = FVector::ZeroVector;
+    GetWorldTimerManager().ClearTimer(AttackCooldownTimerHandle);
+
+    //initial stagger:
+    if(ControlledEnemy && ControlledEnemy->AttackCooldown > 0.0f)
+    {
+        bIsOnCooldown = true;
+
+        float InitialStagger = FMath::RandRange(0.2f, ControlledEnemy->AttackCooldown);
+        GetWorldTimerManager().SetTimer(AttackCooldownTimerHandle, this, &AEnemyAIController::ResetAttackCooldown, InitialStagger, false);
+    }
 
 	if(PlayerTarget)
 	{

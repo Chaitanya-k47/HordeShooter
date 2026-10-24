@@ -13,6 +13,7 @@ class UProgressBar;
 class UButton;
 class UCanvasPanel;
 class UImage;
+class UWidgetAnimation;
 
 UCLASS()
 class HORDESHOOTER_API UHordeShooterHUDWidget : public UUserWidget
@@ -78,8 +79,17 @@ protected:
 	UPROPERTY(meta = (BindWidget))
 	UImage* SurgeOverlay;
 
+	UPROPERTY(meta = (BindWidget))
+	UImage* InvulnerabilityOverlay;
+
 	UPROPERTY(Transient, meta = (BindWidgetAnim))
-	class UWidgetAnimation* GameOverFadeAnim;
+	UWidgetAnimation* GameOverFadeAnim;
+
+	UPROPERTY(Transient, meta = (BindWidgetAnim))
+	UWidgetAnimation* SurgeFadeAnim;
+
+	UPROPERTY(Transient, meta = (BindWidgetAnim))
+	UWidgetAnimation* InvulFadeAnim;
 
 	virtual void NativeConstruct() override;
 
@@ -107,6 +117,8 @@ public:
 	void ShowUpgradeScreen();
 
 	void ToggleSurgeOverlay(bool bIsActive);
+
+	void ToggleInvulnerabilityEffect(bool bIsActive);
 
 private:
 

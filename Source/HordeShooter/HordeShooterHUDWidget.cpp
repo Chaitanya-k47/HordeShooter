@@ -30,7 +30,16 @@ void UHordeShooterHUDWidget::NativeConstruct()
 	if(Btn_UpgradeHealth) Btn_UpgradeHealth->OnClicked.AddDynamic(this, &UHordeShooterHUDWidget::OnHealthUpgradeClicked);
 	if(Btn_UpgradeAmmo) Btn_UpgradeAmmo->OnClicked.AddDynamic(this, &UHordeShooterHUDWidget::OnAmmoUpgradeClicked);
 
-	if(SurgeOverlay) SurgeOverlay->SetVisibility(ESlateVisibility::Hidden);
+	if(SurgeOverlay)
+	{
+		SurgeOverlay->SetVisibility(ESlateVisibility::HitTestInvisible);
+		SurgeOverlay->SetRenderOpacity(0.0f);
+	}
+	if(InvulnerabilityOverlay)
+	{
+		InvulnerabilityOverlay->SetVisibility(ESlateVisibility::HitTestInvisible);
+		InvulnerabilityOverlay->SetRenderOpacity(0.0f);
+	}
 
 	ToggleCrosshair(true);
 }
@@ -201,9 +210,23 @@ void UHordeShooterHUDWidget::ShowUpgradeScreen()
 
 void UHordeShooterHUDWidget::ToggleSurgeOverlay(bool bIsActive)
 {
-	if(SurgeOverlay)
+	if(SurgeFadeAnim)
 	{
-		SurgeOverlay->SetVisibility(bIsActive ? ESlateVisibility::HitTestInvisible : ESlateVisibility::Hidden);
+		float CurrentTime = GetAnimationCurrentTime(SurgeFadeAnim);
+		EUMGSequencePlayMode::Type PlayMode = bIsActive ? EUMGSequencePlayMode::Forward : EUMGSequencePlayMode::Reverse;
+
+		PlayAnimation(SurgeFadeAnim, CurrentTime, 1, PlayMode);
+	}
+}
+
+void UHordeShooterHUDWidget::ToggleInvulnerabilityEffect(bool bIsActive)
+{
+	if(InvulFadeAnim)
+	{
+		float CurrentTime = GetAnimationCurrentTime(InvulFadeAnim);
+		EUMGSequencePlayMode::Type PlayMode = bIsActive ? EUMGSequencePlayMode::Forward : EUMGSequencePlayMode::Reverse;
+
+		PlayAnimation(InvulFadeAnim, CurrentTime, 1, PlayMode);
 	}
 }
 

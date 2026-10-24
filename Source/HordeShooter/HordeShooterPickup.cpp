@@ -255,19 +255,19 @@ void AHordeShooterPickup::GrantReward()
 
 	else if(CurrentType == EPickupType::Surge)
 	{
-		float SurgeAmount = 10.f;
+		float SurgeAmount = SmallSurge;
 		switch(CurrentSize)
 		{
 			case EPickupSize::Small:
-				SurgeAmount = 10.f;
+				SurgeAmount = SmallSurge;
 				break;
 
 			case EPickupSize::Medium:
-				SurgeAmount = 20.f;
+				SurgeAmount = MediumSurge;
 				break;
 
 			case EPickupSize::Large:
-				SurgeAmount = 30.f;
+				SurgeAmount = LargeSurge;
 				break;
 
 			default:
