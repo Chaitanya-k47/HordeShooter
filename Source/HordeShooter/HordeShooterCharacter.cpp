@@ -74,10 +74,6 @@ AHordeShooterCharacter::AHordeShooterCharacter()
 	SurgeAudioLoopComp->SetupAttachment(RootComponent);
 	SurgeAudioLoopComp->bAutoActivate = false;
 
-	HeartbeatAudioComp = CreateDefaultSubobject<UAudioComponent>(TEXT("HeartbeatAudioComp"));
-	HeartbeatAudioComp->SetupAttachment(RootComponent);
-	HeartbeatAudioComp->bAutoActivate = false;
-
 	ProgressionComponent = CreateDefaultSubobject<UPlayerProgressionComponent>(TEXT("ProgressionComponent"));
 
 	//Movement config:
@@ -493,21 +489,49 @@ void AHordeShooterCharacter::SetupPlayerInputComponent(UInputComponent* PlayerIn
 
 void AHordeShooterCharacter::CheckLowHealthState()
 {
-	bool bWasLow = bIsLowOnHealth;
+	float TriggerHealth = MaxHealth * LowHealthThreshold;
 
-	bIsLowOnHealth = (CurrentHealth > 0.0f && CurrentHealth <= (MaxHealth * LowHealthThreshold));
+	bool bWasLowOnHealth = bIsLowOnHealth; 
+	bIsLowOnHealth = (CurrentHealth > 0.0f && CurrentHealth <= TriggerHealth);
 
-	//did we just enter low health state?
-	if(bIsLowOnHealth && !bWasLow)
+	if(!bIsLowOnHealth) //heal or die (exit state)
 	{
-		if(HeartbeatAudioComp->Sound) HeartbeatAudioComp->Play();
+		if(bWasLowOnHealth)
+		{
+			//remove the muffle, exit the state
+			if(LowHealthSoundMix) UGameplayStatics::PopSoundMixModifier(GetWorld(), LowHealthSoundMix);
+		}
+		GetWorldTimerManager().ClearTimer(HeartBeatTimerHandle);
+		return;
 	}
-	//did we heal of low health or just die
-	else if(!bIsLowOnHealth && bWasLow)
+
+	if(bIsLowOnHealth && !bWasLowOnHealth) //did we just enter low health state 
 	{
-		HeartbeatAudioComp->FadeOut(0.5f, 0.0f);
+		//push (activate) the muffle
+		if(LowHealthSoundMix) UGameplayStatics::PushSoundMixModifier(GetWorld(), LowHealthSoundMix);
+
+		//if not beating, then start beating
+		if(!GetWorldTimerManager().IsTimerActive(HeartBeatTimerHandle))
+		{
+			PlayHeartbeatTick();
+		}
 	}
-} 
+
+	FVector2D HealthRange(1.0f, TriggerHealth);
+	CurrentHeartBeatDelay = FMath::GetMappedRangeValueClamped(HealthRange, HeartBeatDelayRange, CurrentHealth);
+}
+
+void AHordeShooterCharacter::PlayHeartbeatTick()
+{
+	if(!bIsLowOnHealth || CurrentHealth <= 0.0f) return;
+
+	if(HeartBeatSound) 
+	{
+		UGameplayStatics::PlaySound2D(GetWorld(), HeartBeatSound, 1.0f, 1.0f, 0.0f, HeartbeatConcurrency);
+	}
+
+	GetWorldTimerManager().SetTimer(HeartBeatTimerHandle, this, &AHordeShooterCharacter::PlayHeartbeatTick, CurrentHeartBeatDelay, false);
+}
 
 void AHordeShooterCharacter::UpgradeMaxHealth(float BonusHealth)
 {
@@ -1237,8 +1261,8 @@ void AHordeShooterCharacter::PlayerDie()
 	if(bIsSurgeActive) DeactivateSurge();
 	if(SpeedLinesVFXComp) SpeedLinesVFXComp->Deactivate();
 	if(FallAudioComp) FallAudioComp->FadeOut(0.15f, 0.0f);
-	if(HeartbeatAudioComp) HeartbeatAudioComp->FadeOut(0.5f, 0.0f); 
-	
+	if(LowHealthSoundMix) UGameplayStatics::PopSoundMixModifier(GetWorld(), LowHealthSoundMix);
+
 	UGameplayStatics::SetGlobalTimeDilation(GetWorld(), 1.0f);
 	bIsRecoveringTime = false;
 	GetWorldTimerManager().ClearTimer(SlowMoDelayTimerHandle);

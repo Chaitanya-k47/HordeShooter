@@ -181,9 +181,6 @@ protected:
 	class USoundConcurrency* PlayerVoiceConcurrency;
 	
 	//Low Health config:
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
-	class UAudioComponent* HeartbeatAudioComp;
-
 	UPROPERTY(EditDefaultsOnly, Category = "Player Stats")
 	float LowHealthThreshold = 0.25f; // triggers low health effect at 25% health or lower
 
@@ -192,6 +189,23 @@ protected:
 
 	void CheckLowHealthState();
 	
+	UPROPERTY(EditDefaultsOnly, Category = "Sound|Combat")
+	USoundBase* HeartBeatSound;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Sound|Combat")
+	class USoundConcurrency* HeartbeatConcurrency;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Sound|Combat")
+	class USoundMix* LowHealthSoundMix;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Sound|Combat")
+	FVector2D HeartBeatDelayRange = FVector2D(0.4f, 0.8f);
+
+	float CurrentHeartBeatDelay = 1.0f;
+	FTimerHandle HeartBeatTimerHandle;
+
+	void PlayHeartbeatTick();
+
 
 	//FP camera FOV config:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Camera|FOV")
