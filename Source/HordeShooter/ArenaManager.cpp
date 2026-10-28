@@ -199,8 +199,8 @@ void AArenaManager::Tick(float DeltaTime)
 		//ANTI CLIPPING SAFEGUARD FOR PLAYER CHAR
 		if(ACharacter* PlayerChar = UGameplayStatics::GetPlayerCharacter(GetWorld(), 0))
 		{
-			float CapHalfHeight = PlayerChar->GetCapsuleComponent()->GetScaledCapsuleHalfHeight();
-			float CapRadius = PlayerChar->GetCapsuleComponent()->GetScaledCapsuleRadius();
+			float CapHalfHeight = Cast<AHordeShooterCharacter>(PlayerChar)->GetCapsuleComponent()->GetScaledCapsuleHalfHeight();
+			float CapRadius = Cast<AHordeShooterCharacter>(PlayerChar)->GetCapsuleComponent()->GetScaledCapsuleRadius();
 
 			//trace from capsule centre to a little below the feet
 			FVector Start = PlayerChar->GetActorLocation();
@@ -276,10 +276,36 @@ void AArenaManager::Tick(float DeltaTime)
 		}
 	}
 
-	//Anti Camping Tracker:
-	if(bIsCombatActive)
+	//Anti Camping and Anti Stuck Tracker:
+	if(ACharacter* PlayerChar = UGameplayStatics::GetPlayerCharacter(GetWorld(), 0))
 	{
-		if(ACharacter* PlayerChar = UGameplayStatics::GetPlayerCharacter(GetWorld(), 0))
+		FVector PlayerLoc = PlayerChar->GetActorLocation();
+		float CapHalfHeight = Cast<AHordeShooterCharacter>(PlayerChar)->GetCapsuleComponent()->GetScaledCapsuleHalfHeight();
+
+		//ANTI STUCK FAIL SAFE
+		FHitResult StuckHit;
+		FCollisionQueryParams StuckParams;
+		StuckParams.AddIgnoredActor(PlayerChar);
+		
+		FCollisionObjectQueryParams StuckObjectParams;
+		StuckObjectParams.AddObjectTypesToQuery(ECC_WorldStatic); // Only check Arena geometry
+
+		FVector StuckTraceStart = PlayerLoc + FVector(0.0f, 0.0f, CapHalfHeight + 10000.0f);
+		FVector StuckTraceEnd = PlayerLoc;
+
+		if(GetWorld()->LineTraceSingleByObjectType(StuckHit, StuckTraceStart, StuckTraceEnd, StuckObjectParams, StuckParams))
+		{
+			//Hit means player stuck under the block, so teleport them above the block
+			FVector SafeLoc = PlayerLoc;
+			SafeLoc.Z = StuckHit.ImpactPoint.Z + CapHalfHeight + 10.0f;
+
+			PlayerChar->SetActorLocation(SafeLoc, false, nullptr, ETeleportType::TeleportPhysics);
+			PlayerChar->GetCharacterMovement()->Velocity.Z = 0.0f;
+		}
+
+		//if not stuck, then launch anticamping strike
+		//ANTI CAMPING
+		else if(bIsCombatActive)
 		{
 			//if airborne reset timer.
 			if (!PlayerChar->GetCharacterMovement()->IsMovingOnGround())
@@ -288,7 +314,6 @@ void AArenaManager::Tick(float DeltaTime)
 			}
 			else
 			{
-				FVector PlayerLoc = PlayerChar->GetActorLocation();
 				FVector ArenaLoc = GetActorLocation();
 
 				//convert the player location to grid index:
@@ -324,7 +349,7 @@ void AArenaManager::Tick(float DeltaTime)
 							FVector TraceEnd = FVector(TraceStart.X, TraceStart.Y, TraceStart.Z - 10000.f);
 							FCollisionQueryParams Params;
 							Params.AddIgnoredActor(PlayerChar);
-							
+								
 							FCollisionObjectQueryParams ObjectParams;
 							ObjectParams.AddObjectTypesToQuery(ECC_WorldStatic);
 
@@ -341,7 +366,6 @@ void AArenaManager::Tick(float DeltaTime)
 					}
 				}
 			}
-			
 		}
 	}
 }
