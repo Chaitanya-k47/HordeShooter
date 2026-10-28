@@ -14,6 +14,7 @@
 #include "GameFramework/CharacterMovementComponent.h"
 #include "HordeShooterCharacter.h"
 #include "HordeShooterEnemy.h"
+#include "Components/CapsuleComponent.h"
 
 
 // Sets default values
@@ -195,6 +196,44 @@ void AArenaManager::Tick(float DeltaTime)
 			RampMesh->BatchUpdateInstancesTransforms(0, CurrentRampTransforms, true, true);
 		}
 
+		//ANTI CLIPPING SAFEGUARD FOR PLAYER CHAR
+		if(ACharacter* PlayerChar = UGameplayStatics::GetPlayerCharacter(GetWorld(), 0))
+		{
+			float CapHalfHeight = PlayerChar->GetCapsuleComponent()->GetScaledCapsuleHalfHeight();
+			float CapRadius = PlayerChar->GetCapsuleComponent()->GetScaledCapsuleRadius();
+
+			//trace from capsule centre to a little below the feet
+			FVector Start = PlayerChar->GetActorLocation();
+			FVector End = Start - FVector(0.0f, 0.0f, CapHalfHeight + 50.0f);
+
+			FCollisionShape Sphere = FCollisionShape::MakeSphere(CapRadius * 0.75f); // a little less than capsule radius so it doesnt touch the walls
+			FHitResult Hit;
+			FCollisionQueryParams Params;
+			Params.AddIgnoredActor(PlayerChar);
+			
+			//trace against world static, blocks and ramps
+			if(GetWorld()->SweepSingleByChannel(Hit, Start, End, FQuat::Identity, ECC_WorldStatic, Sphere, Params))
+			{
+				float PlayerFeetZ =  PlayerChar->GetActorLocation().Z - CapHalfHeight;
+				
+				/*
+					Hit.ImpactNormal.Z > 0.5f ensures it hit floor or ramp
+					for FLOOR Hit.ImpactNormal.Z = 1.0f
+					for RAMP (assuming 45 deg) Hit.ImpactNormal.Z = 0.707f approx
+
+					if Hit.ImpactPoint.Z > PlayerFeetZ, it means the block is clipping above our feet
+				*/
+				if(Hit.ImpactNormal.Z > 0.5f && Hit.ImpactPoint.Z > PlayerFeetZ)
+				{
+					FVector NewLoc = PlayerChar->GetActorLocation();
+					NewLoc.Z = Hit.ImpactPoint.Z + CapHalfHeight + 2.0f; //+2 unit buffer
+					
+					PlayerChar->SetActorLocation(NewLoc, false, nullptr, ETeleportType::TeleportPhysics);
+					PlayerChar->GetCharacterMovement()->Velocity.Z = 0.0f; 
+				}
+			}
+		}
+
 		//STATE MACHINE LOGIC:
 		//if target height reached by all blocks and ramps:
 		if(!bStillMoving)
@@ -285,8 +324,11 @@ void AArenaManager::Tick(float DeltaTime)
 							FVector TraceEnd = FVector(TraceStart.X, TraceStart.Y, TraceStart.Z - 10000.f);
 							FCollisionQueryParams Params;
 							Params.AddIgnoredActor(PlayerChar);
+							
+							FCollisionObjectQueryParams ObjectParams;
+							ObjectParams.AddObjectTypesToQuery(ECC_WorldStatic);
 
-							if(GetWorld()->LineTraceSingleByChannel(Hit, TraceStart, TraceEnd, ECC_Visibility, Params))
+							if(GetWorld()->LineTraceSingleByObjectType(Hit, TraceStart, TraceEnd, ObjectParams, Params))
 							{
 								ExecuteLightningStrike(Hit.ImpactPoint);
 							}
@@ -354,7 +396,7 @@ void AArenaManager::GenerateAndRiseNewLayout()
 	int32 CenterX = GridSizeX/2;
 	int32 CenterY = GridSizeY/2;
 
-	//GENERATE PERLIN NOISE ARENA:
+	// 1. GENERATE PERLIN NOISE ARENA:
 	for(int32 X = 0; X < GridSizeX; ++X)
 	{
 		for(int32 Y = 0; Y < GridSizeY; ++Y)
@@ -418,7 +460,53 @@ void AArenaManager::GenerateAndRiseNewLayout()
 		}
 	}
 
-	//ACCESSIBILITY PASS:
+	// 2. EROSION PASS:
+	//fill in pot holes and trenches.
+	bool bNeedsErosion = true;
+
+	while(bNeedsErosion)
+	{
+		bNeedsErosion = false;
+		for(int32 X = 0; X < GridSizeX; ++X)
+		{
+			for(int32 Y = 0; Y < GridSizeY; ++Y)
+			{
+				int32 Index = (X * GridSizeY) + Y;
+				float CurrentH = TargetHeights[Index];
+
+				int32 HigherNeighbors = 0;
+				float LowestHigherH = 999999.0f; //track the height of the lowest higher neighbor to pull this block up
+
+				//check 4 neighbors
+				TArray<int32> Neighbors;
+
+				if(X + 1 < GridSizeX) Neighbors.Add(((X + 1) * GridSizeY) + Y);
+				if(X - 1 >= 0) Neighbors.Add(((X - 1) * GridSizeY) + Y);
+				if(Y + 1 < GridSizeY) Neighbors.Add((X * GridSizeY) + (Y + 1));
+				if(Y - 1 >= 0) Neighbors.Add((X * GridSizeY) + (Y - 1));
+
+				for(int32 N_Index : Neighbors)
+				{
+					if(TargetHeights[N_Index] > CurrentH + 10.0f /*tolerance*/)
+					{
+						HigherNeighbors++;
+						if(TargetHeights[N_Index] < LowestHigherH) LowestHigherH = TargetHeights[N_Index]; //update the lowest heigher height
+					}
+				}
+
+				//Skatepark: aggressively fills trenches (2 or more higher walls)
+				//JungleGym: only fills deep 1x1 potholes (3 or more higher walls)
+				int32 Threshold = (ArenaStyle == EArenaStyle::Skatepark) ? 2 : 3; 
+				if(HigherNeighbors >= Threshold)
+				{
+					TargetHeights[Index] = LowestHigherH;
+					bNeedsErosion = true; //rerun to ensure smooth cascading
+				}
+			}
+		}
+	}
+
+	// 3. ACCESSIBILITY PASS:
 	//if a cliff is a 2 step drop, the player cant jump it and ramps wont spawn
 	//this loop pulls steep cliffs down so they gently slope, guaranteeing ramps can connect everywhere
 	if(bEnforceAccessibility)
@@ -431,31 +519,31 @@ void AArenaManager::GenerateAndRiseNewLayout()
 			bNeedsSmoothing = false;
 
 			//now loop through the ENTIRE grid, including the edges
-			for (int32 X = 0; X < GridSizeX; ++X)
+			for(int32 X = 0; X < GridSizeX; ++X)
 			{
-				for (int32 Y = 0; Y < GridSizeY; ++Y)
+				for(int32 Y = 0; Y < GridSizeY; ++Y)
 				{
 					int32 Index = (X * GridSizeY) + Y;
 					float CurrentH = TargetHeights[Index];
 
 					//safely collect valid neighbors(prevent checking outside array bounds)
 					TArray<int32> Neighbors;
-					if (X + 1 < GridSizeX)
+					if(X + 1 < GridSizeX)
 						Neighbors.Add(((X + 1) * GridSizeY) + Y); //forward
 
-					if (X - 1 >= 0)
+					if(X - 1 >= 0)
 						Neighbors.Add(((X - 1) * GridSizeY) + Y); //backward
 
-					if (Y + 1 < GridSizeY)
+					if(Y + 1 < GridSizeY)
 						Neighbors.Add((X * GridSizeY) + (Y + 1)); //right
 
-					if (Y - 1 >= 0)
+					if(Y - 1 >= 0)
 						Neighbors.Add((X * GridSizeY) + (Y - 1)); // Left
 
-					for (int32 N_Index : Neighbors)
+					for(int32 N_Index : Neighbors)
 					{
 						//if this block is more than 1 step higher than its neighbor pull it down.
-						if (CurrentH > TargetHeights[N_Index] + BlockSize)
+						if(CurrentH > TargetHeights[N_Index] + BlockSize)
 						{
 							TargetHeights[Index] = TargetHeights[N_Index] + BlockSize;
 							bNeedsSmoothing = true;
@@ -466,44 +554,94 @@ void AArenaManager::GenerateAndRiseNewLayout()
 		}
 	}
 
-	//SPAWN RAMPS:
+	// 4. ANTI-VALLEY RULE AND RAMP DIR
+	//we assign a ramp direction on every block index in the arena where:
+	/*
+		0 = none (no ramp)
+		1 = +X
+		2 = -X
+		3 = +Y
+		4 = -Y
+	*/
+	TArray<int32> ProposedRamps;
+	ProposedRamps.Init(0, GridSizeX * GridSizeY);
+
 	for(int32 X = 0; X < GridSizeX; ++X)
 	{
 		for(int32 Y = 0; Y < GridSizeY; ++Y)
 		{
-			int32 CurrentIndex = (X * GridSizeY) + Y;
-			float CurrentH = TargetHeights[CurrentIndex]; //TargetHeights stores the final height of the block
-
-			//spawn ramp on top of current block only when the neighbour is one block higher
+			int32 Index = (X * GridSizeY) + Y;
+			float CurrentH = TargetHeights[Index];
 			float RampTargetHeight = CurrentH + BlockSize;
 
-			//CHECK NEIGHBORS:
-			//check forward(+X)
-			if((X + 1 < GridSizeX) && TargetHeights[((X + 1) * GridSizeY) + Y] == RampTargetHeight)
+			TArray<int32> ValidDirs;
+
+			// +x neighbor
+			if(X + 1 < GridSizeX && FMath::IsNearlyEqual(TargetHeights[((X + 1) * GridSizeY) + Y], RampTargetHeight, 5.0f)) ValidDirs.Add(1);
+			// -x neighbor
+			if(X - 1 >= 0 && FMath::IsNearlyEqual(TargetHeights[((X - 1) * GridSizeY) + Y], RampTargetHeight, 5.0f)) ValidDirs.Add(2);
+			// +y neighbor
+			if(Y + 1 < GridSizeY && FMath::IsNearlyEqual(TargetHeights[(X * GridSizeY) + (Y + 1)], RampTargetHeight, 5.0f)) ValidDirs.Add(3);
+			// -y neighbor
+			if(Y - 1 >= 0 && FMath::IsNearlyEqual(TargetHeights[(X * GridSizeY) + (Y - 1)], RampTargetHeight, 5.0f)) ValidDirs.Add(4);
+
+			//if the block has 2 or more valid direction its a V-trap so we skip it. and also eliminate the direction bias situation
+			if(ValidDirs.Num() == 1) ProposedRamps[Index] = ValidDirs[0];
+		}
+	}
+
+	// 5. RAMP CLUSTERING AND CULLING
+	for(int32 X = 0; X < GridSizeX; ++X)
+	{
+		for(int32 Y = 0; Y < GridSizeY; ++Y)
+		{
+			int32 Index = (X * GridSizeY) + Y;
+			int32 Dir = ProposedRamps[Index];
+			
+			if(Dir == 0) continue; //no ramp to spawn here
+
+			int32 SameDirNeighbors = 0;
+			if(Dir == 1 || Dir == 2) // ramp facing in +X or -X so check neighbors in Y
 			{
-				SpawnRampTarget(X, Y, CurrentH, 0.0f+90); //0 degrees = facing +X
-				BlockHasRamp[CurrentIndex] = true;
+				if(Y + 1 < GridSizeY && ProposedRamps[(X * GridSizeY) + (Y + 1)] == Dir) SameDirNeighbors++;
+				if(Y - 1 >= 0 && ProposedRamps[(X * GridSizeY) + (Y - 1)] == Dir) SameDirNeighbors++;
+			}
+			else //ramp facing Y, check X neighbors
+			{
+				if(X + 1 < GridSizeX && ProposedRamps[((X + 1) * GridSizeY) + Y] == Dir) SameDirNeighbors++;
+				if(X - 1 >= 0 && ProposedRamps[((X - 1) * GridSizeY) + Y] == Dir) SameDirNeighbors++;
 			}
 
-			//check backward(-X)
-			else if ((X - 1 >= 0) && TargetHeights[((X - 1) * GridSizeY) + Y] == RampTargetHeight)
+			//JUNGLE GYM: culls skinny 1-block ramps. ramps MUST be at least 2 blocks wide
+			//This turns messy terrain into sharp vertical walls, perfect for jumping cover
+			if(ArenaStyle == EArenaStyle::JungleGym && SameDirNeighbors == 0)
 			{
-				SpawnRampTarget(X, Y, CurrentH, 180.0f+90);
-				BlockHasRamp[CurrentIndex] = true;
+				ProposedRamps[Index] = 0;
 			}
+		}
+	}
 
-			//check right(+Y)
-			else if((Y + 1 < GridSizeY) && TargetHeights[(X * GridSizeY) + (Y + 1)] == RampTargetHeight)
-			{
-				SpawnRampTarget(X, Y, CurrentH, 90.0f+90);
-				BlockHasRamp[CurrentIndex] = true;
-			}
+	// 6. SPAWN RAMPS:
+	for(int32 X = 0; X < GridSizeX; ++X)
+	{
+		for(int32 Y = 0; Y < GridSizeY; ++Y)
+		{
+			int32 Index = (X * GridSizeY) + Y;
+			int32 Dir = ProposedRamps[Index];
 
-			//check left(-Y)
-			else if((Y - 1 >= 0) && TargetHeights[(X * GridSizeY) + (Y - 1)] == RampTargetHeight)
+			if(Dir != 0)
 			{
-				SpawnRampTarget(X, Y, CurrentH, -90.0f+90);
-				BlockHasRamp[CurrentIndex] = true;
+				float BaseZ = TargetHeights[Index];
+				float Yaw = 0.0f;
+
+				// Map the direction to rotation
+				if (Dir == 1) Yaw = 90.0f;       // +X
+				else if (Dir == 2) Yaw = 270.0f; // -X
+				else if (Dir == 3) Yaw = 180.0f; // +Y
+				else if (Dir == 4) Yaw = 0.0f;   // -Y
+
+				SpawnRampTarget(X, Y, BaseZ, Yaw);
+				BlockHasRamp[Index] = true;
 			}
 		}
 	}
@@ -684,7 +822,10 @@ void AArenaManager::FireOneLightningAtPlayer()
 		FCollisionQueryParams Params;
 		Params.AddIgnoredActor(PlayerChar);
 
-		if(GetWorld()->LineTraceSingleByChannel(Hit, TraceStart, TraceEnd, ECC_Visibility, Params))
+		FCollisionObjectQueryParams ObjectParams;
+		ObjectParams.AddObjectTypesToQuery(ECC_WorldStatic);
+
+		if(GetWorld()->LineTraceSingleByObjectType(Hit, TraceStart, TraceEnd, ObjectParams, Params))
 		{
 			FVector StrikeLoc = Hit.ImpactPoint;
 			

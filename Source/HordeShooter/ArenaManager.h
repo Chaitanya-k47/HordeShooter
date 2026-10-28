@@ -20,6 +20,12 @@ enum class EArenaTransitionState : uint8
 	WaitingForNavMesh
 };
 
+UENUM(BlueprintType)
+enum class EArenaStyle : uint8
+{
+	Skatepark,
+	JungleGym
+};
 USTRUCT(BlueprintType)
 struct FArenaFloatRange
 {
@@ -113,6 +119,9 @@ protected:
 	float NavMeshCeilingPadding = 1000.0f;
 
 	//PROCEDURAL NOISE SETTING:
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Arena Config|Procedural")
+	EArenaStyle ArenaStyle = EArenaStyle::Skatepark;
+
 	UPROPERTY(EditAnywhere, Category = "Arena Config|Procedural")
 	float NoiseFrequency = 0.1f; //lower=wider hills, higher=choppy terrain
 
