@@ -98,11 +98,14 @@ protected:
 	
 	//RAYGUN STATS:
 	//primary fire(continuous beam):
-	UPROPERTY(EditDefaultsOnly, Category = "Weapon Stats|Beam")
-	float BeamDamageRate = 0.1f; //damage applied every 0.1s while beam is active(10 times a sec.)
 
+	//damage is applied every BeamDamageRate seconds while beam is active(0.1 = 10 times a sec.)
 	UPROPERTY(EditDefaultsOnly, Category = "Weapon Stats|Beam")
-	float BeamDamagePerBeamTick = 15.f; //damage applied every time BeamDamageRate ticks(150 DPS)
+	float BeamDamageRate = 0.1f;
+
+	//damage applied every time BeamDamageRate ticks
+	UPROPERTY(EditDefaultsOnly, Category = "Weapon Stats|Beam")
+	float BeamDamagePerBeamTick = 15.f;
 
 	UPROPERTY(EditDefaultsOnly, Category = "Weapon Stats|Beam")
 	int32 BeamAmmoCostPerBeamTick = 1;

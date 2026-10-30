@@ -283,24 +283,30 @@ void AArenaManager::Tick(float DeltaTime)
 		float CapHalfHeight = Cast<AHordeShooterCharacter>(PlayerChar)->GetCapsuleComponent()->GetScaledCapsuleHalfHeight();
 
 		//ANTI STUCK FAIL SAFE
-		FHitResult StuckHit;
 		FCollisionQueryParams StuckParams;
 		StuckParams.AddIgnoredActor(PlayerChar);
-		
+			
 		FCollisionObjectQueryParams StuckObjectParams;
 		StuckObjectParams.AddObjectTypesToQuery(ECC_WorldStatic); // Only check Arena geometry
 
-		FVector StuckTraceStart = PlayerLoc + FVector(0.0f, 0.0f, CapHalfHeight + 10000.0f);
-		FVector StuckTraceEnd = PlayerLoc;
+		FCollisionShape CoreSphere = FCollisionShape::MakeSphere(15.0f);
+		bool bIsEncased = GetWorld()->OverlapAnyTestByObjectType(PlayerLoc, FQuat::Identity, StuckObjectParams, CoreSphere, StuckParams);
 
-		if(GetWorld()->LineTraceSingleByObjectType(StuckHit, StuckTraceStart, StuckTraceEnd, StuckObjectParams, StuckParams))
+		if(bIsEncased) // if centre of the capsule overlaps with a solid block it means player is stuck under the floor.
 		{
-			//Hit means player stuck under the block, so teleport them above the block
-			FVector SafeLoc = PlayerLoc;
-			SafeLoc.Z = StuckHit.ImpactPoint.Z + CapHalfHeight + 10.0f;
+			FHitResult StuckHit;
+			FVector StuckTraceStart = PlayerLoc + FVector(0.0f, 0.0f, CapHalfHeight + 10000.0f);
+			FVector StuckTraceEnd = PlayerLoc;
 
-			PlayerChar->SetActorLocation(SafeLoc, false, nullptr, ETeleportType::TeleportPhysics);
-			PlayerChar->GetCharacterMovement()->Velocity.Z = 0.0f;
+			if(GetWorld()->LineTraceSingleByObjectType(StuckHit, StuckTraceStart, StuckTraceEnd, StuckObjectParams, StuckParams))
+			{
+				//Hit means player stuck under the block, so teleport them above the block
+				FVector SafeLoc = PlayerLoc;
+				SafeLoc.Z = StuckHit.ImpactPoint.Z + CapHalfHeight + 10.0f;
+
+				PlayerChar->SetActorLocation(SafeLoc, false, nullptr, ETeleportType::TeleportPhysics);
+				PlayerChar->GetCharacterMovement()->Velocity.Z = 0.0f;
+			}
 		}
 
 		//if not stuck, then launch anticamping strike
@@ -857,6 +863,7 @@ void AArenaManager::FireOneLightningAtPlayer()
 			{
 				UNiagaraComponent* Telegraph = UNiagaraFunctionLibrary::SpawnSystemAtLocation(GetWorld(), LightningTelegraphVFX, StrikeLoc);
 				if(Telegraph) Telegraph->SetVariableFloat(FName("LifetimeOverride"), TelegraphTime);
+				if(Telegraph) Telegraph->SetVariableVec3(FName("SpriteFacingOverride"), Hit.ImpactNormal);
 			}
 
 			FTimerHandle StrikeHandle;

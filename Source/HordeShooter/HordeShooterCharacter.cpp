@@ -494,6 +494,9 @@ void AHordeShooterCharacter::CheckLowHealthState()
 	bool bWasLowOnHealth = bIsLowOnHealth; 
 	bIsLowOnHealth = (CurrentHealth > 0.0f && CurrentHealth <= TriggerHealth);
 
+	FVector2D HealthRange(1.0f, TriggerHealth);
+	CurrentHeartBeatDelay = FMath::GetMappedRangeValueClamped(HealthRange, HeartBeatDelayRange, CurrentHealth);
+
 	if(!bIsLowOnHealth) //heal or die (exit state)
 	{
 		if(bWasLowOnHealth)
@@ -516,9 +519,6 @@ void AHordeShooterCharacter::CheckLowHealthState()
 			PlayHeartbeatTick();
 		}
 	}
-
-	FVector2D HealthRange(1.0f, TriggerHealth);
-	CurrentHeartBeatDelay = FMath::GetMappedRangeValueClamped(HealthRange, HeartBeatDelayRange, CurrentHealth);
 }
 
 void AHordeShooterCharacter::PlayHeartbeatTick()
@@ -1262,7 +1262,7 @@ void AHordeShooterCharacter::PlayerDie()
 	if(SpeedLinesVFXComp) SpeedLinesVFXComp->Deactivate();
 	if(FallAudioComp) FallAudioComp->FadeOut(0.15f, 0.0f);
 	if(LowHealthSoundMix) UGameplayStatics::PopSoundMixModifier(GetWorld(), LowHealthSoundMix);
-	OnInvulnerabilityStateChanged(false);
+	if(bIsInvulnerable) EndInvulnerability();
 
 	UGameplayStatics::SetGlobalTimeDilation(GetWorld(), 1.0f);
 	bIsRecoveringTime = false;
