@@ -74,6 +74,8 @@ public:
 	UPROPERTY(BlueprintReadOnly, Category = "Arena|Hazards")
 	bool bIsCombatActive = false;
 
+	float GetMaxBlockHeight() const { return (MaxStairSteps * BlockSize); }
+
 
 protected:
 	// Called when the game starts or when spawned

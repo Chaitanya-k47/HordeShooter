@@ -159,6 +159,9 @@ protected:
 	float MaxProjectileSpeed = 5000.0f;
 
 	UPROPERTY(EditDefaultsOnly, Category = "Rodmaster|Combat")
+	float ProjectileAttackHeightTolerance = 20.0f;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Rodmaster|Combat")
 	USoundBase* ProjectileFireSFX;
 
 	//close quarter PowerMOve
@@ -224,4 +227,6 @@ private:
 	class UMaterialInstanceDynamic* DynamicGlowMat;
 
 	FLinearColor CurrentColor = FLinearColor(1.0f, 1.0f, 1.0f, 1.0f);
+
+	float MaxSlope;
 };

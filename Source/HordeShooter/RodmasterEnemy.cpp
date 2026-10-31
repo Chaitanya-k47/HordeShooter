@@ -8,6 +8,7 @@
 #include "Components/CapsuleComponent.h"
 #include "HordeWaveManager.h"
 #include "Components/AudioComponent.h"
+#include "ArenaManager.h"
 
 // Fill out your copyright notice in the Description page of Project Settings.
 
@@ -52,6 +53,12 @@ void ARodmasterEnemy::BeginPlay()
     CurrentCloseSlamDamage = DefaultCloseSlamDamage;
     CurrentProjectileDamage = DefaultProjectileDamage;
     CurrentProjectileSpeed = DefaultProjectileSpeed;
+
+    AActor* ArenaActor = UGameplayStatics::GetActorOfClass(GetWorld(), AArenaManager::StaticClass());
+	if(AArenaManager* Arena = Cast<AArenaManager>(ArenaActor))
+	{
+		MaxSlope = Arena->GetMaxBlockHeight() / AttackRange;
+	}
 
     OriginalMeshZ = GetMesh()->GetRelativeLocation().Z;
 
@@ -462,12 +469,28 @@ void ARodmasterEnemy::ExecutePlasmaShot()
 	if(bIsDead || bIsStunned || bIsExploding) return;
 
 	APawn* PlayerTarget = UGameplayStatics::GetPlayerPawn(GetWorld(), 0);
+    ACharacter* PlayerChar = Cast<ACharacter>(PlayerTarget);
 	if(!PlayerTarget) return;
 
 	FVector StartLoc = GetMesh()->GetSocketLocation(FName("Projectile_Socket"));
 	FVector TargetLoc = PlayerTarget->GetActorLocation(); 
-	FVector BaseAimDirection  = (TargetLoc - StartLoc).GetSafeNormal();
-    BaseAimDirection.Z = 0;
+	FVector BaseAimDirection  = (TargetLoc - StartLoc);
+
+    //Clamp the Z component of attack
+    float FeetZ = GetActorLocation().Z - (GetCapsuleComponent()->GetScaledCapsuleHalfHeight());
+    float PlayerFeetZ = TargetLoc.Z - (PlayerChar->GetCapsuleComponent()->GetScaledCapsuleHalfHeight());
+    if(FMath::IsNearlyEqual(FeetZ, PlayerFeetZ, ProjectileAttackHeightTolerance))
+    {
+        BaseAimDirection.Z = 0.0f;
+    }
+    else
+    {
+        float HorizontalDistance = FVector2D(BaseAimDirection.X, BaseAimDirection.Y).Size();
+        float MaxAllowedZ = HorizontalDistance * MaxSlope;
+        BaseAimDirection.Z = FMath::Clamp(BaseAimDirection.Z, -MaxAllowedZ, MaxAllowedZ);
+    }
+    
+    BaseAimDirection.Normalize();
 
 	AActor* WaveManagerActor = UGameplayStatics::GetActorOfClass(GetWorld(), AHordeWaveManager::StaticClass());
 	if(AHordeWaveManager* WaveManager = Cast<AHordeWaveManager>(WaveManagerActor))
