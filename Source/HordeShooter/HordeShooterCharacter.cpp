@@ -26,6 +26,8 @@
 #include "Components/AudioComponent.h"
 #include "ArenaManager.h"
 #include "PlayerProgressionComponent.h"
+#include "HordeGameInstance.h"
+
 
 // Sets default values
 AHordeShooterCharacter::AHordeShooterCharacter()
@@ -124,7 +126,9 @@ void AHordeShooterCharacter::BeginPlay()
 		UEnhancedInputLocalPlayerSubsystem* Subsystem = ULocalPlayer::GetSubsystem<UEnhancedInputLocalPlayerSubsystem>(LocalPlayer);
 		if(Subsystem)
 		{
-			Subsystem->AddMappingContext(DefaultMappingContext, 0);
+			FModifyContextOptions ContextOptions;
+			ContextOptions.bNotifyUserSettings = true;
+			Subsystem->AddMappingContext(DefaultMappingContext, 0, ContextOptions);
 		}
 	}
 
@@ -578,8 +582,14 @@ void AHordeShooterCharacter::Look(const FInputActionValue& Value)
 	FVector2D LookAxisVector = Value.Get<FVector2D>();
 	if(Controller !=nullptr)
 	{
-		AddControllerYawInput(LookAxisVector.X); //yaw
-		AddControllerPitchInput(-LookAxisVector.Y); //pitch
+		float Sensitivity = 1.0f;
+		if(UHordeGameInstance* GI = Cast<UHordeGameInstance>(GetGameInstance()))
+		{
+			Sensitivity = GI->GetMouseSensitivity();
+		}
+
+		AddControllerYawInput(LookAxisVector.X * Sensitivity); //yaw
+		AddControllerPitchInput(-LookAxisVector.Y * Sensitivity); //pitch
 	}	
 }
 

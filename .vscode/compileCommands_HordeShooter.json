@@ -64,6 +64,38 @@
 		"directory": "D:\\UE_5.6\\Engine\\Source"
 	},
 	{
+		"file": "D:\\Unreal Projects\\HordeShooter\\Source\\HordeShooter\\HordeGameInstance.cpp",
+		"arguments": [
+			"C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\bin\\Hostx64\\x64\\cl.exe",
+			"@D:\\Unreal Projects\\HordeShooter\\.vscode\\compileCommands_HordeShooter\\HordeShooter.1.rsp"
+		],
+		"directory": "D:\\UE_5.6\\Engine\\Source"
+	},
+	{
+		"file": "D:\\Unreal Projects\\HordeShooter\\Source\\HordeShooter\\HordeGameInstance.h",
+		"arguments": [
+			"C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\bin\\Hostx64\\x64\\cl.exe",
+			"@D:\\Unreal Projects\\HordeShooter\\.vscode\\compileCommands_HordeShooter\\HordeShooter.1.rsp"
+		],
+		"directory": "D:\\UE_5.6\\Engine\\Source"
+	},
+	{
+		"file": "D:\\Unreal Projects\\HordeShooter\\Source\\HordeShooter\\HordeSaveGame.cpp",
+		"arguments": [
+			"C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\bin\\Hostx64\\x64\\cl.exe",
+			"@D:\\Unreal Projects\\HordeShooter\\.vscode\\compileCommands_HordeShooter\\HordeShooter.1.rsp"
+		],
+		"directory": "D:\\UE_5.6\\Engine\\Source"
+	},
+	{
+		"file": "D:\\Unreal Projects\\HordeShooter\\Source\\HordeShooter\\HordeSaveGame.h",
+		"arguments": [
+			"C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\bin\\Hostx64\\x64\\cl.exe",
+			"@D:\\Unreal Projects\\HordeShooter\\.vscode\\compileCommands_HordeShooter\\HordeShooter.1.rsp"
+		],
+		"directory": "D:\\UE_5.6\\Engine\\Source"
+	},
+	{
 		"file": "D:\\Unreal Projects\\HordeShooter\\Source\\HordeShooter\\HordeShooter.Build.cs",
 		"arguments": [
 			"C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\bin\\Hostx64\\x64\\cl.exe",
